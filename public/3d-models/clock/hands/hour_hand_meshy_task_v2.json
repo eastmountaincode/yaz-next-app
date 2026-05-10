@@ -1,0 +1,14 @@
+{
+  "task_id": "019e12b4-6ac0-7240-9a55-66dbf4537064",
+  "created_at": "2026-05-10T16:24:35.711Z",
+  "source_image": "/Volumes/Lexar/everything/business/freelance/yaz/yaz-next-app/public/3d-models/clock/hands/hour_hand_meshy_input.png",
+  "ai_model": "meshy-5",
+  "should_texture": false,
+  "target_formats": [
+    "glb"
+  ],
+  "input_note": "User-edited hour_hand_meshy_input.png v2",
+  "status": "SUCCEEDED",
+  "progress": 100,
+  "consumed_credits": 5
+}
