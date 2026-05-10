@@ -1,0 +1,20 @@
+[
+  {
+    "id": "composite-01",
+    "model": "/3d-models/frames/picture_frame_1520_dimensions.glb",
+    "workSlug": "snoop-ten-til-midnight",
+    "maskShape": "rectangle",
+    "frameWidth": 1.6,
+    "frameHeight": 2,
+    "frameRotationX": 0.125,
+    "videoX": 0,
+    "videoY": 0,
+    "videoZ": 0.06,
+    "videoWidth": 1.89,
+    "videoHeight": 1.4175,
+    "videoAspect": 1.3333333333333333,
+    "videoZoom": 1.25,
+    "cropX": 0.23,
+    "cropY": 0
+  }
+]

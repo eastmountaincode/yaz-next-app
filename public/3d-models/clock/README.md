@@ -19,11 +19,15 @@ Generated hand models:
 - `hands/vintage_clock_minute_hand.glb`
 - `hands/vintage_clock_second_hand.glb`
 
+Hand references:
+
+- `hands/hour_hand_reference.png`
+
 The original face texture includes the Roman numerals, decorative aging, Shutterstock watermark, hour hand, minute hand, and second hand baked into one image. For a live clock, edit this into a clean version with the hands removed and save it here as:
 
 - `vintage_clock_face_clean.jpg`
 
-The hand GLBs are original geometry inspired by the reference clock. Each hand points upward at 12 o'clock by default, with its root object pivot at the clock center. In Three.js, place the hand root at the face center and rotate around `rotation.z`.
+The hand GLBs are original geometry inspired by the reference clock and supplied hand references. Each hand points upward at 12 o'clock by default, with its root object pivot at the clock center. In Three.js, place the hand root at the face center and rotate around `rotation.z`.
 
 Next implementation step:
 
