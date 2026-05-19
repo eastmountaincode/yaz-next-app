@@ -50,7 +50,11 @@
       "clipHeight": 1.0290000000000001,
       "videoScale": 1.25,
       "videoOffsetX": 0,
-      "videoOffsetY": 0
+      "videoOffsetY": 0,
+      "captionOffsetX": 0,
+      "captionOffsetY": -0.18,
+      "captionOffsetZ": 0.018,
+      "captionScale": 1.24
     },
     {
       "id": "frame-02",
@@ -83,7 +87,11 @@
       "clipHeight": 1.4510757220921155,
       "videoScale": 1.25,
       "videoOffsetX": 0.25,
-      "videoOffsetY": 0
+      "videoOffsetY": 0,
+      "captionOffsetX": 0,
+      "captionOffsetY": -0.18,
+      "captionOffsetZ": 0.018,
+      "captionScale": 1
     },
     {
       "id": "prop-small-end-table",

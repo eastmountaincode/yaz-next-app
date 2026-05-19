@@ -16,6 +16,7 @@ import {
   Scissors,
   SlidersHorizontal,
   Trash2,
+  Type,
   Unlock,
   X,
 } from "lucide-react";
@@ -63,6 +64,10 @@ type FrameSetting = BaseObjectSetting & {
   videoScale: number;
   videoOffsetX: number;
   videoOffsetY: number;
+  captionOffsetX: number;
+  captionOffsetY: number;
+  captionOffsetZ: number;
+  captionScale: number;
 };
 
 type ModelSetting = BaseObjectSetting & {
@@ -114,6 +119,8 @@ const FRAME_STORAGE_KEY = "yaz-frame-editor-v3";
 const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
 const DEFAULT_LAMP_LIGHT_MIGRATION_KEY = "yaz-default-lamp-light-added-v1";
 const DEFAULT_LAMP_HITBOX_MIGRATION_KEY = "yaz-default-lamp-hitbox-added-v1";
+const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v1";
+const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
 const MODEL_FLOOR_Y = -2.88;
 const OBJECT_ROTATION_LIMIT = Math.PI;
 const ENVIRONMENT_WIDTH = 18;
@@ -146,6 +153,67 @@ const BASEBOARD_WALL_OFFSET = 0.006;
 const LAMP_TOGGLE_ZONE_NAME = "lamp-toggle-zone";
 const LAMP_TOGGLE_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.68, 0];
 const LAMP_TOGGLE_ZONE_LOCAL_SIZE: VectorTuple = [0.34, 0.64, 0.34];
+const DESKTOP_CAMERA_DISTANCE = 6.81;
+const PHONE_CAMERA_DISTANCE = 11;
+const CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(29.4);
+
+type CaptionFontId = "brik" | "zoom-pro" | "modestia-ultra" | "zafrada" | "puyita";
+type CaptionPlacementId = "corner" | "frame";
+type FrameHoverInfo = {
+  workSlug: string;
+};
+type CaptionFontOption = {
+  id: CaptionFontId;
+  label: string;
+  fontFamily: string;
+  fontWeight: number;
+};
+
+const captionFontOptions: CaptionFontOption[] = [
+  {
+    id: "brik",
+    label: "BRIK",
+    fontFamily: '"Yaz Brik", Brik, serif',
+    fontWeight: 400,
+  },
+  {
+    id: "zoom-pro",
+    label: "Zoom Pro",
+    fontFamily: '"Yaz Zoom Pro", "Zoom Pro", sans-serif',
+    fontWeight: 500,
+  },
+  {
+    id: "modestia-ultra",
+    label: "Modestia Ultra",
+    fontFamily: '"Yaz Modestia", Modestia, serif',
+    fontWeight: 900,
+  },
+  {
+    id: "zafrada",
+    label: "Zafrada",
+    fontFamily: '"Yaz Zafrada", Zafrada, serif',
+    fontWeight: 900,
+  },
+  {
+    id: "puyita",
+    label: "Puyita",
+    fontFamily: '"Yaz Puyita", Puyita, serif',
+    fontWeight: 400,
+  },
+];
+
+function normalizeCaptionFontId(value: string | null | undefined): CaptionFontId {
+  return value === "zoom-pro" ||
+    value === "modestia-ultra" ||
+    value === "zafrada" ||
+    value === "puyita"
+    ? value
+    : "brik";
+}
+
+function normalizeCaptionPlacementId(value: string | null | undefined): CaptionPlacementId {
+  return value === "corner" ? "corner" : "frame";
+}
 
 const frameModels = [
   "/3d-models/frames/picture_frame_1520_dimensions.glb",
@@ -258,6 +326,18 @@ function createFrameSetting(index: number, seed?: Partial<FrameSetting>): FrameS
     videoScale: seed?.videoScale ?? firstSavedComposite?.videoZoom ?? 1.25,
     videoOffsetX: clampCropAmount(seed?.videoOffsetX ?? firstSavedComposite?.cropX ?? 0),
     videoOffsetY: clampCropAmount(seed?.videoOffsetY ?? firstSavedComposite?.cropY ?? 0),
+    captionOffsetX: formatNumber(
+      THREE.MathUtils.clamp(seed?.captionOffsetX ?? 0, -1.5, 1.5),
+    ),
+    captionOffsetY: formatNumber(
+      THREE.MathUtils.clamp(seed?.captionOffsetY ?? -0.18, -2, 0.6),
+    ),
+    captionOffsetZ: formatNumber(
+      THREE.MathUtils.clamp(seed?.captionOffsetZ ?? 0.018, -0.05, 0.2),
+    ),
+    captionScale: formatNumber(
+      THREE.MathUtils.clamp(seed?.captionScale ?? 1, 0.35, 2.5),
+    ),
   };
 }
 
@@ -506,6 +586,82 @@ function createClipGeometry(
   };
 }
 
+function createFrameCaptionTexture(
+  text: string,
+  font: CaptionFontOption,
+  textures: THREE.Texture[],
+) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 192;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Could not create caption canvas.");
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#f6f0e5";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const maxWidth = canvas.width - 96;
+  let fontSize = 112;
+  do {
+    ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
+    if (ctx.measureText(text).width <= maxWidth || fontSize <= 54) {
+      break;
+    }
+    fontSize -= 4;
+  } while (fontSize > 54);
+
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  textures.push(texture);
+  return texture;
+}
+
+function createFrameCaptionMesh(
+  setting: FrameSetting,
+  artist: string,
+  font: CaptionFontOption,
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
+  textures: THREE.Texture[],
+) {
+  const aperture = visibleSize(setting);
+  const texture = createFrameCaptionTexture(artist, font, textures);
+  const height = THREE.MathUtils.clamp(aperture.height * 0.24, 0.16, 0.34);
+  const width = THREE.MathUtils.clamp(height * (1024 / 192), aperture.width * 0.9, setting.width * 1.7);
+  const mesh = new THREE.Mesh(
+    makeGeometry(new THREE.PlaneGeometry(width, height), geometries),
+    makeMaterial(
+      new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+      }),
+      materials,
+    ),
+  );
+
+  mesh.position.set(
+    setting.clipX + setting.captionOffsetX,
+    setting.clipY - aperture.height / 2 + setting.captionOffsetY,
+    setting.clipZ + setting.captionOffsetZ,
+  );
+  mesh.scale.setScalar(setting.captionScale);
+  mesh.visible = false;
+  mesh.renderOrder = 2;
+  mesh.userData.isFrameCaption = true;
+  return mesh;
+}
+
 function createFrame(
   setting: FrameSetting,
   sourceModel: THREE.Object3D,
@@ -514,9 +670,12 @@ function createFrame(
   textures: THREE.Texture[],
   videos: HTMLVideoElement[],
   _selected: boolean,
+  captionFont: CaptionFontOption,
+  captionPlacement: CaptionPlacementId,
   onSceneError: (error: Error) => void,
 ) {
   const group = new THREE.Group();
+  group.userData.sceneObjectId = setting.id;
   applyObjectPlacement(group, setting);
   const frameRoot = new THREE.Group();
   frameRoot.rotation.set(
@@ -639,7 +798,21 @@ function createFrame(
   videoMesh.userData.videoMaterial = videoMaterial;
   videoMesh.userData.fadeTarget = 0;
   videoMesh.userData.workSlug = work.slug;
+  videoMesh.userData.sceneObjectId = setting.id;
   group.add(videoMesh);
+
+  if (captionPlacement === "frame") {
+    const captionMesh = createFrameCaptionMesh(
+      setting,
+      work.artist,
+      captionFont,
+      geometries,
+      materials,
+      textures,
+    );
+    videoMesh.userData.captionMesh = captionMesh;
+    group.add(captionMesh);
+  }
 
   return group;
 }
@@ -1146,6 +1319,21 @@ function syncSceneObject(group: THREE.Group, setting: SceneObjectSetting) {
   }
 
   applyObjectPlacement(group, setting);
+
+  if (setting.kind === "frame") {
+    const aperture = visibleSize(setting);
+    group.traverse((child) => {
+      if (!(child instanceof THREE.Mesh) || !child.userData?.isFrameCaption) {
+        return;
+      }
+      child.position.set(
+        setting.clipX + setting.captionOffsetX,
+        setting.clipY - aperture.height / 2 + setting.captionOffsetY,
+        setting.clipZ + setting.captionOffsetZ,
+      );
+      child.scale.setScalar(setting.captionScale);
+    });
+  }
 }
 
 function syncClockHands(group: THREE.Object3D) {
@@ -1210,22 +1398,30 @@ function ThreeWallCanvas({
   lighting,
   showSceneLightMarkers,
   showHitboxHelpers,
+  activeCaptionFrameId,
   resetSignal,
   freeOrbit,
+  captionFont,
+  captionPlacement,
   onSceneError,
   onCameraInfoChange,
   onFrameClick,
+  onFrameHover,
   onLampToggle,
 }: {
   settings: SceneObjectSetting[];
   lighting: SceneLighting;
   showSceneLightMarkers: boolean;
   showHitboxHelpers: boolean;
+  activeCaptionFrameId?: string | null;
   resetSignal: number;
   freeOrbit: boolean;
+  captionFont: CaptionFontOption;
+  captionPlacement: CaptionPlacementId;
   onSceneError: (error: Error) => void;
   onCameraInfoChange?: (info: CameraInfo) => void;
   onFrameClick?: (workSlug: string) => void;
+  onFrameHover?: (info: FrameHoverInfo | null) => void;
   onLampToggle?: (position: VectorTuple) => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -1233,13 +1429,16 @@ function ThreeWallCanvas({
   const lightingRef = useRef(lighting);
   const showSceneLightMarkersRef = useRef(showSceneLightMarkers);
   const showHitboxHelpersRef = useRef(showHitboxHelpers);
+  const activeCaptionFrameIdRef = useRef(activeCaptionFrameId ?? null);
   const syncLightingRef = useRef<(() => void) | null>(null);
   const syncHitboxHelpersRef = useRef<(() => void) | null>(null);
+  const syncFrameCaptionVisibilityRef = useRef<(() => void) | null>(null);
   const syncOrbitModeRef = useRef<((enabled: boolean) => void) | null>(null);
   const freeOrbitRef = useRef(freeOrbit);
   const sceneObjectsRef = useRef<THREE.Group[]>([]);
   const cameraInfoCallbackRef = useRef(onCameraInfoChange);
   const frameClickCallbackRef = useRef(onFrameClick);
+  const frameHoverCallbackRef = useRef(onFrameHover);
   const lampToggleCallbackRef = useRef(onLampToggle);
 
   useEffect(() => {
@@ -1249,6 +1448,10 @@ function ThreeWallCanvas({
   useEffect(() => {
     frameClickCallbackRef.current = onFrameClick;
   }, [onFrameClick]);
+
+  useEffect(() => {
+    frameHoverCallbackRef.current = onFrameHover;
+  }, [onFrameHover]);
 
   useEffect(() => {
     lampToggleCallbackRef.current = onLampToggle;
@@ -1263,6 +1466,7 @@ function ThreeWallCanvas({
       }
     });
     syncHitboxHelpersRef.current?.();
+    syncFrameCaptionVisibilityRef.current?.();
   }, [settings]);
 
   useEffect(() => {
@@ -1273,12 +1477,18 @@ function ThreeWallCanvas({
   useEffect(() => {
     showSceneLightMarkersRef.current = showSceneLightMarkers;
     syncLightingRef.current?.();
+    syncFrameCaptionVisibilityRef.current?.();
   }, [showSceneLightMarkers]);
 
   useEffect(() => {
     showHitboxHelpersRef.current = showHitboxHelpers;
     syncHitboxHelpersRef.current?.();
   }, [showHitboxHelpers]);
+
+  useEffect(() => {
+    activeCaptionFrameIdRef.current = activeCaptionFrameId ?? null;
+    syncFrameCaptionVisibilityRef.current?.();
+  }, [activeCaptionFrameId]);
 
   useEffect(() => {
     freeOrbitRef.current = freeOrbit;
@@ -1616,7 +1826,7 @@ function ThreeWallCanvas({
     let animationFrame = 0;
     let disposed = false;
     let cameraBaseY = 0.32;
-    let baseCameraDistance = 8.96;
+    let baseCameraDistance = DESKTOP_CAMERA_DISTANCE;
     let targetCameraDistance = baseCameraDistance;
 
     const resetViewTargets = () => {
@@ -1633,7 +1843,7 @@ function ThreeWallCanvas({
       const width = Math.max(1, host.clientWidth);
       const height = Math.max(1, host.clientHeight);
       const isPhone = width < 720;
-      const nextBaseDistance = isPhone ? 11 : 8.96;
+      const nextBaseDistance = isPhone ? PHONE_CAMERA_DISTANCE : DESKTOP_CAMERA_DISTANCE;
 
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
       renderer.setSize(width, height, false);
@@ -1659,7 +1869,8 @@ function ThreeWallCanvas({
     const hoverPointer = new THREE.Vector2();
     let hoveredFrameClip: THREE.Mesh | null = null;
 
-    const collectFrameClips = (target: THREE.Object3D[]) => {
+    const collectFrameClipMeshes = () => {
+      const clips: THREE.Mesh[] = [];
       sceneObjectsRef.current.forEach((group) => {
         if (!group.visible) {
           return;
@@ -1667,10 +1878,34 @@ function ThreeWallCanvas({
 
         group.traverse((child) => {
           if (child instanceof THREE.Mesh && child.userData?.isFrameClip) {
-            target.push(child);
+            clips.push(child);
           }
         });
       });
+      return clips;
+    };
+
+    const shouldShowFrameCaption = (clip: THREE.Mesh) => {
+      if (showSceneLightMarkersRef.current) {
+        return false;
+      }
+
+      const sceneObjectId = clip.userData?.sceneObjectId as string | undefined;
+      return clip === hoveredFrameClip || sceneObjectId === activeCaptionFrameIdRef.current;
+    };
+
+    const syncFrameCaptionVisibility = () => {
+      collectFrameClipMeshes().forEach((clip) => {
+        const caption = clip.userData.captionMesh as THREE.Mesh | undefined;
+        if (caption) {
+          caption.visible = shouldShowFrameCaption(clip);
+        }
+      });
+    };
+    syncFrameCaptionVisibilityRef.current = syncFrameCaptionVisibility;
+
+    const collectFrameClips = (target: THREE.Object3D[]) => {
+      target.push(...collectFrameClipMeshes());
     };
 
     const collectLampToggleZones = (target: THREE.Object3D[]) => {
@@ -1734,6 +1969,19 @@ function ThreeWallCanvas({
       // Pause is driven by the fade tween: once opacity hits zero the animate
       // loop pauses the video and seeks back to the poster moment.
       clip.userData.fadeTarget = 0;
+      syncFrameCaptionVisibility();
+    };
+
+    const syncHoveredWork = (clip: THREE.Mesh | null) => {
+      const workSlug = clip?.userData?.workSlug as string | undefined;
+      if (!clip || !workSlug) {
+        frameHoverCallbackRef.current?.(null);
+        return;
+      }
+
+      frameHoverCallbackRef.current?.({
+        workSlug,
+      });
     };
 
     const clearHoveredFrame = () => {
@@ -1741,6 +1989,8 @@ function ThreeWallCanvas({
         hoveredFrameClip.userData.fadeTarget = 0;
         hoveredFrameClip = null;
       }
+      syncHoveredWork(null);
+      syncFrameCaptionVisibility();
       if (host.style.cursor === "pointer") {
         host.style.cursor = "";
       }
@@ -1782,6 +2032,10 @@ function ThreeWallCanvas({
         hoverRaycaster.intersectObjects(lampTargets, false).length > 0;
 
       if (nextClip === hoveredFrameClip) {
+        if (nextClip) {
+          syncHoveredWork(nextClip);
+        }
+        syncFrameCaptionVisibility();
         if (!nextClip) {
           host.style.cursor = lampHovered ? "pointer" : "";
         }
@@ -1792,6 +2046,8 @@ function ThreeWallCanvas({
         pauseFrame(hoveredFrameClip);
       }
       hoveredFrameClip = nextClip;
+      syncHoveredWork(hoveredFrameClip);
+      syncFrameCaptionVisibility();
       if (hoveredFrameClip) {
         playFrame(hoveredFrameClip);
         host.style.cursor = "pointer";
@@ -1850,7 +2106,11 @@ function ThreeWallCanvas({
         return;
       }
 
-      targetRotationY = THREE.MathUtils.clamp(startRotationY + deltaX * 0.0026, -0.24, 0.24);
+      targetRotationY = THREE.MathUtils.clamp(
+        startRotationY + deltaX * 0.0026,
+        -CONSTRAINED_YAW_LIMIT,
+        CONSTRAINED_YAW_LIMIT,
+      );
       targetRotationX = 0;
     };
 
@@ -2022,8 +2282,15 @@ function ThreeWallCanvas({
     host.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("resize", resize);
 
-    loadSceneModels(settingsRef.current)
-      .then((models) => {
+    const captionFontReady =
+      captionPlacement === "frame" && document.fonts
+        ? document.fonts
+            .load(`${captionFont.fontWeight} 112px ${captionFont.fontFamily}`)
+            .catch(() => undefined)
+        : Promise.resolve();
+
+    Promise.all([loadSceneModels(settingsRef.current), captionFontReady])
+      .then(([models]) => {
         if (disposed) {
           return;
         }
@@ -2059,12 +2326,15 @@ function ThreeWallCanvas({
             textures,
             videos,
             false,
+            captionFont,
+            captionPlacement,
             onSceneError,
           );
         });
         sceneObjectsRef.current = sceneObjects;
         sceneObjects.forEach((sceneObject) => objectGroup.add(sceneObject));
         syncHitboxHelpers();
+        syncFrameCaptionVisibility();
       })
       .catch((error: unknown) => {
         onSceneError(error instanceof Error ? error : new Error(String(error)));
@@ -2085,6 +2355,7 @@ function ThreeWallCanvas({
       host.removeEventListener("wheel", onWheel);
       syncLightingRef.current = null;
       syncHitboxHelpersRef.current = null;
+      syncFrameCaptionVisibilityRef.current = null;
       syncOrbitModeRef.current = null;
       videos.forEach((video) => {
         video.pause();
@@ -2098,7 +2369,7 @@ function ThreeWallCanvas({
       textures.forEach((texture) => texture.dispose());
       renderer.domElement.remove();
     };
-  }, [onSceneError, resetSignal]);
+  }, [captionFont, captionPlacement, onSceneError, resetSignal]);
 
   return <div ref={hostRef} className="absolute inset-0" />;
 }
@@ -2600,6 +2871,7 @@ export function GalleryScene() {
   const [showChrome, setShowChrome] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [lightingOpen, setLightingOpen] = useState(false);
+  const [captionOpen, setCaptionOpen] = useState(false);
   const [freeOrbit, setFreeOrbit] = useState(false);
   const [selectedObject, setSelectedObject] = useState(0);
   const [resetSignal, setResetSignal] = useState(0);
@@ -2607,9 +2879,43 @@ export function GalleryScene() {
   const [pendingReset, setPendingReset] = useState<"layout" | "lighting" | null>(null);
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [openWorkSlug, setOpenWorkSlug] = useState<string | null>(null);
+  const [hoveredFrameInfo, setHoveredFrameInfo] = useState<FrameHoverInfo | null>(null);
+  const [captionFontId, setCaptionFontId] = useState<CaptionFontId>(() => {
+    if (typeof window === "undefined") {
+      return "brik";
+    }
+
+    try {
+      return normalizeCaptionFontId(window.localStorage.getItem(CAPTION_FONT_STORAGE_KEY));
+    } catch {
+      return "brik";
+    }
+  });
+  const [captionPlacementId, setCaptionPlacementId] = useState<CaptionPlacementId>(() => {
+    if (typeof window === "undefined") {
+      return "frame";
+    }
+
+    try {
+      return normalizeCaptionPlacementId(window.localStorage.getItem(CAPTION_PLACEMENT_STORAGE_KEY));
+    } catch {
+      return "frame";
+    }
+  });
   const openWork = useMemo(
     () => (openWorkSlug ? works.find((w) => w.slug === openWorkSlug) ?? null : null),
     [openWorkSlug],
+  );
+  const hoveredWork = useMemo(
+    () =>
+      hoveredFrameInfo?.workSlug
+        ? works.find((w) => w.slug === hoveredFrameInfo.workSlug) ?? null
+        : null,
+    [hoveredFrameInfo],
+  );
+  const captionFont = useMemo(
+    () => captionFontOptions.find((option) => option.id === captionFontId) ?? captionFontOptions[0],
+    [captionFontId],
   );
   const [settings, setSettings] = useState<SceneObjectSetting[]>(defaultSceneSettings);
   const [lighting, setLighting] = useState<SceneLighting>(defaultSceneLighting);
@@ -2618,6 +2924,43 @@ export function GalleryScene() {
     () => JSON.stringify({ lighting, objects: settings }, null, 2),
     [lighting, settings],
   );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRootOverflow = root.style.overflow;
+    const previousRootOverscroll = root.style.overscrollBehavior;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+
+    return () => {
+      root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehavior = previousRootOverscroll;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CAPTION_FONT_STORAGE_KEY, captionFontId);
+    } catch {
+      // Non-critical preference.
+    }
+  }, [captionFontId]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CAPTION_PLACEMENT_STORAGE_KEY, captionPlacementId);
+    } catch {
+      // Non-critical preference.
+    }
+  }, [captionPlacementId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2905,13 +3248,30 @@ export function GalleryScene() {
         lighting={lighting}
         showSceneLightMarkers={lightingOpen}
         showHitboxHelpers={editorOpen}
+        activeCaptionFrameId={editorOpen && selected?.kind === "frame" ? selected.id : null}
         resetSignal={resetSignal}
         freeOrbit={freeOrbit}
+        captionFont={captionFont}
+        captionPlacement={captionPlacementId}
         onSceneError={handleSceneError}
         onCameraInfoChange={setCameraInfo}
         onFrameClick={setOpenWorkSlug}
+        onFrameHover={setHoveredFrameInfo}
         onLampToggle={toggleNearestLight}
       />
+
+      {hoveredWork && captionPlacementId === "corner" && !editorOpen && !lightingOpen && !openWork ? (
+        <div
+          className="pointer-events-none absolute bottom-7 left-5 max-w-[calc(100vw-2.5rem)] break-words text-5xl leading-none text-[#f6f0e5] sm:bottom-9 sm:left-8 sm:text-7xl lg:text-8xl"
+          style={{
+            fontFamily: captionFont.fontFamily,
+            fontWeight: captionFont.fontWeight,
+          }}
+          aria-hidden="true"
+        >
+          {hoveredWork.artist}
+        </div>
+      ) : null}
 
       <div className="pointer-events-none absolute right-4 top-4 flex items-start justify-end p-0 sm:right-6 sm:top-6">
         <div className="flex flex-col items-end gap-2">
@@ -2945,12 +3305,28 @@ export function GalleryScene() {
                 <button
                   type="button"
                   className={`grid size-10 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10 ${
+                    captionOpen ? "bg-white/15" : ""
+                  }`}
+                  aria-label="Toggle caption typography"
+                  title="Toggle caption typography"
+                  onClick={() => {
+                    setCaptionOpen((current) => !current);
+                    setEditorOpen(false);
+                    setLightingOpen(false);
+                  }}
+                >
+                  <Type size={18} />
+                </button>
+                <button
+                  type="button"
+                  className={`grid size-10 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10 ${
                     editorOpen ? "bg-white/15" : ""
                   }`}
                   aria-label="Toggle environment object editor"
                   title="Toggle environment object editor"
                   onClick={() => {
                     setEditorOpen((current) => !current);
+                    setCaptionOpen(false);
                     setLightingOpen(false);
                   }}
                 >
@@ -2965,6 +3341,7 @@ export function GalleryScene() {
                   title="Toggle scene lighting"
                   onClick={() => {
                     setLightingOpen((current) => !current);
+                    setCaptionOpen(false);
                     setEditorOpen(false);
                   }}
                 >
@@ -2986,7 +3363,12 @@ export function GalleryScene() {
               className="grid size-10 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
               aria-label={showChrome ? "Hide helper controls" : "Show helper controls"}
               title={showChrome ? "Hide helper controls" : "Show helper controls"}
-              onClick={() => setShowChrome((current) => !current)}
+              onClick={() => {
+                if (showChrome) {
+                  setCaptionOpen(false);
+                }
+                setShowChrome((current) => !current);
+              }}
             >
               <Eye size={18} />
             </button>
@@ -3025,6 +3407,77 @@ export function GalleryScene() {
             onChange={updateLighting}
             onReset={() => setPendingReset("lighting")}
           />
+        </div>
+      ) : null}
+
+      {showChrome && captionOpen ? (
+        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/92 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
+          <div className="mb-3">
+            <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+              Caption typography
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+              Placement
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: "frame", label: "Below frame" },
+                { id: "corner", label: "Lower left" },
+              ].map((option) => {
+                const selectedPlacement = option.id === captionPlacementId;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`rounded border px-3 py-2 text-left text-xs transition ${
+                      selectedPlacement
+                        ? "border-sky-300 bg-sky-300/15 text-sky-100"
+                        : "border-white/10 bg-white/5 text-[#f6f0e5] hover:bg-white/10"
+                    }`}
+                    onClick={() => setCaptionPlacementId(option.id as CaptionPlacementId)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            {captionFontOptions.map((option) => {
+              const selectedFont = option.id === captionFontId;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`flex items-center justify-between gap-3 rounded border px-3 py-2 text-left transition ${
+                    selectedFont
+                      ? "border-sky-300 bg-sky-300/15 text-sky-100"
+                      : "border-white/10 bg-white/5 text-[#f6f0e5] hover:bg-white/10"
+                  }`}
+                  onClick={() => setCaptionFontId(option.id)}
+                >
+                  <span
+                    className="block truncate text-xl leading-none"
+                    style={{
+                      fontFamily: option.fontFamily,
+                      fontWeight: option.fontWeight,
+                    }}
+                  >
+                    {option.label}
+                  </span>
+                  {selectedFont ? (
+                    <span className="shrink-0 text-[11px] uppercase tracking-[0.08em] text-sky-100">
+                      Using this
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : null}
 
@@ -3204,6 +3657,56 @@ export function GalleryScene() {
             >
               Floor
             </button>
+          ) : null}
+
+          {selected.kind === "frame" ? (
+            <div className="mt-4 grid gap-3">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+                Caption
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <RangeControl
+                  label="Caption X"
+                  min={-1.5}
+                  max={1.5}
+                  step={0.01}
+                  value={selected.captionOffsetX}
+                  onChange={(value) =>
+                    updateSelectedObject({ captionOffsetX: value } as Partial<SceneObjectSetting>)
+                  }
+                />
+                <RangeControl
+                  label="Caption Y"
+                  min={-2}
+                  max={0.6}
+                  step={0.01}
+                  value={selected.captionOffsetY}
+                  onChange={(value) =>
+                    updateSelectedObject({ captionOffsetY: value } as Partial<SceneObjectSetting>)
+                  }
+                />
+                <RangeControl
+                  label="Caption Z"
+                  min={-0.05}
+                  max={0.2}
+                  step={0.002}
+                  value={selected.captionOffsetZ}
+                  onChange={(value) =>
+                    updateSelectedObject({ captionOffsetZ: value } as Partial<SceneObjectSetting>)
+                  }
+                />
+                <RangeControl
+                  label="Caption Size"
+                  min={0.35}
+                  max={2.5}
+                  step={0.01}
+                  value={selected.captionScale}
+                  onChange={(value) =>
+                    updateSelectedObject({ captionScale: value } as Partial<SceneObjectSetting>)
+                  }
+                />
+              </div>
+            </div>
           ) : null}
 
           {selected.kind === "clock" ? (

@@ -1,5 +1,61 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Yaz Brik";
+  src:
+    url("/fonts/Brik-Regular.ttf") format("truetype"),
+    local("Brik Regular"),
+    local("Brik-Regular"),
+    local("Brik");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Yaz Zoom Pro";
+  src:
+    url("/fonts/Zoom-Pro-Normal-Medium.ttf") format("truetype"),
+    local("Zoom Pro Normal Medium"),
+    local("Zoom-Pro-Normal-Medium");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Yaz Modestia";
+  src:
+    url("/fonts/Modestia-Ultra.ttf") format("truetype"),
+    local("Modestia Ultra"),
+    local("Modestia-Ultra");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Yaz Zafrada";
+  src:
+    url("/fonts/Zafrada-Round-Black.ttf") format("truetype"),
+    local("Zafrada Round Black"),
+    local("Zafrada-Round-Black");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Yaz Puyita";
+  src:
+    url("/fonts/Puyita-Tuscan.ttf") format("truetype"),
+    local("Puyita Tuscan"),
+    local("Puyita-Tuscan");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --background: #15130f;
   --foreground: #f6f0e5;
