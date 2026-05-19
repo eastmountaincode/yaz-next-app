@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Yaz Frame Wall",
-  description: "A 3D wall and picture frame scene for Yaz.",
+  title: "Yaz Environment",
+  description: "A 3D environment scene editor for Yaz.",
 };
 
 export default function RootLayout({

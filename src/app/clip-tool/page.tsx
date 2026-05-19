@@ -61,6 +61,8 @@ export default function ClipToolPage() {
 
     const nextWork = works.find((work) => work.slug === nextSlug);
     if (!nextWork) {
+      setSourceUrl("");
+      setOutputSlug("");
       return;
     }
 
@@ -83,7 +85,7 @@ export default function ClipToolPage() {
         body: JSON.stringify({
           workSlug: selectedWork?.slug,
           sourceUrl,
-          outputSlug,
+          outputSlug: selectedWork?.slug ?? outputSlug,
           startSeconds,
           durationSeconds,
           width,
@@ -179,7 +181,8 @@ export default function ClipToolPage() {
                 </span>
                 <input
                   className="h-11 w-full rounded border border-white/10 bg-black/25 px-3 font-mono text-sm text-[#fff7e8] outline-none focus:border-sky-300"
-                  value={outputSlug}
+                  value={selectedWork?.slug ?? outputSlug}
+                  disabled={Boolean(selectedWork)}
                   onChange={(event) => setOutputSlug(event.target.value)}
                   placeholder="snoop-ten-til-midnight"
                 />

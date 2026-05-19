@@ -17,6 +17,8 @@ type CompositeConfig = {
   frameWidth: number;
   frameHeight: number;
   frameRotationX: number;
+  frameRotationY: number;
+  frameRotationZ: number;
   videoX: number;
   videoY: number;
   videoZ: number;
@@ -29,9 +31,16 @@ type CompositeConfig = {
 };
 
 const STORAGE_KEY = "yaz-object-composites-v1";
+const SCENE_STORAGE_KEY = "yaz-environment-editor-v4";
+const FRAME_STORAGE_KEY = "yaz-frame-editor-v3";
+const LEGACY_FRAME_STORAGE_KEY = "yaz-frame-editor-v2";
+const FRAME_ROTATION_LIMIT = Math.PI;
+const PREVIEW_YAW_LIMIT = Math.PI;
+const PREVIEW_PITCH_LIMIT = Math.PI / 2;
 
 const frameModels = [
   "/3d-models/frames/picture_frame_1520_dimensions.glb",
+  "/3d-models/frames/standing_picture_frame_01.glb",
   "/3d-models/frames/picture_frame_2.glb",
   "/3d-models/frames/fancy_picture_frame_01-freepoly.org.glb",
   "/3d-models/frames/picture_frame.glb",
@@ -62,6 +71,8 @@ const defaultComposite: CompositeConfig = {
   frameWidth: 1.6,
   frameHeight: 2.0,
   frameRotationX: 0,
+  frameRotationY: 0,
+  frameRotationZ: 0,
   videoX: 0,
   videoY: 0,
   videoZ: 0.09,
@@ -73,7 +84,40 @@ const defaultComposite: CompositeConfig = {
   cropY: 0,
 };
 
-const defaultComposites = [defaultComposite] satisfies CompositeConfig[];
+const defaultComposites = [
+  defaultComposite,
+  normalizeComposite({
+    ...defaultComposite,
+    id: "composite-02",
+    workSlug: works[1]?.slug ?? defaultComposite.workSlug,
+  }),
+] satisfies CompositeConfig[];
+
+type SceneFrameSetting = {
+  id?: string;
+  kind?: string;
+  model?: string;
+  workSlug?: string;
+  maskShape?: string;
+  width?: number;
+  height?: number;
+  frameRotationX?: number;
+  frameRotationY?: number;
+  frameRotationZ?: number;
+  clipX?: number;
+  clipY?: number;
+  clipZ?: number;
+  clipWidth?: number;
+  clipHeight?: number;
+  videoScale?: number;
+  videoOffsetX?: number;
+  videoOffsetY?: number;
+};
+
+type StoredEnvironment = {
+  lighting?: unknown;
+  objects?: SceneFrameSetting[];
+};
 
 function normalizeComposite(composite: Partial<CompositeConfig>) {
   const parsed = { ...defaultComposite, ...composite };
@@ -83,6 +127,8 @@ function normalizeComposite(composite: Partial<CompositeConfig>) {
     model: normalizeFrameModelPath(parsed.model),
     maskShape: normalizeMaskShape(parsed.maskShape),
     frameRotationX: parsed.frameRotationX ?? 0,
+    frameRotationY: parsed.frameRotationY ?? 0,
+    frameRotationZ: parsed.frameRotationZ ?? 0,
     videoAspect,
     videoHeight: parsed.videoWidth / videoAspect,
     cropX: clampCropAmount(parsed.cropX),
@@ -102,7 +148,135 @@ function readStoredComposites() {
 
   const parsed = JSON.parse(stored) as Partial<CompositeConfig>[] | Partial<CompositeConfig>;
   const composites = Array.isArray(parsed) ? parsed : [parsed];
-  return composites.map(normalizeComposite);
+  return ensureDefaultCompositeCount(composites.map(normalizeComposite));
+}
+
+function ensureDefaultCompositeCount(composites: CompositeConfig[]) {
+  if (composites.length >= defaultComposites.length) {
+    return composites;
+  }
+
+  const existingIds = new Set(composites.map((composite) => composite.id));
+  const missingDefaults = defaultComposites.filter((composite) => !existingIds.has(composite.id));
+  return [...composites, ...missingDefaults].slice(0, defaultComposites.length);
+}
+
+function sceneFrameToComposite(frame: SceneFrameSetting, index: number): CompositeConfig {
+  const fallback = defaultComposites[index] ?? defaultComposite;
+  const videoWidth = frame.clipWidth ?? fallback.videoWidth;
+  const videoHeight = frame.clipHeight ?? fallback.videoHeight;
+  const videoAspect = videoWidth / Math.max(0.001, videoHeight);
+
+  return normalizeComposite({
+    id: frame.id ?? `scene-frame-${String(index + 1).padStart(2, "0")}`,
+    model: frame.model ?? fallback.model,
+    workSlug: frame.workSlug ?? works[index % Math.max(works.length, 1)]?.slug ?? fallback.workSlug,
+    maskShape: normalizeMaskShape(frame.maskShape),
+    frameWidth: frame.width ?? fallback.frameWidth,
+    frameHeight: frame.height ?? fallback.frameHeight,
+    frameRotationX: frame.frameRotationX ?? fallback.frameRotationX,
+    frameRotationY: frame.frameRotationY ?? fallback.frameRotationY,
+    frameRotationZ: frame.frameRotationZ ?? fallback.frameRotationZ,
+    videoX: frame.clipX ?? fallback.videoX,
+    videoY: frame.clipY ?? fallback.videoY,
+    videoZ: frame.clipZ ?? fallback.videoZ,
+    videoWidth,
+    videoHeight,
+    videoAspect,
+    videoZoom: frame.videoScale ?? fallback.videoZoom,
+    cropX: frame.videoOffsetX ?? fallback.cropX,
+    cropY: frame.videoOffsetY ?? fallback.cropY,
+  });
+}
+
+function readSceneFrameComposites() {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  const stored =
+    window.localStorage.getItem(SCENE_STORAGE_KEY) ??
+    window.localStorage.getItem(FRAME_STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_FRAME_STORAGE_KEY);
+  if (!stored) {
+    return [];
+  }
+
+  const parsed = JSON.parse(stored) as SceneFrameSetting[] | SceneFrameSetting;
+  const settings = Array.isArray(parsed) ? parsed : [parsed];
+  return settings
+    .filter((setting) => !setting.kind || setting.kind === "frame")
+    .map(sceneFrameToComposite);
+}
+
+function compositeToSceneFramePatch(composite: CompositeConfig): Partial<SceneFrameSetting> {
+  return {
+    model: composite.model,
+    workSlug: composite.workSlug,
+    maskShape: composite.maskShape,
+    width: composite.frameWidth,
+    height: composite.frameHeight,
+    frameRotationX: composite.frameRotationX,
+    frameRotationY: composite.frameRotationY,
+    frameRotationZ: composite.frameRotationZ,
+    clipX: composite.videoX,
+    clipY: composite.videoY,
+    clipZ: composite.videoZ,
+    clipWidth: composite.videoWidth,
+    clipHeight: composite.videoHeight,
+    videoScale: composite.videoZoom,
+    videoOffsetX: composite.cropX,
+    videoOffsetY: composite.cropY,
+  };
+}
+
+function applyCompositesToSceneFrames(
+  objects: SceneFrameSetting[],
+  composites: CompositeConfig[],
+) {
+  const nextObjects = objects.map((object) => ({ ...object }));
+  const frameIndexes = nextObjects
+    .map((object, index) => (!object.kind || object.kind === "frame" ? index : -1))
+    .filter((index) => index >= 0);
+
+  composites.forEach((composite, index) => {
+    const matchingFrameIndex = nextObjects.findIndex(
+      (object) => (!object.kind || object.kind === "frame") && object.id === composite.id,
+    );
+    const targetIndex = matchingFrameIndex >= 0 ? matchingFrameIndex : frameIndexes[index];
+    if (targetIndex === undefined || targetIndex < 0) {
+      return;
+    }
+
+    nextObjects[targetIndex] = {
+      ...nextObjects[targetIndex],
+      ...compositeToSceneFramePatch(composite),
+    };
+  });
+
+  return nextObjects;
+}
+
+function updateStoredSceneFrames(composites: CompositeConfig[]) {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const stored = window.localStorage.getItem(SCENE_STORAGE_KEY);
+  if (!stored) {
+    return false;
+  }
+
+  const parsed = JSON.parse(stored) as SceneFrameSetting[];
+  if (!Array.isArray(parsed)) {
+    return false;
+  }
+
+  window.localStorage.setItem(
+    SCENE_STORAGE_KEY,
+    JSON.stringify(applyCompositesToSceneFrames(parsed, composites)),
+  );
+  return true;
 }
 
 function formatNumber(value: number) {
@@ -155,6 +329,10 @@ function getVideoHeight(config: CompositeConfig) {
   return config.videoWidth / config.videoAspect;
 }
 
+function workForComposite(config: CompositeConfig) {
+  return works.find((candidate) => candidate.slug === config.workSlug) ?? works[0];
+}
+
 function createVideoGeometry(config: CompositeConfig, geometries: THREE.BufferGeometry[]) {
   const aperture = getApertureSize(config);
 
@@ -175,27 +353,59 @@ function frameScaleForSize(size: THREE.Vector3, config: CompositeConfig) {
   return Math.min(config.frameWidth / size.x, config.frameHeight / size.y);
 }
 
-function createAlignmentGrid() {
-  const vertices: number[] = [];
-  const size = 4;
-  const step = 0.25;
+function createGridLines(
+  vertices: number[],
+  color: string,
+  opacity: number,
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
+) {
+  const geometry = makeGeometry(new THREE.BufferGeometry(), geometries);
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  const material = makeMaterial(
+    new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      depthTest: false,
+      depthWrite: false,
+    }),
+    materials,
+  );
+  const lines = new THREE.LineSegments(geometry, material);
+  lines.renderOrder = 40;
+  return lines;
+}
 
-  for (let value = -size; value <= size; value += step) {
-    vertices.push(value, -size, 0.18, value, size, 0.18);
-    vertices.push(-size, value, 0.18, size, value, 0.18);
+function createAlignmentGrid(
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
+) {
+  const size = 6;
+  const z = 0.24;
+  const minorVertices: number[] = [];
+  const majorVertices: number[] = [];
+  const axisVertices: number[] = [
+    0, -size, z, 0, size, z,
+    -size, 0, z, size, 0, z,
+  ];
+
+  for (let index = -size * 4; index <= size * 4; index += 1) {
+    const value = index / 4;
+    if (value === 0) {
+      continue;
+    }
+    const target = index % 4 === 0 ? majorVertices : minorVertices;
+    target.push(value, -size, z, value, size, z);
+    target.push(-size, value, z, size, value, z);
   }
 
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-  const material = new THREE.LineBasicMaterial({
-    color: "#9bdcff",
-    transparent: true,
-    opacity: 0.28,
-    depthTest: false,
-    depthWrite: false,
-  });
-  const grid = new THREE.LineSegments(geometry, material);
-  grid.renderOrder = 20;
+  const grid = new THREE.Group();
+  grid.add(
+    createGridLines(minorVertices, "#7dd3fc", 0.16, geometries, materials),
+    createGridLines(majorVertices, "#9bdcff", 0.3, geometries, materials),
+    createGridLines(axisVertices, "#f6d98f", 0.62, geometries, materials),
+  );
   return grid;
 }
 
@@ -270,7 +480,7 @@ function CompositeCanvas({
     const frameRoot = new THREE.Group();
     const videoRoot = new THREE.Group();
     const handleRoot = new THREE.Group();
-    const alignmentGrid = createAlignmentGrid();
+    const alignmentGrid = createAlignmentGrid(geometries, materials);
     compositeRoot.add(frameRoot, videoRoot, handleRoot);
     scene.add(compositeRoot);
     scene.add(alignmentGrid);
@@ -287,6 +497,7 @@ function CompositeCanvas({
     const handleMeshes: Array<{ mode: DragMode; mesh: THREE.Mesh }> = [];
     let loadedFrameModel: THREE.Object3D | null = null;
     let loadedFrameSize = new THREE.Vector3(1, 1, 1);
+    let loadedFrameCenter = new THREE.Vector3();
 
     const loader = new GLTFLoader();
     const video = document.createElement("video");
@@ -336,9 +547,19 @@ function CompositeCanvas({
 
     const updateFrameTransform = () => {
       const current = configRef.current;
-      frameRoot.rotation.x = current.frameRotationX;
+      frameRoot.rotation.set(
+        current.frameRotationX,
+        current.frameRotationY,
+        current.frameRotationZ,
+      );
       if (loadedFrameModel) {
-        loadedFrameModel.scale.setScalar(frameScaleForSize(loadedFrameSize, current));
+        const frameScale = frameScaleForSize(loadedFrameSize, current);
+        loadedFrameModel.scale.setScalar(frameScale);
+        loadedFrameModel.position.set(
+          -loadedFrameCenter.x * frameScale,
+          -loadedFrameCenter.y * frameScale,
+          -loadedFrameCenter.z * frameScale,
+        );
       }
     };
 
@@ -447,7 +668,7 @@ function CompositeCanvas({
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
       loadedFrameSize = box.getSize(new THREE.Vector3());
-      model.position.sub(center);
+      loadedFrameCenter = center;
       loadedFrameModel = model;
       updateFrameTransform();
       model.traverse((object) => {
@@ -538,13 +759,13 @@ function CompositeCanvas({
         const dy = event.clientY - orbitStartY;
         compositeRoot.rotation.y = THREE.MathUtils.clamp(
           orbitStartRotationY + dx * 0.008,
-          -2.45,
-          2.45,
+          -PREVIEW_YAW_LIMIT,
+          PREVIEW_YAW_LIMIT,
         );
         compositeRoot.rotation.x = THREE.MathUtils.clamp(
           orbitStartRotationX + dy * 0.006,
-          -1.45,
-          1.45,
+          -PREVIEW_PITCH_LIMIT,
+          PREVIEW_PITCH_LIMIT,
         );
         return;
       }
@@ -602,7 +823,7 @@ function CompositeCanvas({
 
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
-      const zoomFactor = event.deltaY > 0 ? 1.025 : 0.975;
+      const zoomFactor = event.deltaY > 0 ? 1.012 : 0.988;
       updateCameraDistance(cameraDistance * zoomFactor);
     };
 
@@ -658,10 +879,6 @@ function CompositeCanvas({
         item.load();
       });
       renderer.dispose();
-      alignmentGrid.geometry.dispose();
-      if (alignmentGrid.material instanceof THREE.Material) {
-        alignmentGrid.material.dispose();
-      }
       geometries.forEach((geometry) => geometry.dispose());
       materials.forEach((material) => material.dispose());
       textures.forEach((texture) => texture.dispose());
@@ -681,7 +898,7 @@ export function ObjectCompositeEditor() {
   const [composites, setComposites] = useState<CompositeConfig[]>(defaultComposites);
   const [selectedComposite, setSelectedComposite] = useState(0);
   const [viewResetSignal, setViewResetSignal] = useState(0);
-  const [showGrid, setShowGrid] = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const config = composites[selectedComposite] ?? composites[0] ?? defaultComposite;
@@ -696,10 +913,16 @@ export function ObjectCompositeEditor() {
             throw new Error("Failed to load composites: " + response.status);
           }
           const loaded = (await response.json()) as Partial<CompositeConfig>[];
-          setComposites(loaded.map(normalizeComposite));
+          const sceneComposites = readSceneFrameComposites();
+          setComposites(
+            sceneComposites.length > 0
+              ? sceneComposites
+              : ensureDefaultCompositeCount(loaded.map(normalizeComposite)),
+          );
         } catch (nextError) {
           try {
-            setComposites(readStoredComposites());
+            const sceneComposites = readSceneFrameComposites();
+            setComposites(sceneComposites.length > 0 ? sceneComposites : readStoredComposites());
           } catch {
             setComposites(defaultComposites);
           }
@@ -737,18 +960,50 @@ export function ObjectCompositeEditor() {
   const saveComposites = useCallback(async () => {
     setError(null);
     setSaveStatus("Saving...");
-    const response = await fetch("/api/composites", {
+    const compositesResponse = await fetch("/api/composites", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(composites),
     });
 
-    if (!response.ok) {
-      const message = await response.text();
-      throw new Error(message || "Save failed: " + response.status);
+    if (!compositesResponse.ok) {
+      const message = await compositesResponse.text();
+      throw new Error(message || "Save failed: " + compositesResponse.status);
     }
 
-    setSaveStatus("Saved to src/content/composites.json");
+    updateStoredSceneFrames(composites);
+
+    let savedEnvironment = false;
+    const environmentResponse = await fetch("/api/environment", { cache: "no-store" });
+    if (environmentResponse.ok) {
+      const environment = (await environmentResponse.json()) as StoredEnvironment;
+      if (Array.isArray(environment.objects)) {
+        const nextEnvironment: StoredEnvironment = {
+          ...environment,
+          objects: applyCompositesToSceneFrames(environment.objects, composites),
+        };
+        const saveEnvironmentResponse = await fetch("/api/environment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(nextEnvironment),
+        });
+
+        if (!saveEnvironmentResponse.ok) {
+          const message = await saveEnvironmentResponse.text();
+          throw new Error(message || "Environment save failed: " + saveEnvironmentResponse.status);
+        }
+        savedEnvironment = true;
+      }
+    } else if (environmentResponse.status !== 404) {
+      const message = await environmentResponse.text();
+      throw new Error(message || "Environment load failed: " + environmentResponse.status);
+    }
+
+    setSaveStatus(
+      savedEnvironment
+        ? "Saved to src/content/composites.json and src/content/environment.json"
+        : "Saved to src/content/composites.json",
+    );
   }, [composites]);
 
   const handleSave = useCallback(() => {
@@ -762,13 +1017,8 @@ export function ObjectCompositeEditor() {
     setError(nextError.message);
   }, []);
 
-  const goPrevious = () => {
-    setSelectedComposite((current) => Math.max(0, current - 1));
-    setViewResetSignal((current) => current + 1);
-  };
-
-  const goNext = () => {
-    setSelectedComposite((current) => Math.min(composites.length - 1, current + 1));
+  const selectComposite = (index: number) => {
+    setSelectedComposite(index);
     setViewResetSignal((current) => current + 1);
   };
 
@@ -799,29 +1049,69 @@ export function ObjectCompositeEditor() {
           onChange={updateConfig}
           onError={handleError}
         />
-        <div className="pointer-events-none absolute left-4 top-4 rounded border border-white/10 bg-[#16120d]/80 px-4 py-3 shadow-2xl backdrop-blur">
-          <h1 className="text-base font-medium">Object composite editor</h1>
+        <div className="absolute left-4 top-4 flex items-start gap-2">
+          <Link
+            className="rounded border border-white/10 bg-[#16120d]/86 px-3 py-2 text-xs font-medium text-[#f6f0e5] shadow-2xl backdrop-blur transition hover:bg-white/10"
+            href="/"
+          >
+            Wall
+          </Link>
+          <div className="pointer-events-none rounded border border-white/10 bg-[#16120d]/80 px-4 py-3 shadow-2xl backdrop-blur">
+            <h1 className="text-base font-medium">Object composite editor</h1>
+            <div className="mt-1 font-mono text-[11px] text-[#d8cdbb]">
+              {config.id}
+            </div>
+          </div>
         </div>
-        <div className="absolute inset-x-4 bottom-4 flex items-center justify-center gap-2 rounded border border-white/10 bg-[#16120d]/86 px-3 py-2 shadow-2xl backdrop-blur sm:left-1/2 sm:right-auto sm:-translate-x-1/2">
-          <button
-            type="button"
-            className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={selectedComposite === 0}
-            onClick={goPrevious}
-          >
-            Previous
-          </button>
-          <span className="min-w-20 text-center font-mono text-xs">
-            {selectedComposite + 1} / {composites.length}
-          </span>
-          <button
-            type="button"
-            className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={selectedComposite >= composites.length - 1}
-            onClick={goNext}
-          >
-            Next
-          </button>
+        <div className="absolute inset-x-4 bottom-4 rounded border border-white/10 bg-[#16120d]/88 p-2 shadow-2xl backdrop-blur">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+              Composite objects
+            </div>
+            <div className="font-mono text-[11px] text-[#d8cdbb]">
+              {selectedComposite + 1} / {composites.length}
+            </div>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {composites.map((composite, index) => {
+              const work = workForComposite(composite);
+              const selected = index === selectedComposite;
+              return (
+                <button
+                  key={composite.id}
+                  type="button"
+                  className={`grid w-44 shrink-0 grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-2 rounded border p-1.5 text-left transition ${
+                    selected
+                      ? "border-sky-300 bg-sky-300/15 text-sky-100"
+                      : "border-white/10 bg-white/5 text-[#f6f0e5] hover:bg-white/10"
+                  }`}
+                  onClick={() => selectComposite(index)}
+                >
+                  {work ? (
+                    <video
+                      className="h-12 w-full rounded object-cover"
+                      src={work.clipSrc}
+                      muted
+                      loop
+                      playsInline
+                      autoPlay
+                      preload="metadata"
+                    />
+                  ) : (
+                    <div className="h-12 rounded bg-black/35" />
+                  )}
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs font-medium">
+                      Object {index + 1}
+                    </span>
+                    <span className="block truncate text-[11px] text-[#d8cdbb]">
+                      {work?.artist ?? composite.id}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -829,7 +1119,7 @@ export function ObjectCompositeEditor() {
         <div className="grid min-w-0 gap-4">
           <div className="flex min-w-0 items-center justify-between gap-2">
             <div className="min-w-0">
-              <div className="text-xs text-[#d8cdbb]">Object</div>
+              <div className="text-xs text-[#d8cdbb]">Object composite editor</div>
               <div className="truncate font-mono text-sm">{config.id}</div>
             </div>
             <button
@@ -902,11 +1192,27 @@ export function ObjectCompositeEditor() {
             />
             <RangeControl
               label="Frame Pitch"
-              min={-1.2}
-              max={1.2}
-              step={0.005}
+              min={-FRAME_ROTATION_LIMIT}
+              max={FRAME_ROTATION_LIMIT}
+              step={0.01}
               value={config.frameRotationX}
               onChange={(value) => updateConfig({ frameRotationX: value })}
+            />
+            <RangeControl
+              label="Frame Yaw"
+              min={-FRAME_ROTATION_LIMIT}
+              max={FRAME_ROTATION_LIMIT}
+              step={0.01}
+              value={config.frameRotationY}
+              onChange={(value) => updateConfig({ frameRotationY: value })}
+            />
+            <RangeControl
+              label="Frame Roll"
+              min={-FRAME_ROTATION_LIMIT}
+              max={FRAME_ROTATION_LIMIT}
+              step={0.01}
+              value={config.frameRotationZ}
+              onChange={(value) => updateConfig({ frameRotationZ: value })}
             />
             <RangeControl
               label="Video X"
@@ -999,12 +1305,6 @@ export function ObjectCompositeEditor() {
             >
               Reset object
             </button>
-            <Link
-              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
-              href="/"
-            >
-              Wall
-            </Link>
           </div>
 
           {saveStatus ? (

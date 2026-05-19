@@ -68,6 +68,41 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function findWorkBlock(source: string, workSlug: string) {
+  const slugIndex = source.search(new RegExp(`slug:\\s*"${escapeRegExp(workSlug)}"`));
+  if (slugIndex < 0) {
+    throw new Error(`Could not find work slug in works.ts: ${workSlug}`);
+  }
+
+  const prefix = source.slice(0, slugIndex);
+  const blockStartMatch = Array.from(prefix.matchAll(/^  \{/gm)).at(-1);
+  if (!blockStartMatch || blockStartMatch.index === undefined) {
+    throw new Error(`Could not find work block start in works.ts: ${workSlug}`);
+  }
+
+  const start = blockStartMatch.index;
+  const endMatch = source.slice(slugIndex).match(/^  \},?$/m);
+  if (!endMatch || endMatch.index === undefined) {
+    throw new Error(`Could not find work block end in works.ts: ${workSlug}`);
+  }
+
+  const end = slugIndex + endMatch.index + endMatch[0].length;
+  return {
+    start,
+    end,
+    block: source.slice(start, end),
+  };
+}
+
+function replaceRequiredField(block: string, field: string, nextValue: string) {
+  const pattern = new RegExp(`(${field}:\\s*)[^,\\n]+`);
+  if (!pattern.test(block)) {
+    throw new Error(`Could not find ${field} in selected work block.`);
+  }
+
+  return block.replace(pattern, `$1${nextValue}`);
+}
+
 async function runCommand(command: string, args: string[], timeoutMs: number) {
   return await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -120,21 +155,14 @@ async function findDownloadedSource(tempDir: string) {
 
 async function updateWorksMetadata(workSlug: string, clipSrc: string, start: number, duration: number) {
   const source = await fs.readFile(worksPath, "utf8");
-  const blockPattern = new RegExp(
-    `(\\{[\\s\\S]*?slug:\\s*"${escapeRegExp(workSlug)}",[\\s\\S]*?\\n  \\})`,
-    "m",
-  );
-  const match = source.match(blockPattern);
-  if (!match) {
-    throw new Error(`Could not find work slug in works.ts: ${workSlug}`);
-  }
+  const match = findWorkBlock(source, workSlug);
+  const nextBlock = [
+    ["clipSrc", `"${clipSrc}"`],
+    ["clipStartSeconds", String(start)],
+    ["clipDurationSeconds", String(duration)],
+  ].reduce((block, [field, value]) => replaceRequiredField(block, field, value), match.block);
 
-  const nextBlock = match[1]
-    .replace(/clipSrc:\s*"[^"]+"/, `clipSrc: "${clipSrc}"`)
-    .replace(/clipStartSeconds:\s*\d+(?:\.\d+)?/, `clipStartSeconds: ${start}`)
-    .replace(/clipDurationSeconds:\s*\d+(?:\.\d+)?/, `clipDurationSeconds: ${duration}`);
-
-  await fs.writeFile(worksPath, source.replace(match[1], nextBlock));
+  await fs.writeFile(worksPath, `${source.slice(0, match.start)}${nextBlock}${source.slice(match.end)}`);
 }
 
 export async function POST(request: Request) {
@@ -151,11 +179,30 @@ export async function POST(request: Request) {
     const body = (await request.json()) as ClipRequest;
     const selectedWork = works.find((work) => work.slug === body.workSlug);
     const sourceUrl = body.sourceUrl?.trim() || selectedWork?.sourceUrl;
-    const outputSlug = slugify(body.outputSlug || selectedWork?.slug || "");
+    const requestedOutputSlug = slugify(body.outputSlug || selectedWork?.slug || "");
+    const outputSlug = selectedWork && body.updateWorkMetadata ? selectedWork.slug : requestedOutputSlug;
     const startSeconds = parseSeconds(body.startSeconds, selectedWork?.clipStartSeconds ?? 0);
     const durationSeconds = parseSeconds(body.durationSeconds, selectedWork?.clipDurationSeconds ?? 10);
     const width = Math.min(1920, Math.max(320, parseInteger(body.width, 1280)));
     const crf = Math.min(35, Math.max(18, parseInteger(body.crf, 24)));
+
+    if (body.updateWorkMetadata && !selectedWork) {
+      return NextResponse.json({ error: "A valid work selection is required to update metadata." }, { status: 400 });
+    }
+
+    if (
+      body.updateWorkMetadata &&
+      selectedWork &&
+      requestedOutputSlug &&
+      requestedOutputSlug !== selectedWork.slug
+    ) {
+      return NextResponse.json(
+        {
+          error: `Selected work clips must be saved as ${selectedWork.slug}.mp4, not ${requestedOutputSlug}.mp4.`,
+        },
+        { status: 400 },
+      );
+    }
 
     if (!sourceUrl || !/^https?:\/\//.test(sourceUrl)) {
       return NextResponse.json({ error: "A valid source URL is required." }, { status: 400 });

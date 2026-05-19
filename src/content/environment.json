@@ -1,0 +1,186 @@
+{
+  "lighting": {
+    "ambientColor": "#aa9f8d",
+    "ambientIntensity": 2.2,
+    "keyColor": "#c4ad97",
+    "keyIntensity": 3.45,
+    "keyPosition": [
+      0.05,
+      3.05,
+      2.7
+    ],
+    "fillColor": "#6a7595",
+    "fillIntensity": 3.85,
+    "fillPosition": [
+      4.2,
+      2.1,
+      3.6
+    ],
+    "exposure": 1.06
+  },
+  "objects": [
+    {
+      "id": "frame-01",
+      "kind": "frame",
+      "label": "Video frame 1",
+      "visible": true,
+      "model": "/3d-models/frames/picture_frame_1520_dimensions.glb",
+      "workSlug": "snoop-ten-til-midnight",
+      "maskShape": "rectangle",
+      "position": [
+        -1.24,
+        0.78,
+        0
+      ],
+      "width": 1.6,
+      "height": 2,
+      "frameRotationX": -0.001592653589793,
+      "frameRotationY": -0.131592653589793,
+      "frameRotationZ": -1.57159265358979,
+      "rotation": [
+        0,
+        0.035,
+        0.015
+      ],
+      "wallScale": 1.13,
+      "clipX": 0.006,
+      "clipY": -0.01,
+      "clipZ": 0.015,
+      "clipWidth": 1.372,
+      "clipHeight": 1.0290000000000001,
+      "videoScale": 1.25,
+      "videoOffsetX": 0,
+      "videoOffsetY": 0
+    },
+    {
+      "id": "frame-02",
+      "kind": "frame",
+      "label": "Video frame 2",
+      "visible": true,
+      "model": "/3d-models/frames/fancy_picture_frame_01-freepoly.org.glb",
+      "workSlug": "dani-offline-angel",
+      "maskShape": "oval",
+      "position": [
+        1.28,
+        0.68,
+        0
+      ],
+      "width": 2.3,
+      "height": 2.34,
+      "frameRotationX": 0.018407346410207,
+      "frameRotationY": 0.008407346410207,
+      "frameRotationZ": 0,
+      "rotation": [
+        0,
+        -0.025,
+        -0.02
+      ],
+      "wallScale": 1.08,
+      "clipX": -0.001,
+      "clipY": -0.015,
+      "clipZ": -0.005,
+      "clipWidth": 2.098,
+      "clipHeight": 1.4510757220921155,
+      "videoScale": 1.25,
+      "videoOffsetX": 0.25,
+      "videoOffsetY": 0
+    },
+    {
+      "id": "prop-small-end-table",
+      "kind": "model",
+      "catalogId": "small-end-table",
+      "label": "Small end table",
+      "visible": true,
+      "model": "/3d-models/Meshy_AI_small_simple_end_tabl_0510164139_texture.glb",
+      "position": [
+        -2.02,
+        -3.28,
+        0.52
+      ],
+      "rotation": [
+        0,
+        0.31,
+        0
+      ],
+      "wallScale": 1.63
+    },
+    {
+      "id": "prop-victorian-bed",
+      "kind": "model",
+      "catalogId": "victorian-bed",
+      "label": "Victorian bed",
+      "visible": false,
+      "model": "/3d-models/bed/victorian_bed.glb",
+      "position": [
+        1.5,
+        -2.44,
+        1.935
+      ],
+      "rotation": [
+        0,
+        -0.55,
+        0
+      ],
+      "wallScale": 1.28
+    },
+    {
+      "id": "prop-potted-plant",
+      "kind": "model",
+      "catalogId": "potted-plant",
+      "label": "Potted plant",
+      "visible": true,
+      "model": "/3d-models/plants/potted_plant_02_optimized_webp.glb",
+      "position": [
+        3.15,
+        -2.44,
+        0.72
+      ],
+      "rotation": [
+        0,
+        -0.2,
+        0
+      ],
+      "wallScale": 1.35
+    },
+    {
+      "id": "light-table-lamp",
+      "kind": "light",
+      "label": "Lamp light source",
+      "visible": true,
+      "position": [
+        -1.98,
+        -0.94,
+        0.575
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "wallScale": 0.12,
+      "color": "#ffd08a",
+      "intensity": 3,
+      "distance": 3.2,
+      "decay": 1.8,
+      "enabled": false
+    },
+    {
+      "id": "hitbox-lamp-toggle",
+      "kind": "hitbox",
+      "label": "Lamp click zone",
+      "visible": true,
+      "position": [
+        -2.02,
+        -1.32,
+        0.52
+      ],
+      "rotation": [
+        0,
+        0.31,
+        0
+      ],
+      "wallScale": 1.63,
+      "action": "toggle-nearest-light"
+    }
+  ]
+}

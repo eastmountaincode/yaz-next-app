@@ -25,6 +25,10 @@
 ._*
 *.pem
 
+# local source archives for large 3D assets; commit optimized runtime assets instead
+public/3d-models/**/*.zip
+public/3d-models/*.zip
+
 # debug
 npm-debug.log*
 yarn-debug.log*

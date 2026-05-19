@@ -7,6 +7,10 @@ export type WorkItem = {
   clipSrc: string;
   clipStartSeconds: number;
   clipDurationSeconds: number;
+  // Timestamp (seconds) of the canonical "still" frame for the clip. The
+  // gallery shows this frame as a poster when the clip is idle and seeks back
+  // to it whenever the hover crossfade completes. Defaults to 0 when omitted.
+  posterTime?: number;
 };
 
 export const works: WorkItem[] = [
@@ -17,7 +21,7 @@ export const works: WorkItem[] = [
     credit: "Cowritten and directed",
     sourceUrl: "https://www.youtube.com/watch?v=DKIgoOVF914",
     clipSrc: "/work-clips/snoop-ten-til-midnight.mp4",
-    clipStartSeconds: 20,
+    clipStartSeconds: 5,
     clipDurationSeconds: 10,
   },
   {
