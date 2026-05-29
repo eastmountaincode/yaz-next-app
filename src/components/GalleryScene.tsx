@@ -31,6 +31,11 @@ import {
   defaultClockComposite,
   normalizeClockComposite,
 } from "@/lib/clockComposite";
+import {
+  CLOCK_PENDULUM_GROUP_NAME,
+  extractClockPendulum,
+  setClockPendulumSwing,
+} from "@/lib/clockPendulum";
 
 type MaskShape = "rectangle" | "oval";
 type ObjectKind = "frame" | "model" | "light" | "clock" | "hitbox";
@@ -1195,20 +1200,25 @@ function createClockObject(
   }
 
   const model = modelSource.clone(true);
+  extractClockPendulum(model);
   const modelBox = new THREE.Box3().setFromObject(model);
   const modelSize = modelBox.getSize(new THREE.Vector3());
   const modelCenter = modelBox.getCenter(new THREE.Vector3());
   const modelScale = modelSize.y > 0 ? clockComposite.clockHeight / modelSize.y : 1;
+  const modelRoot = new THREE.Group();
+  modelRoot.name = "live-clock-case-root";
+  modelRoot.position.set(clockComposite.modelX, clockComposite.modelY, clockComposite.modelZ);
+  modelRoot.rotation.x = clockComposite.modelRotationX;
   model.name = "live-clock-case";
   model.position.set(
-    clockComposite.modelX - modelCenter.x,
-    clockComposite.modelY - modelCenter.y,
-    clockComposite.modelZ - modelCenter.z,
+    -modelCenter.x * modelScale,
+    -modelCenter.y * modelScale,
+    -modelCenter.z * modelScale,
   );
   model.scale.setScalar(modelScale);
-  model.rotation.x = clockComposite.modelRotationX;
   prepareStaticModel(model);
-  group.add(model);
+  modelRoot.add(model);
+  group.add(modelRoot);
 
   const faceMaterial = makeMaterial(
     new THREE.MeshBasicMaterial({
@@ -1234,15 +1244,25 @@ function createClockObject(
   handsRoot.position.set(clockComposite.handX, clockComposite.handY, clockComposite.handZ);
   group.add(handsRoot);
 
-  const hourHand = hourSource.clone(true);
+  const hourHand = minuteSource.clone(true);
   hourHand.name = "live-clock-hour-hand";
+  hourHand.position.set(
+    clockComposite.hourHandX,
+    clockComposite.hourHandY,
+    clockComposite.hourHandZ,
+  );
   hourHand.scale.setScalar(clockComposite.hourScale);
   hourHand.visible = clockComposite.showHourHand;
   prepareStaticModel(hourHand);
   handsRoot.add(hourHand);
 
-  const minuteHand = minuteSource.clone(true);
+  const minuteHand = hourSource.clone(true);
   minuteHand.name = "live-clock-minute-hand";
+  minuteHand.position.set(
+    clockComposite.minuteHandX,
+    clockComposite.minuteHandY,
+    clockComposite.minuteHandZ,
+  );
   minuteHand.scale.setScalar(clockComposite.minuteScale);
   minuteHand.visible = clockComposite.showMinuteHand;
   prepareStaticModel(minuteHand);
@@ -1250,6 +1270,11 @@ function createClockObject(
 
   const secondHand = secondSource.clone(true);
   secondHand.name = "live-clock-second-hand";
+  secondHand.position.set(
+    clockComposite.secondHandX,
+    clockComposite.secondHandY,
+    clockComposite.secondHandZ,
+  );
   secondHand.scale.setScalar(clockComposite.secondScale);
   secondHand.visible = clockComposite.showSecondHand;
   prepareStaticModel(secondHand);
@@ -1351,6 +1376,14 @@ function syncClockHands(group: THREE.Object3D) {
   if (secondHand) {
     secondHand.rotation.z = angles.second + clockComposite.secondRotationOffset;
   }
+}
+
+function syncClockPendulum(group: THREE.Object3D, timeSeconds: number) {
+  setClockPendulumSwing(
+    group.getObjectByName(CLOCK_PENDULUM_GROUP_NAME),
+    timeSeconds,
+    clockComposite,
+  );
 }
 
 async function loadSceneModels(settings: SceneObjectSetting[]) {
@@ -2216,9 +2249,11 @@ function ThreeWallCanvas({
       camera.position.y = cameraBaseY + currentPanY;
       camera.position.z += (targetCameraDistance - camera.position.z) * 0.08;
       camera.lookAt(currentPanX, 0.05 + currentPanY, -0.05);
+      const timeSeconds = performance.now() / 1000;
       sceneObjectsRef.current.forEach((group) => {
         if (group.name === "editable-live-clock") {
           syncClockHands(group);
+          syncClockPendulum(group, timeSeconds);
         }
       });
 

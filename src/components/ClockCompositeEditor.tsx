@@ -10,6 +10,10 @@ import {
   defaultClockComposite,
   normalizeClockComposite,
 } from "@/lib/clockComposite";
+import {
+  extractClockPendulum,
+  setClockPendulumSwing,
+} from "@/lib/clockPendulum";
 
 const STORAGE_KEY = "yaz-clock-composite-v1";
 
@@ -46,14 +50,82 @@ function setHandRotation(hand: THREE.Object3D | null, angle: number, offset: num
   }
 }
 
+function createPivotMarker(
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
+) {
+  const group = new THREE.Group();
+  group.name = "clock-pendulum-pivot-marker";
+
+  const markerMaterial = makeMaterial(
+    new THREE.MeshBasicMaterial({
+      color: "#67e8f9",
+      transparent: true,
+      opacity: 0.95,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+    }),
+    materials,
+  );
+  const centerMaterial = makeMaterial(
+    new THREE.MeshBasicMaterial({
+      color: "#f0f9ff",
+      transparent: true,
+      opacity: 1,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+    materials,
+  );
+
+  const ring = new THREE.Mesh(
+    makeGeometry(new THREE.RingGeometry(0.018, 0.025, 48), geometries),
+    markerMaterial,
+  );
+  ring.position.z = 0.006;
+  ring.renderOrder = 1000;
+  group.add(ring);
+
+  const horizontal = new THREE.Mesh(
+    makeGeometry(new THREE.PlaneGeometry(0.07, 0.004), geometries),
+    markerMaterial,
+  );
+  horizontal.position.z = 0.007;
+  horizontal.renderOrder = 1001;
+  group.add(horizontal);
+
+  const vertical = new THREE.Mesh(
+    makeGeometry(new THREE.PlaneGeometry(0.004, 0.07), geometries),
+    markerMaterial,
+  );
+  vertical.position.z = 0.007;
+  vertical.renderOrder = 1001;
+  group.add(vertical);
+
+  const center = new THREE.Mesh(
+    makeGeometry(new THREE.CircleGeometry(0.007, 24), geometries),
+    centerMaterial,
+  );
+  center.position.z = 0.008;
+  center.renderOrder = 1002;
+  group.add(center);
+
+  return group;
+}
+
 function ClockCanvas({
   config,
   showGrid,
+  showPivot,
   viewResetSignal,
   onError,
 }: {
   config: ClockCompositeConfig;
   showGrid: boolean;
+  showPivot: boolean;
   viewResetSignal: number;
   onError: (error: Error) => void;
 }) {
@@ -61,6 +133,7 @@ function ClockCanvas({
   const configRef = useRef(config);
   const onErrorRef = useRef(onError);
   const showGridRef = useRef(showGrid);
+  const showPivotRef = useRef(showPivot);
   const sceneHandlesRef = useRef<ClockSceneHandles | null>(null);
 
   useEffect(() => {
@@ -76,6 +149,11 @@ function ClockCanvas({
     showGridRef.current = showGrid;
     sceneHandlesRef.current?.syncConfig();
   }, [showGrid]);
+
+  useEffect(() => {
+    showPivotRef.current = showPivot;
+    sceneHandlesRef.current?.syncConfig();
+  }, [showPivot]);
 
   useEffect(() => {
     sceneHandlesRef.current?.resetView();
@@ -158,9 +236,12 @@ function ClockCanvas({
 
     let clockModel: THREE.Object3D | null = null;
     let clockModelBaseHeight = 1;
+    const clockModelBaseCenter = new THREE.Vector3();
     let hourHand: THREE.Object3D | null = null;
     let minuteHand: THREE.Object3D | null = null;
     let secondHand: THREE.Object3D | null = null;
+    let pendulum: THREE.Object3D | null = null;
+    let pivotMarker: THREE.Object3D | null = null;
     let pointerIsDown = false;
     let pointerStartX = 0;
     let pointerStartY = 0;
@@ -198,8 +279,9 @@ function ClockCanvas({
       if (clockModel) {
         const scale = clockModelBaseHeight > 0 ? current.clockHeight / clockModelBaseHeight : 1;
         modelRoot.position.set(current.modelX, current.modelY, current.modelZ);
+        modelRoot.rotation.x = current.modelRotationX;
         clockModel.scale.setScalar(scale);
-        clockModel.rotation.x = current.modelRotationX;
+        clockModel.position.copy(clockModelBaseCenter).multiplyScalar(-scale);
       }
 
       face.position.set(current.faceX, current.faceY, current.faceZ);
@@ -208,19 +290,25 @@ function ClockCanvas({
 
       handsRoot.position.set(current.handX, current.handY, current.handZ);
       if (hourHand) {
+        hourHand.position.set(current.hourHandX, current.hourHandY, current.hourHandZ);
         hourHand.scale.setScalar(current.hourScale);
         hourHand.visible = current.showHourHand;
       }
       if (minuteHand) {
+        minuteHand.position.set(current.minuteHandX, current.minuteHandY, current.minuteHandZ);
         minuteHand.scale.setScalar(current.minuteScale);
         minuteHand.visible = current.showMinuteHand;
       }
       if (secondHand) {
+        secondHand.position.set(current.secondHandX, current.secondHandY, current.secondHandZ);
         secondHand.scale.setScalar(current.secondScale);
         secondHand.visible = current.showSecondHand;
       }
 
       grid.visible = showGridRef.current;
+      if (pivotMarker) {
+        pivotMarker.visible = showPivotRef.current;
+      }
     };
 
     sceneHandlesRef.current = { syncConfig, resetView };
@@ -238,15 +326,20 @@ function ClockCanvas({
         }
 
         clockModel = clock.scene;
+        pendulum = extractClockPendulum(clockModel);
         const clockBox = new THREE.Box3().setFromObject(clockModel);
         clockModelBaseHeight = clockBox.getSize(new THREE.Vector3()).y || 1;
-        const clockCenter = clockBox.getCenter(new THREE.Vector3());
-        clockModel.position.sub(clockCenter);
+        clockBox.getCenter(clockModelBaseCenter);
+        if (pendulum) {
+          pivotMarker = createPivotMarker(geometries, materials);
+          pivotMarker.visible = showPivotRef.current;
+          pendulum.add(pivotMarker);
+        }
         prepareModel(clockModel);
         modelRoot.add(clockModel);
 
-        hourHand = hour.scene;
-        minuteHand = minute.scene;
+        hourHand = minute.scene;
+        minuteHand = hour.scene;
         secondHand = second.scene;
         [hourHand, minuteHand, secondHand].forEach((hand) => {
           prepareModel(hand);
@@ -322,6 +415,7 @@ function ClockCanvas({
       setHandRotation(hourHand, angles.hour, current.hourRotationOffset);
       setHandRotation(minuteHand, angles.minute, current.minuteRotationOffset);
       setHandRotation(secondHand, angles.second, current.secondRotationOffset);
+      setClockPendulumSwing(pendulum, performance.now() / 1000, current);
       renderer.render(scene, camera);
       animationFrame = window.requestAnimationFrame(animate);
     };
@@ -379,6 +473,7 @@ export function ClockCompositeEditor() {
   const storageReadyRef = useRef(false);
   const [config, setConfig] = useState<ClockCompositeConfig>(defaultClockComposite);
   const [showGrid, setShowGrid] = useState(true);
+  const [showPivot, setShowPivot] = useState(true);
   const [viewResetSignal, setViewResetSignal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -451,6 +546,7 @@ export function ClockCompositeEditor() {
         <ClockCanvas
           config={config}
           showGrid={showGrid}
+          showPivot={showPivot}
           viewResetSignal={viewResetSignal}
           onError={handleError}
         />
@@ -567,12 +663,91 @@ export function ClockCompositeEditor() {
             <RangeControl label="Center X" min={-0.8} max={0.8} step={0.002} value={config.handX} onChange={(value) => updateConfig({ handX: value })} />
             <RangeControl label="Center Y" min={-0.8} max={0.9} step={0.002} value={config.handY} onChange={(value) => updateConfig({ handY: value })} />
             <RangeControl label="Hand Z" min={-0.12} max={0.55} step={0.002} value={config.handZ} onChange={(value) => updateConfig({ handZ: value })} />
+            <RangeControl label="Hour X" min={-0.4} max={0.4} step={0.001} value={config.hourHandX} onChange={(value) => updateConfig({ hourHandX: value })} />
+            <RangeControl label="Hour Y" min={-0.4} max={0.4} step={0.001} value={config.hourHandY} onChange={(value) => updateConfig({ hourHandY: value })} />
+            <RangeControl label="Hour Z" min={-0.3} max={0.45} step={0.001} value={config.hourHandZ} onChange={(value) => updateConfig({ hourHandZ: value })} />
+            <RangeControl label="Minute X" min={-0.4} max={0.4} step={0.001} value={config.minuteHandX} onChange={(value) => updateConfig({ minuteHandX: value })} />
+            <RangeControl label="Minute Y" min={-0.4} max={0.4} step={0.001} value={config.minuteHandY} onChange={(value) => updateConfig({ minuteHandY: value })} />
+            <RangeControl label="Minute Z" min={-0.3} max={0.45} step={0.001} value={config.minuteHandZ} onChange={(value) => updateConfig({ minuteHandZ: value })} />
+            <RangeControl label="Second X" min={-0.4} max={0.4} step={0.001} value={config.secondHandX} onChange={(value) => updateConfig({ secondHandX: value })} />
+            <RangeControl label="Second Y" min={-0.4} max={0.4} step={0.001} value={config.secondHandY} onChange={(value) => updateConfig({ secondHandY: value })} />
+            <RangeControl label="Second Z" min={-0.3} max={0.45} step={0.001} value={config.secondHandZ} onChange={(value) => updateConfig({ secondHandZ: value })} />
             <RangeControl label="Hour Scale" min={0.08} max={1.4} step={0.005} value={config.hourScale} onChange={(value) => updateConfig({ hourScale: value })} />
             <RangeControl label="Minute Scale" min={0.08} max={1.5} step={0.005} value={config.minuteScale} onChange={(value) => updateConfig({ minuteScale: value })} />
             <RangeControl label="Second Scale" min={0.08} max={1.6} step={0.005} value={config.secondScale} onChange={(value) => updateConfig({ secondScale: value })} />
             <RangeControl label="Hour Roll" min={-0.8} max={0.8} step={0.002} value={config.hourRotationOffset} onChange={(value) => updateConfig({ hourRotationOffset: value })} />
             <RangeControl label="Minute Roll" min={-0.8} max={0.8} step={0.002} value={config.minuteRotationOffset} onChange={(value) => updateConfig({ minuteRotationOffset: value })} />
             <RangeControl label="Second Roll" min={-0.8} max={0.8} step={0.002} value={config.secondRotationOffset} onChange={(value) => updateConfig({ secondRotationOffset: value })} />
+          </div>
+
+          <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+            Pendulum
+          </div>
+          <div className="grid min-w-0 grid-cols-2 gap-3">
+            <RangeControl
+              label="Rest Angle"
+              min={-0.6}
+              max={0.6}
+              step={0.002}
+              value={config.pendulumRotationOffset}
+              onChange={(value) => updateConfig({ pendulumRotationOffset: value })}
+            />
+            <RangeControl
+              label="Pivot X"
+              min={-0.12}
+              max={0.12}
+              step={0.001}
+              value={config.pendulumPivotX}
+              onChange={(value) => updateConfig({ pendulumPivotX: value })}
+            />
+            <RangeControl
+              label="Pivot Y"
+              min={-0.18}
+              max={0.18}
+              step={0.001}
+              value={config.pendulumPivotY}
+              onChange={(value) => updateConfig({ pendulumPivotY: value })}
+            />
+            <RangeControl
+              label="Pendulum X"
+              min={-0.12}
+              max={0.12}
+              step={0.001}
+              value={config.pendulumOffsetX}
+              onChange={(value) => updateConfig({ pendulumOffsetX: value })}
+            />
+            <RangeControl
+              label="Pendulum Y"
+              min={-0.18}
+              max={0.18}
+              step={0.001}
+              value={config.pendulumOffsetY}
+              onChange={(value) => updateConfig({ pendulumOffsetY: value })}
+            />
+            <RangeControl
+              label="Swing Width"
+              min={0}
+              max={0.35}
+              step={0.002}
+              value={config.pendulumSwingAmount}
+              onChange={(value) => updateConfig({ pendulumSwingAmount: value })}
+            />
+            <RangeControl
+              label="Swing Speed"
+              min={0}
+              max={1.2}
+              step={0.01}
+              value={config.pendulumSwingSpeed}
+              onChange={(value) => updateConfig({ pendulumSwingSpeed: value })}
+            />
+            <RangeControl
+              label="Swing Inertia"
+              min={0}
+              max={1}
+              step={0.01}
+              value={config.pendulumSwingInertia}
+              onChange={(value) => updateConfig({ pendulumSwingInertia: value })}
+            />
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -582,6 +757,13 @@ export function ClockCompositeEditor() {
               onClick={() => setShowGrid((current) => !current)}
             >
               {showGrid ? "Hide grid" : "Show grid"}
+            </button>
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => setShowPivot((current) => !current)}
+            >
+              {showPivot ? "Hide pivot" : "Show pivot"}
             </button>
             <button
               type="button"

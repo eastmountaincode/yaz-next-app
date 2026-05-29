@@ -28,8 +28,8 @@
       "workSlug": "snoop-ten-til-midnight",
       "maskShape": "rectangle",
       "position": [
-        -1.24,
-        0.78,
+        -0.9,
+        1.6,
         0
       ],
       "width": 1.6,
@@ -42,7 +42,7 @@
         0.035,
         0.015
       ],
-      "wallScale": 1.13,
+      "wallScale": 1.02,
       "clipX": 0.006,
       "clipY": -0.01,
       "clipZ": 0.015,
@@ -53,7 +53,7 @@
       "videoOffsetY": 0,
       "captionOffsetX": 0,
       "captionOffsetY": -0.18,
-      "captionOffsetZ": 0.018,
+      "captionOffsetZ": 0.03,
       "captionScale": 1.24
     },
     {
@@ -90,8 +90,25 @@
       "videoOffsetY": 0,
       "captionOffsetX": 0,
       "captionOffsetY": -0.18,
-      "captionOffsetZ": 0.018,
+      "captionOffsetZ": 0.068,
       "captionScale": 1
+    },
+    {
+      "id": "clock-vintage-wall",
+      "kind": "clock",
+      "label": "Vintage clock",
+      "visible": true,
+      "position": [
+        -3.02,
+        0.78,
+        -0.105
+      ],
+      "rotation": [
+        0,
+        0.038407346410207,
+        -0.001592653589793
+      ],
+      "wallScale": 0.82
     },
     {
       "id": "prop-small-end-table",
