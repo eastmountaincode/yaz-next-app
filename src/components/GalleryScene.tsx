@@ -240,7 +240,14 @@ const LAMP_TOGGLE_ZONE_NAME = "lamp-toggle-zone";
 const SPEAKER_CLICK_ZONE_NAME = "speaker-click-zone";
 const LAMP_TOGGLE_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.68, 0];
 const LAMP_TOGGLE_ZONE_LOCAL_SIZE: VectorTuple = [0.34, 0.64, 0.34];
-const DESKTOP_CAMERA_DISTANCE = 6.81;
+const DESKTOP_CAMERA_DEFAULTS = {
+  distance: 6.81,
+  panX: -0.19,
+  panY: 0.87,
+  yaw: 0,
+  pitch: 0,
+  fov: 43,
+};
 const PHONE_CAMERA_DISTANCE = 11;
 const CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(29.4);
 
@@ -2735,25 +2742,27 @@ function ThreeWallCanvas({
     let startPanX = 0;
     let startPanY = 0;
     let pointerMode: "orbit" | "pan" = "orbit";
-    let targetRotationX = 0;
-    let targetRotationY = 0;
-    let currentPanX = 0;
-    let currentPanY = 0;
-    let targetPanX = 0;
-    let targetPanY = 0;
+    let targetRotationX = DESKTOP_CAMERA_DEFAULTS.pitch;
+    let targetRotationY = DESKTOP_CAMERA_DEFAULTS.yaw;
+    let basePanX = DESKTOP_CAMERA_DEFAULTS.panX;
+    let basePanY = DESKTOP_CAMERA_DEFAULTS.panY;
+    let currentPanX = basePanX;
+    let currentPanY = basePanY;
+    let targetPanX = basePanX;
+    let targetPanY = basePanY;
     let animationFrame = 0;
     let disposed = false;
     let cameraBaseY = 0.32;
-    let baseCameraDistance = DESKTOP_CAMERA_DISTANCE;
+    let baseCameraDistance = DESKTOP_CAMERA_DEFAULTS.distance;
     let targetCameraDistance = baseCameraDistance;
 
     const resetViewTargets = () => {
       pointerIsDown = false;
       pointerMode = "orbit";
-      targetRotationX = 0;
-      targetRotationY = 0;
-      targetPanX = 0;
-      targetPanY = 0;
+      targetRotationX = DESKTOP_CAMERA_DEFAULTS.pitch;
+      targetRotationY = DESKTOP_CAMERA_DEFAULTS.yaw;
+      targetPanX = basePanX;
+      targetPanY = basePanY;
       targetCameraDistance = baseCameraDistance;
     };
 
@@ -2761,13 +2770,17 @@ function ThreeWallCanvas({
       const width = Math.max(1, host.clientWidth);
       const height = Math.max(1, host.clientHeight);
       const isPhone = width < 720;
-      const nextBaseDistance = isPhone ? PHONE_CAMERA_DISTANCE : DESKTOP_CAMERA_DISTANCE;
+      const nextBaseDistance = isPhone
+        ? PHONE_CAMERA_DISTANCE
+        : DESKTOP_CAMERA_DEFAULTS.distance;
+      const nextBasePanX = isPhone ? 0 : DESKTOP_CAMERA_DEFAULTS.panX;
+      const nextBasePanY = isPhone ? 0 : DESKTOP_CAMERA_DEFAULTS.panY;
 
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
       renderer.setSize(width, height, false);
 
       camera.aspect = width / height;
-      camera.fov = isPhone ? 54 : 43;
+      camera.fov = isPhone ? 54 : DESKTOP_CAMERA_DEFAULTS.fov;
       cameraBaseY = isPhone ? 0.1 : 0.32;
       targetCameraDistance = THREE.MathUtils.clamp(
         targetCameraDistance + nextBaseDistance - baseCameraDistance,
@@ -2775,6 +2788,18 @@ function ThreeWallCanvas({
         nextBaseDistance * 5,
       );
       baseCameraDistance = nextBaseDistance;
+      targetPanX = THREE.MathUtils.clamp(
+        targetPanX + nextBasePanX - basePanX,
+        -3.6,
+        3.6,
+      );
+      targetPanY = THREE.MathUtils.clamp(
+        targetPanY + nextBasePanY - basePanY,
+        -2.1,
+        2.1,
+      );
+      basePanX = nextBasePanX;
+      basePanY = nextBasePanY;
       if (!freeOrbitRef.current) {
         resetViewTargets();
       }
@@ -3155,8 +3180,8 @@ function ThreeWallCanvas({
     let lastCameraInfoReport = 0;
     const animate = () => {
       if (!freeOrbitRef.current) {
-        targetPanX = 0;
-        targetPanY = 0;
+        targetPanX = basePanX;
+        targetPanY = basePanY;
         targetCameraDistance = baseCameraDistance;
       }
 
