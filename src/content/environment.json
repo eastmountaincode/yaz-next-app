@@ -28,8 +28,8 @@
       "workSlug": "dani-offline-angel",
       "maskShape": "rectangle",
       "position": [
-        0,
-        0.12,
+        -0.16,
+        1.04,
         -0.02
       ],
       "width": 2.3,
@@ -42,7 +42,7 @@
         0.008407346410207,
         0.008407346410207
       ],
-      "wallScale": 1.55,
+      "wallScale": 1.24,
       "clipX": 0.011,
       "clipY": -0.026,
       "clipZ": -0.01,
@@ -55,6 +55,42 @@
       "captionOffsetY": -0.13,
       "captionOffsetZ": 0.146,
       "captionScale": 2.03
+    },
+    {
+      "id": "candle-holder-composite",
+      "kind": "candle-composite",
+      "label": "Candle holder",
+      "visible": true,
+      "position": [
+        1.48,
+        0.14,
+        0.065
+      ],
+      "rotation": [
+        -0.011592653589793,
+        0.028407346410207,
+        -0.001592653589793
+      ],
+      "wallScale": 0.92,
+      "holderModel": "/3d-models/candle-and-holder/holder.glb",
+      "candleModel": "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
+      "flameTexture": "/3d-models/candle-and-holder/candleflame_atlas.png",
+      "candleOffset": [
+        0,
+        0.015,
+        0.05
+      ],
+      "candleScale": 0.58,
+      "flameOffset": [
+        0,
+        0.61,
+        0.05
+      ],
+      "flameScale": 0.065,
+      "flameOpacity": 0.92,
+      "flameLightColor": "#ffb86b",
+      "flameLightIntensity": 0.1,
+      "flameLightDistance": 4
     }
   ]
 }
