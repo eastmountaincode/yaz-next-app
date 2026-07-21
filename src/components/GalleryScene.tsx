@@ -193,10 +193,6 @@ const STORAGE_KEY = "yaz-environment-editor-v4";
 const LIGHTING_STORAGE_KEY = "yaz-environment-lighting-v1";
 const FRAME_STORAGE_KEY = "yaz-frame-editor-v3";
 const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
-const DEFAULT_LAMP_LIGHT_MIGRATION_KEY = "yaz-default-lamp-light-added-v1";
-const DEFAULT_LAMP_HITBOX_MIGRATION_KEY = "yaz-default-lamp-hitbox-added-v1";
-const DEFAULT_BIO_FRAME_MIGRATION_KEY = "yaz-default-bio-frame-added-v1";
-const DEFAULT_FAMILY_FRAME_MIGRATION_KEY = "yaz-default-family-frame-added-v1";
 const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v3";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
 const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v1";
@@ -439,7 +435,6 @@ const propModels = [
 ];
 
 const deprecatedPropModelIds = new Set(["table-lamp"]);
-const requiredDefaultPropModelIds = new Set(["victorian-bed"]);
 
 type SavedCompositeConfig = Partial<{
   id: string;
@@ -782,44 +777,45 @@ function createSpeakerCompositeSetting(
 }
 
 const defaultSceneSettings = [
-  createFrameSetting(0),
-  createFrameSetting(1),
-  createBioFrameSetting(2),
-  createImageFrameSetting(3),
-  createModelSetting("victorian-bed", {
-    id: "prop-victorian-bed",
-  }),
-  createModelSetting("small-end-table", {
-    id: "prop-small-end-table",
-  }),
-  createLightSetting({
-    id: "light-table-lamp",
-    label: "Lamp light source",
-  }),
-  createHitboxSetting({
-    id: "hitbox-lamp-toggle",
-  }),
-  createClockSetting({
-    id: "clock-vintage-wall",
-  }),
-  createCandleCompositeSetting({
-    id: "candle-holder-composite",
-  }),
-  createSpeakerCompositeSetting({
-    id: "speaker-composite",
+  createFrameSetting(0, {
+    id: "frame-02",
+    label: "Director reel",
+    model: "/3d-models/frames/vintage_frame_06.glb",
+    workSlug: "dani-offline-angel",
+    maskShape: "rectangle",
+    position: [0, 0.12, -0.02],
+    width: 2.3,
+    height: 2.34,
+    frameRotationX: -0.001592653589793,
+    frameRotationY: -0.001592653589793,
+    frameRotationZ: -1.57159265358979,
+    rotation: [0, 0.008407346410207, 0.008407346410207],
+    wallScale: 1.55,
+    clipX: 0.011,
+    clipY: -0.026,
+    clipZ: -0.01,
+    clipWidth: 2.789,
+    clipHeight: 1.9290039032006248,
+    videoScale: 1.25,
+    videoOffsetX: 0.12,
+    videoOffsetY: 0.06,
+    captionOffsetX: 0,
+    captionOffsetY: -0.13,
+    captionOffsetZ: 0.146,
+    captionScale: 2.03,
   }),
 ] satisfies SceneObjectSetting[];
 
 const defaultSceneLighting: SceneLighting = {
-  ambientColor: "#7f715c",
-  ambientIntensity: 0.82,
-  keyColor: "#d7a46e",
-  keyIntensity: 1.25,
-  keyPosition: [-3.8, 4.2, 5.6],
-  fillColor: "#485066",
-  fillIntensity: 1.1,
+  ambientColor: "#aa9f8d",
+  ambientIntensity: 2.2,
+  keyColor: "#c4ad97",
+  keyIntensity: 3.45,
+  keyPosition: [0.05, 3.05, 2.7],
+  fillColor: "#6a7595",
+  fillIntensity: 3.85,
   fillPosition: [4.2, 2.1, 3.6],
-  exposure: 0.82,
+  exposure: 1.06,
 };
 
 function normalizeVectorTuple(
@@ -1210,7 +1206,7 @@ function createFrame(
   videoMesh.userData.sceneObjectId = setting.id;
   group.add(videoMesh);
 
-  if (captionPlacement === "frame") {
+  if (captionPlacement === "frame" && setting.label !== "Director reel") {
     const captionMesh = createFrameCaptionMesh(
       setting,
       work.artist,
@@ -3346,22 +3342,7 @@ function ThreeWallCanvas({
   return <div ref={hostRef} className="absolute inset-0" />;
 }
 
-function normalizeSceneSettings(
-  parsed: Partial<SceneObjectSetting>[] | undefined,
-  {
-    includeLegacyDefaults = false,
-    addDefaultLampLight = false,
-    addDefaultLampHitbox = false,
-    markLampLightMigration = false,
-    markLampHitboxMigration = false,
-  }: {
-    includeLegacyDefaults?: boolean;
-    addDefaultLampLight?: boolean;
-    addDefaultLampHitbox?: boolean;
-    markLampLightMigration?: boolean;
-    markLampHitboxMigration?: boolean;
-  } = {},
-) {
+function normalizeSceneSettings(parsed: Partial<SceneObjectSetting>[] | undefined) {
   if (!Array.isArray(parsed) || parsed.length === 0) {
     return defaultSceneSettings;
   }
@@ -3406,103 +3387,7 @@ function normalizeSceneSettings(
     return createFrameSetting(index, setting as Partial<FrameSetting>);
   });
 
-  const existingCatalogIds = new Set(
-    migrated
-      .filter((setting): setting is ModelSetting => setting.kind === "model")
-      .map((setting) => setting.catalogId),
-  );
-  const missingDefaultModels = defaultSceneSettings.filter(
-    (setting): setting is ModelSetting =>
-      setting.kind === "model" &&
-      !existingCatalogIds.has(setting.catalogId) &&
-      (includeLegacyDefaults || requiredDefaultPropModelIds.has(setting.catalogId)),
-  );
-  const hasLightSource = migrated.some((setting) => setting.kind === "light");
-  const shouldAddDefaultLampLight = !hasLightSource && addDefaultLampLight;
-  const missingDefaultLights = shouldAddDefaultLampLight
-    ? defaultSceneSettings.filter((setting): setting is LightSetting => setting.kind === "light")
-    : [];
-  const hasLampHitbox = migrated.some(
-    (setting) => setting.kind === "hitbox" && setting.action === "toggle-nearest-light",
-  );
-  const lampAnchor =
-    migrated.find(
-      (setting): setting is ModelSetting =>
-        setting.kind === "model" && setting.catalogId === "small-end-table",
-    ) ??
-    defaultSceneSettings.find(
-      (setting): setting is ModelSetting =>
-        setting.kind === "model" && setting.catalogId === "small-end-table",
-    );
-  const missingDefaultHitboxes =
-    !hasLampHitbox && addDefaultLampHitbox && lampAnchor
-      ? [
-          createHitboxSetting({
-            id: "hitbox-lamp-toggle",
-            ...lampHitboxPlacementFromModel(lampAnchor),
-          }),
-        ]
-      : [];
-  const hasBioFrame = migrated.some((setting) => setting.kind === "bio-frame");
-  const hasFamilyFrame = migrated.some(
-    (setting) => setting.kind === "image-frame" && setting.id === "family-portrait-frame",
-  );
-  const shouldAddDefaultBioFrame =
-    !hasBioFrame &&
-    (includeLegacyDefaults ||
-      typeof window === "undefined" ||
-      window.localStorage.getItem(DEFAULT_BIO_FRAME_MIGRATION_KEY) !== "1");
-  const missingDefaultBioFrames = shouldAddDefaultBioFrame
-    ? defaultSceneSettings.filter(
-        (setting): setting is BioFrameSetting => setting.kind === "bio-frame",
-      )
-    : [];
-  const shouldAddDefaultFamilyFrame =
-    !hasFamilyFrame &&
-    (includeLegacyDefaults ||
-      typeof window === "undefined" ||
-      window.localStorage.getItem(DEFAULT_FAMILY_FRAME_MIGRATION_KEY) !== "1");
-  const missingDefaultFamilyFrames = shouldAddDefaultFamilyFrame
-    ? defaultSceneSettings.filter(
-        (setting): setting is ImageFrameSetting =>
-          setting.kind === "image-frame" && setting.id === "family-portrait-frame",
-      )
-    : [];
-
-  if (shouldAddDefaultLampLight && markLampLightMigration && typeof window !== "undefined") {
-    window.localStorage.setItem(DEFAULT_LAMP_LIGHT_MIGRATION_KEY, "1");
-  }
-
-  if (
-    (hasLampHitbox || missingDefaultHitboxes.length > 0) &&
-    markLampHitboxMigration &&
-    typeof window !== "undefined"
-  ) {
-    window.localStorage.setItem(DEFAULT_LAMP_HITBOX_MIGRATION_KEY, "1");
-  }
-
-  if (
-    (hasBioFrame || missingDefaultBioFrames.length > 0) &&
-    typeof window !== "undefined"
-  ) {
-    window.localStorage.setItem(DEFAULT_BIO_FRAME_MIGRATION_KEY, "1");
-  }
-
-  if (
-    (hasFamilyFrame || missingDefaultFamilyFrames.length > 0) &&
-    typeof window !== "undefined"
-  ) {
-    window.localStorage.setItem(DEFAULT_FAMILY_FRAME_MIGRATION_KEY, "1");
-  }
-
-  return [
-    ...migrated,
-    ...missingDefaultModels,
-    ...missingDefaultLights,
-    ...missingDefaultHitboxes,
-    ...missingDefaultBioFrames,
-    ...missingDefaultFamilyFrames,
-  ];
+  return migrated;
 }
 
 function readStoredSettings() {
@@ -3518,20 +3403,7 @@ function readStoredSettings() {
     return defaultSceneSettings;
   }
 
-  const shouldAddDefaultLampLight =
-    Boolean(frameStored || legacyStored) ||
-    (Boolean(stored) && window.localStorage.getItem(DEFAULT_LAMP_LIGHT_MIGRATION_KEY) !== "1");
-  const shouldAddDefaultLampHitbox =
-    Boolean(frameStored || legacyStored) ||
-    (Boolean(stored) && window.localStorage.getItem(DEFAULT_LAMP_HITBOX_MIGRATION_KEY) !== "1");
-
-  return normalizeSceneSettings(JSON.parse(storedValue) as Partial<SceneObjectSetting>[], {
-    includeLegacyDefaults: Boolean(frameStored || legacyStored),
-    addDefaultLampLight: shouldAddDefaultLampLight,
-    addDefaultLampHitbox: shouldAddDefaultLampHitbox,
-    markLampLightMigration: true,
-    markLampHitboxMigration: true,
-  });
+  return normalizeSceneSettings(JSON.parse(storedValue) as Partial<SceneObjectSetting>[]);
 }
 
 function readStoredLighting() {
@@ -3556,15 +3428,8 @@ async function readPersistedEnvironment(): Promise<{
     const response = await fetch("/api/environment", { cache: "no-store" });
     if (response.ok) {
       const environment = (await response.json()) as StoredEnvironment;
-      const shouldAddDefaultLampHitbox =
-        typeof window === "undefined" ||
-        window.localStorage.getItem(DEFAULT_LAMP_HITBOX_MIGRATION_KEY) !== "1";
       return {
-        settings: normalizeSceneSettings(environment.objects, {
-          addDefaultLampLight: true,
-          addDefaultLampHitbox: shouldAddDefaultLampHitbox,
-          markLampHitboxMigration: true,
-        }),
+        settings: normalizeSceneSettings(environment.objects),
         lighting: normalizeSceneLighting(environment.lighting),
       };
     }

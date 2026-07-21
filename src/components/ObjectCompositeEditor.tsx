@@ -166,14 +166,26 @@ const defaultFamilyComposite: CompositeConfig = {
 };
 
 const defaultComposites = [
-  defaultComposite,
-  normalizeComposite({
+  {
     ...defaultComposite,
-    id: "composite-02",
-    workSlug: works[1]?.slug ?? defaultComposite.workSlug,
-  }),
-  defaultBioComposite,
-  defaultFamilyComposite,
+    id: "frame-02",
+    model: "/3d-models/frames/vintage_frame_06.glb",
+    workSlug: "dani-offline-angel",
+    frameWidth: 2.3,
+    frameHeight: 2.34,
+    frameRotationX: -0.001592653589793,
+    frameRotationY: -0.001592653589793,
+    frameRotationZ: -1.57159265358979,
+    videoX: 0.011,
+    videoY: -0.026,
+    videoZ: -0.01,
+    videoWidth: 2.789,
+    videoHeight: 1.9290039032006248,
+    videoAspect: 1.445823927765237,
+    videoZoom: 1.25,
+    cropX: 0.12,
+    cropY: 0.06,
+  },
 ] satisfies CompositeConfig[];
 
 type SceneFrameSetting = {
@@ -259,37 +271,7 @@ function readStoredComposites() {
 }
 
 function ensureDefaultCompositeCount(composites: CompositeConfig[]) {
-  if (composites.length === 0) {
-    return defaultComposites;
-  }
-
-  const hasVideoComposite = composites.some((composite) => composite.kind === "video-frame");
-  const hasBioComposite = composites.some((composite) => composite.kind === "bio-frame");
-  const hasFamilyComposite = composites.some(
-    (composite) => composite.kind === "image-frame" && composite.id === defaultFamilyComposite.id,
-  );
-  const missingDefaults: CompositeConfig[] = [];
-
-  if (!hasVideoComposite) {
-    missingDefaults.push(
-      defaultComposite,
-      normalizeComposite({
-        ...defaultComposite,
-        id: "composite-02",
-        workSlug: works[1]?.slug ?? defaultComposite.workSlug,
-      }),
-    );
-  }
-
-  if (!hasBioComposite) {
-    missingDefaults.push(defaultBioComposite);
-  }
-
-  if (!hasFamilyComposite) {
-    missingDefaults.push(defaultFamilyComposite);
-  }
-
-  return [...composites, ...missingDefaults];
+  return composites.length > 0 ? composites : defaultComposites;
 }
 
 function mergeCompositeLists(
@@ -1201,8 +1183,7 @@ export function ObjectCompositeEditor() {
           }
           const loaded = (await response.json()) as Partial<CompositeConfig>[];
           const loadedComposites = ensureDefaultCompositeCount(loaded.map(normalizeComposite));
-          const sceneComposites = readSceneFrameComposites();
-          setComposites(mergeCompositeLists(loadedComposites, sceneComposites));
+          setComposites(loadedComposites);
         } catch (nextError) {
           try {
             const sceneComposites = readSceneFrameComposites();
