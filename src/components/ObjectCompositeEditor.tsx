@@ -5,6 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import {
+  bioFramePicture,
+  familyFramePicture,
+  framePictures,
+} from "@/content/framePictures";
 import { works } from "@/content/works";
 
 type MaskShape = "rectangle" | "oval";
@@ -43,10 +48,10 @@ const LEGACY_FRAME_STORAGE_KEY = "yaz-frame-editor-v2";
 const FRAME_ROTATION_LIMIT = Math.PI;
 const PREVIEW_YAW_LIMIT = Math.PI;
 const PREVIEW_PITCH_LIMIT = Math.PI / 2;
-const BIO_FRAME_IMAGE_PATH = "/image/yaz_headshot.jpeg";
-const BIO_IMAGE_ASPECT = 2023 / 3051;
-const FAMILY_FRAME_IMAGE_PATH = "/image/family_portrait.jpg";
-const FAMILY_IMAGE_ASPECT = 1206 / 826;
+const BIO_FRAME_IMAGE_PATH = bioFramePicture.src;
+const BIO_IMAGE_ASPECT = bioFramePicture.aspect;
+const FAMILY_FRAME_IMAGE_PATH = familyFramePicture.src;
+const FAMILY_IMAGE_ASPECT = familyFramePicture.aspect;
 
 const frameModels = [
   "/3d-models/frames/picture_frame_1520_dimensions.glb",
@@ -120,11 +125,11 @@ const defaultBioComposite: CompositeConfig = {
   ...defaultComposite,
   id: "bio-yaslynn-frame",
   kind: "bio-frame",
-  model: "/3d-models/frames/gold_picture_frame_2026_05_31_optimized.glb",
+  model: "/3d-models/frames/vintage_frame_06.glb",
   workSlug: works[0]?.slug ?? "",
   imageSrc: BIO_FRAME_IMAGE_PATH,
   bioSlug: "yaslynn",
-  captionText: "Yaslynn Rivera: Bio",
+  captionText: bioFramePicture.defaultCaption,
   frameWidth: 1.42,
   frameHeight: 2.02,
   frameRotationX: 0,
@@ -133,8 +138,8 @@ const defaultBioComposite: CompositeConfig = {
   videoX: 0,
   videoY: 0,
   videoZ: 0.09,
-  videoWidth: 0.94,
-  videoHeight: 0.94 / BIO_IMAGE_ASPECT,
+  videoWidth: 0.82,
+  videoHeight: 0.82 / BIO_IMAGE_ASPECT,
   videoAspect: BIO_IMAGE_ASPECT,
   videoZoom: 1,
   cropX: 0,
@@ -1288,6 +1293,40 @@ export function ObjectCompositeEditor() {
     setViewResetSignal((current) => current + 1);
   };
 
+  const addComposite = (kind: "video-frame" | "bio-frame") => {
+    const nextIndex = composites.length;
+    const nextComposite = normalizeComposite({
+      ...(kind === "bio-frame" ? defaultBioComposite : defaultComposite),
+      id: `${kind === "bio-frame" ? "picture" : "video"}-${Date.now().toString(36)}`,
+      workSlug:
+        kind === "video-frame"
+          ? works[nextIndex % Math.max(works.length, 1)]?.slug ?? defaultComposite.workSlug
+          : defaultBioComposite.workSlug,
+    });
+
+    setError(null);
+    setSaveStatus(null);
+    setComposites((current) => [...current, nextComposite]);
+    setSelectedComposite(nextIndex);
+    setViewResetSignal((current) => current + 1);
+  };
+
+  const selectPicture = (imageSrc: string) => {
+    const picture = framePictures.find((candidate) => candidate.src === imageSrc);
+    if (!picture) {
+      return;
+    }
+
+    updateConfig({
+      kind: picture.kind,
+      imageSrc: picture.src,
+      bioSlug: picture.bioSlug,
+      captionText: picture.defaultCaption,
+      videoAspect: picture.aspect,
+      videoHeight: formatNumber(config.videoWidth / picture.aspect),
+    });
+  };
+
   const resetComposite = () => {
     setError(null);
     setSaveStatus(null);
@@ -1365,6 +1404,7 @@ export function ObjectCompositeEditor() {
                     <span className="relative block h-12 w-full overflow-hidden rounded bg-black/35">
                       <Image
                         fill
+                        unoptimized
                         className="object-cover object-top"
                         src={composite.imageSrc || (composite.kind === "bio-frame" ? BIO_FRAME_IMAGE_PATH : FAMILY_FRAME_IMAGE_PATH)}
                         alt=""
@@ -1419,6 +1459,23 @@ export function ObjectCompositeEditor() {
             </button>
           </div>
 
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addComposite("video-frame")}
+            >
+              Add video
+            </button>
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addComposite("bio-frame")}
+            >
+              Add picture
+            </button>
+          </div>
+
           <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
             Frame model
             <select
@@ -1446,13 +1503,19 @@ export function ObjectCompositeEditor() {
           ) : null}
 
           <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
-            {isImageComposite ? "Image" : "Clip"}
+            {isImageComposite ? "Picture" : "Clip"}
             {isImageComposite ? (
-              <input
+              <select
                 className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
                 value={config.imageSrc || (config.kind === "bio-frame" ? BIO_FRAME_IMAGE_PATH : FAMILY_FRAME_IMAGE_PATH)}
-                onChange={(event) => updateConfig({ imageSrc: event.target.value })}
-              />
+                onChange={(event) => selectPicture(event.target.value)}
+              >
+                {framePictures.map((picture) => (
+                  <option key={picture.id} value={picture.src}>
+                    {picture.label}
+                  </option>
+                ))}
+              </select>
             ) : (
               <select
                 className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
