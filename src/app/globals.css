@@ -1,6 +1,30 @@
 @import "tailwindcss";
 
 @font-face {
+  font-family: "Yaz Sobria";
+  src:
+    url("/fonts/Sobria-Regular.ttf") format("truetype"),
+    local("Sobria"),
+    local("Sobria Regular"),
+    local("Sobria-Regular");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Yaz Sato";
+  src:
+    url("/fonts/Sato-Regular.ttf") format("truetype"),
+    local("Sato"),
+    local("Sato Regular"),
+    local("Sato-Regular");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
   font-family: "Yaz Brik";
   src:
     url("/fonts/Brik-Regular.ttf") format("truetype"),

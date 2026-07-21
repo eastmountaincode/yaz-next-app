@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Box,
   Clock,
   CircleHelp,
   Eye,
   EyeOff,
+  ExternalLink,
+  Flame,
   Lightbulb,
+  Play,
   Lock,
   Plus,
   RotateCcw,
@@ -24,7 +28,8 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import savedClockComposite from "@/content/clock.json";
 import savedComposites from "@/content/composites.json";
-import { works, type WorkItem } from "@/content/works";
+import { works, yaslynnBio, type WorkItem } from "@/content/works";
+import { candleFlameAtlas } from "@/lib/candleComposite";
 import {
   ClockCompositeConfig,
   clockHandAngles,
@@ -38,8 +43,18 @@ import {
 } from "@/lib/clockPendulum";
 
 type MaskShape = "rectangle" | "oval";
-type ObjectKind = "frame" | "model" | "light" | "clock" | "hitbox";
+type ObjectKind =
+  | "frame"
+  | "bio-frame"
+  | "image-frame"
+  | "model"
+  | "light"
+  | "clock"
+  | "hitbox"
+  | "candle-composite"
+  | "speaker-composite";
 type VectorTuple = [number, number, number];
+type ClickZoneAction = "toggle-nearest-light" | "speaker-click";
 
 type BaseObjectSetting = {
   id: string;
@@ -75,6 +90,25 @@ type FrameSetting = BaseObjectSetting & {
   captionScale: number;
 };
 
+type BioFrameSetting = Omit<FrameSetting, "kind" | "workSlug"> & {
+  kind: "bio-frame";
+  imageSrc: string;
+  bioSlug: "yaslynn";
+  captionText: string;
+};
+
+type ImageFrameSetting = Omit<FrameSetting, "kind" | "workSlug"> & {
+  kind: "image-frame";
+  imageSrc: string;
+  captionText: string;
+  imageTintColor: string;
+  imageTintStrength: number;
+  imageHazeColor: string;
+  imageHazeOpacity: number;
+};
+
+type FrameLikeSetting = FrameSetting | BioFrameSetting | ImageFrameSetting;
+
 type ModelSetting = BaseObjectSetting & {
   kind: "model";
   model: string;
@@ -96,10 +130,42 @@ type LightSetting = BaseObjectSetting & {
 
 type HitboxSetting = BaseObjectSetting & {
   kind: "hitbox";
-  action: "toggle-nearest-light";
+  action: ClickZoneAction;
 };
 
-type SceneObjectSetting = FrameSetting | ModelSetting | ClockSetting | LightSetting | HitboxSetting;
+type CandleCompositeSetting = BaseObjectSetting & {
+  kind: "candle-composite";
+  holderModel: string;
+  candleModel: string;
+  flameTexture: string;
+  candleOffset: VectorTuple;
+  candleScale: number;
+  flameOffset: VectorTuple;
+  flameScale: number;
+  flameOpacity: number;
+  flameLightColor: string;
+  flameLightIntensity: number;
+  flameLightDistance: number;
+};
+
+type SpeakerCompositeSetting = BaseObjectSetting & {
+  kind: "speaker-composite";
+  speakerModel: string;
+  hitboxOffset: VectorTuple;
+  hitboxSize: VectorTuple;
+  action: "speaker-click";
+};
+
+type SceneObjectSetting =
+  | FrameSetting
+  | BioFrameSetting
+  | ImageFrameSetting
+  | ModelSetting
+  | ClockSetting
+  | LightSetting
+  | HitboxSetting
+  | CandleCompositeSetting
+  | SpeakerCompositeSetting;
 
 type SceneLighting = {
   ambientColor: string;
@@ -118,14 +184,18 @@ type StoredEnvironment = {
   objects?: Partial<SceneObjectSetting>[];
 };
 
+type SpeakerAudioChain = {
+  context: AudioContext;
+  element: HTMLAudioElement;
+};
+
 const STORAGE_KEY = "yaz-environment-editor-v4";
 const LIGHTING_STORAGE_KEY = "yaz-environment-lighting-v1";
 const FRAME_STORAGE_KEY = "yaz-frame-editor-v3";
 const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
-const DEFAULT_LAMP_LIGHT_MIGRATION_KEY = "yaz-default-lamp-light-added-v1";
-const DEFAULT_LAMP_HITBOX_MIGRATION_KEY = "yaz-default-lamp-hitbox-added-v1";
-const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v1";
+const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v3";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
+const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v1";
 const MODEL_FLOOR_Y = -2.88;
 const OBJECT_ROTATION_LIMIT = Math.PI;
 const ENVIRONMENT_WIDTH = 18;
@@ -137,6 +207,8 @@ const FLOOR_COLOR_PATH = "/textures/floor/floor_color.webp";
 const FLOOR_NORMAL_PATH = "/textures/floor/floor_normal.webp";
 const FLOOR_ROUGHNESS_PATH = "/textures/floor/floor_roughness.webp";
 const BASEBOARD_MODEL_PATH = "/3d-models/beaded_baseboard_4_plaster_texture.glb";
+const BIO_FRAME_IMAGE_PATH = "/image/yaz_headshot.jpeg";
+const FAMILY_FRAME_IMAGE_PATH = "/image/family_portrait.jpg";
 // One texture tile covers this many world units. Smaller value = planks repeat
 // more often. The Poly Haven "old_wooden_floor_03" image shows roughly a 1 m
 // patch with a few planks running along U.
@@ -155,15 +227,48 @@ const BASEBOARD_HEIGHT = 0.16;
 const BASEBOARD_BOTTOM_Y = FLOOR_TOP_Y + 0.012;
 const BASEBOARD_WIDTH_OVERHANG = 0.8;
 const BASEBOARD_WALL_OFFSET = 0.006;
+const CANDLE_HOLDER_MODEL_PATH = "/3d-models/candle-and-holder/holder.glb";
+const CANDLE_MODEL_PATH = "/3d-models/candle-and-holder/candle_no_flame_shorter.glb";
+const CANDLE_FLAME_TEXTURE_PATH = "/3d-models/candle-and-holder/candleflame_atlas.png";
+const SPEAKER_MODEL_PATH = "/3d-models/decor/portable_bluetooth_speaker.glb";
+const SPEAKER_MUSIC_AUDIO_PATH = "/audio/speaker-radio-track.mp3";
+const SPEAKER_BUTTON_AUDIO_PATH = "/audio/dragon-studio-button-press-2.mp3";
+const SPEAKER_AUDIO_START_SECONDS = 30;
+const LAMP_SWITCH_ON_AUDIO_PATH = "/audio/lamp-switch-on.mp3";
+const LAMP_SWITCH_OFF_AUDIO_PATH = "/audio/lamp-switch-off.mp3";
 const LAMP_TOGGLE_ZONE_NAME = "lamp-toggle-zone";
+const SPEAKER_CLICK_ZONE_NAME = "speaker-click-zone";
 const LAMP_TOGGLE_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.68, 0];
 const LAMP_TOGGLE_ZONE_LOCAL_SIZE: VectorTuple = [0.34, 0.64, 0.34];
-const DESKTOP_CAMERA_DISTANCE = 6.81;
-const PHONE_CAMERA_DISTANCE = 11;
+const DESKTOP_CAMERA_DEFAULTS = {
+  distance: 6.81,
+  panX: -0.19,
+  panY: 1,
+  yaw: 0,
+  pitch: 0,
+  fov: 43,
+};
+const MOBILE_CAMERA_DEFAULTS = {
+  distance: 8.51,
+  panX: -0.17,
+  panY: 0.85,
+  yaw: 0,
+  pitch: 0,
+  fov: 54,
+};
 const CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(29.4);
 
-type CaptionFontId = "brik" | "zoom-pro" | "modestia-ultra" | "zafrada" | "puyita";
+type CaptionFontId =
+  | "sobria"
+  | "sato"
+  | "helvetica"
+  | "brik"
+  | "zoom-pro"
+  | "modestia-ultra"
+    | "zafrada"
+    | "puyita";
 type CaptionPlacementId = "corner" | "frame";
+type CaptionDisplayMode = "always" | "hover";
 type FrameHoverInfo = {
   workSlug: string;
 };
@@ -175,6 +280,24 @@ type CaptionFontOption = {
 };
 
 const captionFontOptions: CaptionFontOption[] = [
+  {
+    id: "sobria",
+    label: "Sobria",
+    fontFamily: '"Yaz Sobria", Sobria, serif',
+    fontWeight: 400,
+  },
+  {
+    id: "sato",
+    label: "Sato",
+    fontFamily: '"Yaz Sato", Sato, sans-serif',
+    fontWeight: 400,
+  },
+  {
+    id: "helvetica",
+    label: "Helvetica",
+    fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif',
+    fontWeight: 400,
+  },
   {
     id: "brik",
     label: "BRIK",
@@ -208,16 +331,25 @@ const captionFontOptions: CaptionFontOption[] = [
 ];
 
 function normalizeCaptionFontId(value: string | null | undefined): CaptionFontId {
-  return value === "zoom-pro" ||
+  return value === "sobria" ||
+    value === "sato" ||
+    value === "helvetica" ||
+    value === "brik" ||
+    value === "zoom-pro" ||
     value === "modestia-ultra" ||
     value === "zafrada" ||
     value === "puyita"
     ? value
-    : "brik";
+    : "sobria";
 }
 
 function normalizeCaptionPlacementId(value: string | null | undefined): CaptionPlacementId {
-  return value === "corner" ? "corner" : "frame";
+  void value;
+  return "frame";
+}
+
+function normalizeCaptionDisplayMode(value: string | null | undefined): CaptionDisplayMode {
+  return value === "hover" ? "hover" : "always";
 }
 
 const frameModels = [
@@ -226,7 +358,20 @@ const frameModels = [
   "/3d-models/frames/picture_frame_2.glb",
   "/3d-models/frames/fancy_picture_frame_01-freepoly.org.glb",
   "/3d-models/frames/picture_frame.glb",
+  "/3d-models/frames/picture_frame_2026_07_21_optimized.glb",
+  "/3d-models/frames/backrooms_ff2_painting_bacteria_room_2026_07_21_optimized.glb",
+  "/3d-models/frames/thick_simple_picture_frame_2026_07_21_optimized.glb",
   "/3d-models/frames/vintage_picture_frame..glb",
+  "/3d-models/frames/wooden_picture_frame_2026_05_31_optimized.glb",
+  "/3d-models/frames/new_frame_default_2026_05_31_pbr.glb",
+  "/3d-models/frames/vintage_frame_04.glb",
+  "/3d-models/frames/vintage_frame_06.glb",
+  "/3d-models/frames/photo_frame_with_mat_2026_05_31.glb",
+  "/3d-models/frames/photo_frame_with_mat_wider_2026_05_31.glb",
+  "/3d-models/frames/red_cardinal_snowing_in_winter.glb",
+  "/3d-models/frames/thin_brass_2026_05_31.glb",
+  "/3d-models/frames/old_soviet_paints_first.glb",
+  "/3d-models/frames/old_soviet_paints_second.glb",
 ];
 
 const propModels = [
@@ -254,12 +399,98 @@ const propModels = [
     rotation: [0, -0.2, 0] as VectorTuple,
     height: 1.35,
   },
+  {
+    id: "flor-de-maga-potted",
+    label: "Flor de Maga potted plant",
+    model: "/3d-models/plants/flor_de_maga_potted_optimized.glb",
+    position: [2.32, MODEL_FLOOR_Y, 0.88] as VectorTuple,
+    rotation: [0, -0.36, 0] as VectorTuple,
+    height: 1.28,
+  },
+  {
+    id: "egyptian-princess-v2",
+    label: "Egyptian princess",
+    model: "/3d-models/meshy/egyptian_princess_v2.glb",
+    position: [2.58, MODEL_FLOOR_Y, 0.92] as VectorTuple,
+    rotation: [0, -0.24, 0] as VectorTuple,
+    height: 1.18,
+  },
+  {
+    id: "human",
+    label: "Reference human",
+    model: "/3d-models/humans/human_optimized.glb",
+    position: [0.68, MODEL_FLOOR_Y, 0.9] as VectorTuple,
+    rotation: [0, 0, 0] as VectorTuple,
+    height: 1.72,
+  },
+  {
+    id: "wooden-cross",
+    label: "Wooden Cross",
+    model: "/3d-models/decor/wooden_cross.glb",
+    position: [3.18, 0.82, 0.04] as VectorTuple,
+    rotation: [0, 0, 0] as VectorTuple,
+    height: 1.1,
+  },
+  {
+    id: "thin-christ",
+    label: "Thin Christ",
+    model: "/3d-models/decor/thin_christ.glb",
+    position: [-1.52, 0.56, 0.03] as VectorTuple,
+    rotation: [0, 0, 0] as VectorTuple,
+    height: 0.9,
+  },
+  {
+    id: "directors-chair",
+    label: "Director's chair",
+    model: "/3d-models/decor/directors_chair.glb",
+    position: [-3.05, MODEL_FLOOR_Y, 0.95] as VectorTuple,
+    rotation: [0, 0.35, 0] as VectorTuple,
+    height: 1.15,
+  },
 ];
 
 const deprecatedPropModelIds = new Set(["table-lamp"]);
-const requiredDefaultPropModelIds = new Set(["victorian-bed"]);
 
-const firstSavedComposite = savedComposites[0];
+type SavedCompositeConfig = Partial<{
+  id: string;
+  kind: string;
+  model: string;
+  workSlug: string;
+  imageSrc: string;
+  bioSlug: "yaslynn";
+  captionText: string;
+  maskShape: string;
+  frameWidth: number;
+  frameHeight: number;
+  frameRotationX: number;
+  frameRotationY: number;
+  frameRotationZ: number;
+  videoX: number;
+  videoY: number;
+  videoZ: number;
+  videoWidth: number;
+  videoHeight: number;
+  videoZoom: number;
+  cropX: number;
+  cropY: number;
+  imageTintColor: string;
+  imageTintStrength: number;
+  imageHazeColor: string;
+  imageHazeOpacity: number;
+}>;
+
+const savedCompositeEntries = savedComposites as SavedCompositeConfig[];
+const firstSavedComposite =
+  savedCompositeEntries.find(
+    (composite) => composite.kind !== "bio-frame" && composite.kind !== "image-frame",
+  ) ??
+  savedCompositeEntries[0];
+const savedBioComposite = savedCompositeEntries.find(
+  (composite) => composite.kind === "bio-frame" || composite.id === "bio-yaslynn-frame",
+);
+const savedFamilyComposite = savedCompositeEntries.find(
+  (composite) => composite.kind === "image-frame" || composite.id === "family-portrait-frame",
+);
 const loadedClockComposite = normalizeClockComposite(savedClockComposite as Partial<ClockCompositeConfig>);
 const clockComposite: ClockCompositeConfig = {
   ...loadedClockComposite,
@@ -271,6 +502,13 @@ const clockComposite: ClockCompositeConfig = {
 };
 
 function normalizeFrameModelPath(model: string) {
+  if (
+    model === "/3d-models/frames/frame_1_default.glb" ||
+    model === "/3d-models/frames/new_frame_default_2026_05_31.glb"
+  ) {
+    return "/3d-models/frames/new_frame_default_2026_05_31_pbr.glb";
+  }
+
   if (model.startsWith("/3d-models/frames/")) {
     return model;
   }
@@ -343,6 +581,91 @@ function createFrameSetting(index: number, seed?: Partial<FrameSetting>): FrameS
     captionScale: formatNumber(
       THREE.MathUtils.clamp(seed?.captionScale ?? 1, 0.35, 2.5),
     ),
+  };
+}
+
+function createBioFrameSetting(index: number, seed?: Partial<BioFrameSetting>): BioFrameSetting {
+  const base = createFrameSetting(index, {
+    ...(seed as Partial<FrameSetting>),
+    model: seed?.model ?? savedBioComposite?.model ?? "/3d-models/frames/gold_picture_frame_2026_05_31_optimized.glb",
+    maskShape: normalizeMaskShape(seed?.maskShape ?? savedBioComposite?.maskShape),
+    width: seed?.width ?? savedBioComposite?.frameWidth ?? 1.42,
+    height: seed?.height ?? savedBioComposite?.frameHeight ?? 2.02,
+    frameRotationX: seed?.frameRotationX ?? savedBioComposite?.frameRotationX ?? 0,
+    frameRotationY: seed?.frameRotationY ?? savedBioComposite?.frameRotationY ?? 0,
+    frameRotationZ: seed?.frameRotationZ ?? savedBioComposite?.frameRotationZ ?? 0,
+    clipX: seed?.clipX ?? savedBioComposite?.videoX ?? 0,
+    clipY: seed?.clipY ?? savedBioComposite?.videoY ?? 0,
+    clipWidth: seed?.clipWidth ?? savedBioComposite?.videoWidth ?? 0.94,
+    clipHeight: seed?.clipHeight ?? savedBioComposite?.videoHeight ?? 1.42,
+    clipZ: seed?.clipZ ?? savedBioComposite?.videoZ ?? 0.09,
+    videoScale: seed?.videoScale ?? savedBioComposite?.videoZoom ?? 1,
+    videoOffsetX: seed?.videoOffsetX ?? savedBioComposite?.cropX ?? 0,
+    videoOffsetY: seed?.videoOffsetY ?? savedBioComposite?.cropY ?? 0,
+    captionOffsetY: seed?.captionOffsetY ?? -0.22,
+    captionScale: seed?.captionScale ?? 0.82,
+  });
+  return {
+    ...base,
+    id: seed?.id ?? "bio-yaslynn-frame",
+    kind: "bio-frame",
+    label: seed?.label ?? "Bio portrait",
+    imageSrc: safeAssetPath(seed?.imageSrc ?? savedBioComposite?.imageSrc, BIO_FRAME_IMAGE_PATH),
+    bioSlug: seed?.bioSlug ?? "yaslynn",
+    captionText: seed?.captionText ?? savedBioComposite?.captionText ?? "About the Director",
+    position: seed?.position ?? [2.55, 0.92, 0],
+    rotation: seed?.rotation ?? [0, -0.03, -0.012],
+    wallScale: seed?.wallScale ?? 0.78,
+  };
+}
+
+function createImageFrameSetting(index: number, seed?: Partial<ImageFrameSetting>): ImageFrameSetting {
+  const base = createFrameSetting(index, {
+    ...(seed as Partial<FrameSetting>),
+    model: seed?.model ?? savedFamilyComposite?.model ?? "/3d-models/frames/photo_frame_with_mat_2026_05_31.glb",
+    maskShape: normalizeMaskShape(seed?.maskShape ?? savedFamilyComposite?.maskShape),
+    width: seed?.width ?? savedFamilyComposite?.frameWidth ?? 1.9,
+    height: seed?.height ?? savedFamilyComposite?.frameHeight ?? 1.3,
+    frameRotationX: seed?.frameRotationX ?? savedFamilyComposite?.frameRotationX ?? 0,
+    frameRotationY: seed?.frameRotationY ?? savedFamilyComposite?.frameRotationY ?? 0,
+    frameRotationZ: seed?.frameRotationZ ?? savedFamilyComposite?.frameRotationZ ?? 0,
+    clipX: seed?.clipX ?? savedFamilyComposite?.videoX ?? 0,
+    clipY: seed?.clipY ?? savedFamilyComposite?.videoY ?? 0,
+    clipWidth: seed?.clipWidth ?? savedFamilyComposite?.videoWidth ?? 1.46,
+    clipHeight: seed?.clipHeight ?? savedFamilyComposite?.videoHeight ?? 1,
+    clipZ: seed?.clipZ ?? savedFamilyComposite?.videoZ ?? 0.09,
+    videoScale: seed?.videoScale ?? savedFamilyComposite?.videoZoom ?? 1,
+    videoOffsetX: seed?.videoOffsetX ?? savedFamilyComposite?.cropX ?? 0,
+    videoOffsetY: seed?.videoOffsetY ?? savedFamilyComposite?.cropY ?? 0,
+    captionOffsetY: seed?.captionOffsetY ?? -0.16,
+    captionScale: seed?.captionScale ?? 1,
+  });
+  return {
+    ...base,
+    id: seed?.id ?? "family-portrait-frame",
+    kind: "image-frame",
+    label: seed?.label ?? "Family portrait",
+    imageSrc: safeAssetPath(seed?.imageSrc ?? savedFamilyComposite?.imageSrc, FAMILY_FRAME_IMAGE_PATH),
+    captionText: seed?.captionText ?? savedFamilyComposite?.captionText ?? "",
+    imageTintColor: normalizeHexColor(
+      seed?.imageTintColor ?? savedFamilyComposite?.imageTintColor,
+      "#ead8bf",
+    ),
+    imageTintStrength: normalizeImageTintStrength(
+      seed?.imageTintStrength ?? savedFamilyComposite?.imageTintStrength,
+      0.05,
+    ),
+    imageHazeColor: normalizeHexColor(
+      seed?.imageHazeColor ?? savedFamilyComposite?.imageHazeColor,
+      "#ead8bf",
+    ),
+    imageHazeOpacity: normalizeImageHazeOpacity(
+      seed?.imageHazeOpacity ?? savedFamilyComposite?.imageHazeOpacity,
+      0.08,
+    ),
+    position: seed?.position ?? [-0.05, 1.1, -0.03],
+    rotation: seed?.rotation ?? [0, 0.02, -0.01],
+    wallScale: seed?.wallScale ?? 0.82,
   };
 }
 
@@ -425,37 +748,113 @@ function createHitboxSetting(seed?: Partial<HitboxSetting>): HitboxSetting {
   };
 }
 
+function createCandleCompositeSetting(
+  seed?: Partial<CandleCompositeSetting>,
+): CandleCompositeSetting {
+  return {
+    id: seed?.id ?? `candle-composite-${Date.now().toString(36)}`,
+    kind: "candle-composite",
+    label: seed?.label ?? "Candle holder",
+    visible: seed?.visible ?? true,
+    position: seed?.position ?? [-3.08, -1.1, 0.18],
+    rotation: seed?.rotation ?? [0, 0.08, 0],
+    wallScale: seed?.wallScale ?? 0.92,
+    holderModel: seed?.holderModel ?? CANDLE_HOLDER_MODEL_PATH,
+    candleModel: seed?.candleModel ?? CANDLE_MODEL_PATH,
+    flameTexture: seed?.flameTexture ?? CANDLE_FLAME_TEXTURE_PATH,
+    candleOffset: seed?.candleOffset ?? [0, 0.42, 0.02],
+    candleScale: seed?.candleScale ?? 0.46,
+    flameOffset: seed?.flameOffset ?? [0, 0.9, 0.08],
+    flameScale: seed?.flameScale ?? 0.46,
+    flameOpacity: seed?.flameOpacity ?? 0.92,
+    flameLightColor: seed?.flameLightColor ?? "#ffb86b",
+    flameLightIntensity: seed?.flameLightIntensity ?? 0.3,
+    flameLightDistance: seed?.flameLightDistance ?? 1.1,
+  };
+}
+
+function createSpeakerCompositeSetting(
+  seed?: Partial<SpeakerCompositeSetting>,
+): SpeakerCompositeSetting {
+  return {
+    id: seed?.id ?? `speaker-composite-${Date.now().toString(36)}`,
+    kind: "speaker-composite",
+    label: seed?.label ?? "Portable Bluetooth speaker",
+    visible: seed?.visible ?? true,
+    position: seed?.position ?? [-1.2, MODEL_FLOOR_Y, 0.72],
+    rotation: seed?.rotation ?? [0, 0.16, 0],
+    wallScale: seed?.wallScale ?? 0.42,
+    speakerModel: seed?.speakerModel ?? SPEAKER_MODEL_PATH,
+    hitboxOffset: seed?.hitboxOffset ?? [0, 0.48, 0],
+    hitboxSize: seed?.hitboxSize ?? [0.72, 0.52, 0.5],
+    action: seed?.action ?? "speaker-click",
+  };
+}
+
 const defaultSceneSettings = [
-  createFrameSetting(0),
-  createFrameSetting(1),
-  createModelSetting("victorian-bed", {
-    id: "prop-victorian-bed",
+  createFrameSetting(0, {
+    id: "frame-02",
+    label: "Director reel",
+    model: "/3d-models/frames/vintage_frame_06.glb",
+    workSlug: "dani-offline-angel",
+    maskShape: "rectangle",
+    position: [-0.16, 1.04, -0.02],
+    width: 2.3,
+    height: 2.34,
+    frameRotationX: -0.001592653589793,
+    frameRotationY: -0.001592653589793,
+    frameRotationZ: -1.57159265358979,
+    rotation: [0, 0.008407346410207, 0.008407346410207],
+    wallScale: 1.24,
+    clipX: 0.011,
+    clipY: -0.026,
+    clipZ: -0.01,
+    clipWidth: 2.789,
+    clipHeight: 1.9290039032006248,
+    videoScale: 1.25,
+    videoOffsetX: 0.12,
+    videoOffsetY: 0.06,
+    captionOffsetX: 0,
+    captionOffsetY: -0.13,
+    captionOffsetZ: 0.146,
+    captionScale: 2.03,
   }),
-  createModelSetting("small-end-table", {
-    id: "prop-small-end-table",
-  }),
-  createLightSetting({
-    id: "light-table-lamp",
-    label: "Lamp light source",
-  }),
-  createHitboxSetting({
-    id: "hitbox-lamp-toggle",
+  createCandleCompositeSetting({
+    id: "candle-holder-composite",
+    position: [1.48, 0.14, 0.065],
+    rotation: [-0.011592653589793, 0.028407346410207, -0.001592653589793],
+    wallScale: 0.92,
+    holderModel: "/3d-models/candle-and-holder/holder.glb",
+    candleModel: "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
+    flameTexture: "/3d-models/candle-and-holder/candleflame_atlas.png",
+    candleOffset: [0, 0.015, 0.05],
+    candleScale: 0.58,
+    flameOffset: [0, 0.61, 0.05],
+    flameScale: 0.065,
+    flameOpacity: 0.92,
+    flameLightColor: "#ffb86b",
+    flameLightIntensity: 0.1,
+    flameLightDistance: 4,
   }),
   createClockSetting({
     id: "clock-vintage-wall",
+    label: "Vintage clock",
+    position: [-2.78, 0.78, -0.105],
+    rotation: [0, 0.038407346410207, -0.001592653589793],
+    wallScale: 0.82,
   }),
 ] satisfies SceneObjectSetting[];
 
 const defaultSceneLighting: SceneLighting = {
-  ambientColor: "#7f715c",
-  ambientIntensity: 0.82,
-  keyColor: "#d7a46e",
-  keyIntensity: 1.25,
-  keyPosition: [-3.8, 4.2, 5.6],
-  fillColor: "#485066",
-  fillIntensity: 1.1,
+  ambientColor: "#aa9f8d",
+  ambientIntensity: 2.2,
+  keyColor: "#c4ad97",
+  keyIntensity: 3.45,
+  keyPosition: [0.05, 3.05, 2.7],
+  fillColor: "#6a7595",
+  fillIntensity: 3.85,
   fillPosition: [4.2, 2.1, 3.6],
-  exposure: 0.82,
+  exposure: 1.06,
 };
 
 function normalizeVectorTuple(
@@ -492,6 +891,18 @@ function normalizeSceneLighting(seed?: Partial<SceneLighting>): SceneLighting {
   };
 }
 
+function normalizeHexColor(value: string | undefined, fallback: string) {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+}
+
+function normalizeImageTintStrength(value: number | undefined, fallback = 0) {
+  return formatNumber(THREE.MathUtils.clamp(value ?? fallback, 0, 0.3));
+}
+
+function normalizeImageHazeOpacity(value: number | undefined, fallback = 0) {
+  return formatNumber(THREE.MathUtils.clamp(value ?? fallback, 0, 0.35));
+}
+
 function makeMaterial<T extends THREE.Material>(material: T, disposables: THREE.Material[]) {
   disposables.push(material);
   return material;
@@ -505,7 +916,7 @@ function makeGeometry<T extends THREE.BufferGeometry>(
   return geometry;
 }
 
-function visibleSize(setting: FrameSetting) {
+function visibleSize(setting: FrameLikeSetting) {
   const cropX = clampCropAmount(setting.videoOffsetX);
   const cropY = clampCropAmount(setting.videoOffsetY);
 
@@ -559,7 +970,7 @@ function createVideoTexture(
   return { texture, video };
 }
 
-function applyVideoCrop(target: THREE.Texture | THREE.Texture[], setting: FrameSetting) {
+function applyVideoCrop(target: THREE.Texture | THREE.Texture[], setting: FrameLikeSetting) {
   const aperture = visibleSize(setting);
   const repeatX = (aperture.width / setting.clipWidth) / Math.max(1, setting.videoScale);
   const repeatY = (aperture.height / setting.clipHeight) / Math.max(1, setting.videoScale);
@@ -573,7 +984,7 @@ function applyVideoCrop(target: THREE.Texture | THREE.Texture[], setting: FrameS
 }
 
 function createClipGeometry(
-  setting: FrameSetting,
+  setting: FrameLikeSetting,
   geometries: THREE.BufferGeometry[],
 ) {
   const size = visibleSize(setting);
@@ -605,21 +1016,46 @@ function createFrameCaptionTexture(
   }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#f6f0e5";
+  ctx.fillStyle = "#f3e6d3";
+  ctx.shadowColor = "rgba(46, 31, 16, 0.5)";
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 2;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   const maxWidth = canvas.width - 96;
-  let fontSize = 112;
-  do {
-    ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
-    if (ctx.measureText(text).width <= maxWidth || fontSize <= 54) {
-      break;
-    }
-    fontSize -= 4;
-  } while (fontSize > 54);
+  const fitText = (line: string, startSize: number, minSize: number) => {
+    let fontSize = startSize;
+    do {
+      ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
+      if (ctx.measureText(line).width <= maxWidth || fontSize <= minSize) {
+        break;
+      }
+      fontSize -= 4;
+    } while (fontSize > minSize);
+    return fontSize;
+  };
 
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 2);
+  const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length > 1) {
+    const title = lines[0];
+    const subtitle = lines.slice(1).join(" ");
+    const titleSize = fitText(title, font.id === "sobria" ? 78 : 84, 44);
+    ctx.font = `${font.fontWeight} ${titleSize}px ${font.fontFamily}`;
+    ctx.fillText(title, canvas.width / 2, 78);
+
+    ctx.globalAlpha = 0.86;
+    ctx.shadowBlur = 4;
+    const subtitleSize = fitText(subtitle, font.id === "sobria" ? 42 : 46, 28);
+    ctx.font = `${font.fontWeight} ${subtitleSize}px ${font.fontFamily}`;
+    ctx.fillText(subtitle, canvas.width / 2, 142);
+    ctx.globalAlpha = 1;
+  } else {
+    const line = lines[0] ?? text;
+    const fontSize = fitText(line, font.id === "sobria" ? 96 : 104, 46);
+    ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
+    ctx.fillText(line, canvas.width / 2, canvas.height / 2 + 2);
+  }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -630,7 +1066,7 @@ function createFrameCaptionTexture(
 }
 
 function createFrameCaptionMesh(
-  setting: FrameSetting,
+  setting: FrameLikeSetting,
   artist: string,
   font: CaptionFontOption,
   geometries: THREE.BufferGeometry[],
@@ -639,14 +1075,17 @@ function createFrameCaptionMesh(
 ) {
   const aperture = visibleSize(setting);
   const texture = createFrameCaptionTexture(artist, font, textures);
-  const height = THREE.MathUtils.clamp(aperture.height * 0.24, 0.16, 0.34);
-  const width = THREE.MathUtils.clamp(height * (1024 / 192), aperture.width * 0.9, setting.width * 1.7);
+  const height = artist.includes("\n")
+    ? THREE.MathUtils.clamp(aperture.height * 0.28, 0.18, 0.34)
+    : THREE.MathUtils.clamp(aperture.height * 0.2, 0.13, 0.27);
+  const width = height * (1024 / 192);
   const mesh = new THREE.Mesh(
     makeGeometry(new THREE.PlaneGeometry(width, height), geometries),
     makeMaterial(
       new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
+        opacity: 0.58,
         depthWrite: false,
         toneMapped: false,
         side: THREE.DoubleSide,
@@ -661,7 +1100,7 @@ function createFrameCaptionMesh(
     setting.clipZ + setting.captionOffsetZ,
   );
   mesh.scale.setScalar(setting.captionScale);
-  mesh.visible = false;
+  mesh.visible = true;
   mesh.renderOrder = 2;
   mesh.userData.isFrameCaption = true;
   return mesh;
@@ -806,7 +1245,7 @@ function createFrame(
   videoMesh.userData.sceneObjectId = setting.id;
   group.add(videoMesh);
 
-  if (captionPlacement === "frame") {
+  if (captionPlacement === "frame" && setting.label !== "Director reel") {
     const captionMesh = createFrameCaptionMesh(
       setting,
       work.artist,
@@ -816,6 +1255,132 @@ function createFrame(
       textures,
     );
     videoMesh.userData.captionMesh = captionMesh;
+    group.add(captionMesh);
+  }
+
+  return group;
+}
+
+function createImageTexture(
+  source: string,
+  textures: THREE.Texture[],
+  onSceneError: (error: Error) => void,
+) {
+  const texture = new THREE.TextureLoader().load(
+    source,
+    undefined,
+    undefined,
+    () => onSceneError(new Error(`Image failed to load: ${source}`)),
+  );
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  textures.push(texture);
+  return texture;
+}
+
+function createImageFrame(
+  setting: BioFrameSetting | ImageFrameSetting,
+  sourceModel: THREE.Object3D,
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
+  textures: THREE.Texture[],
+  captionFont: CaptionFontOption,
+  captionPlacement: CaptionPlacementId,
+  onSceneError: (error: Error) => void,
+) {
+  const group = new THREE.Group();
+  group.userData.sceneObjectId = setting.id;
+  applyObjectPlacement(group, setting);
+  const frameRoot = new THREE.Group();
+  frameRoot.rotation.set(
+    setting.frameRotationX,
+    setting.frameRotationY,
+    setting.frameRotationZ,
+  );
+  group.add(frameRoot);
+
+  const frameModel = sourceModel.clone(true);
+  const modelBox = new THREE.Box3().setFromObject(frameModel);
+  const modelSize = modelBox.getSize(new THREE.Vector3());
+  const modelCenter = modelBox.getCenter(new THREE.Vector3());
+  const scale = Math.min(setting.width / modelSize.x, setting.height / modelSize.y);
+
+  frameModel.scale.setScalar(scale);
+  frameModel.position.set(
+    -modelCenter.x * scale,
+    -modelCenter.y * scale,
+    -modelCenter.z * scale,
+  );
+  frameModel.traverse((object) => {
+    if (object instanceof THREE.Mesh) {
+      object.castShadow = false;
+      object.receiveShadow = false;
+    }
+  });
+  frameRoot.add(frameModel);
+
+  const imageTexture = createImageTexture(setting.imageSrc, textures, onSceneError);
+  applyVideoCrop(imageTexture, setting);
+  const clipShape = createClipGeometry(setting, geometries);
+  const imageTint =
+    setting.kind === "image-frame"
+      ? new THREE.Color("#ffffff").lerp(
+          new THREE.Color(setting.imageTintColor),
+          setting.imageTintStrength,
+        )
+      : new THREE.Color("#ffffff");
+  const imageMaterial = makeMaterial(
+    new THREE.MeshBasicMaterial({
+      map: imageTexture,
+      color: imageTint,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+    }),
+    materials,
+  );
+  const imageMesh = new THREE.Mesh(clipShape.geometry, imageMaterial);
+  imageMesh.scale.copy(clipShape.scale);
+  imageMesh.position.set(setting.clipX, setting.clipY, setting.clipZ);
+  imageMesh.renderOrder = 0;
+  imageMesh.userData.isFrameClip = true;
+  if (setting.kind === "bio-frame") {
+    imageMesh.userData.bioSlug = setting.bioSlug;
+  }
+  imageMesh.userData.sceneObjectId = setting.id;
+  group.add(imageMesh);
+
+  if (setting.kind === "image-frame" && setting.imageHazeOpacity > 0.001) {
+    const hazeMaterial = makeMaterial(
+      new THREE.MeshBasicMaterial({
+        color: setting.imageHazeColor,
+        transparent: true,
+        opacity: setting.imageHazeOpacity,
+        depthWrite: false,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+      }),
+      materials,
+    );
+    const hazeMesh = new THREE.Mesh(clipShape.geometry, hazeMaterial);
+    hazeMesh.scale.copy(clipShape.scale);
+    hazeMesh.position.set(setting.clipX, setting.clipY, setting.clipZ + 0.002);
+    hazeMesh.renderOrder = 1;
+    group.add(hazeMesh);
+  }
+
+  if (captionPlacement === "frame" && setting.captionText.trim().length > 0) {
+    const captionMesh = createFrameCaptionMesh(
+      setting,
+      setting.captionText,
+      captionFont,
+      geometries,
+      materials,
+      textures,
+    );
+    imageMesh.userData.captionMesh = captionMesh;
     group.add(captionMesh);
   }
 
@@ -848,7 +1413,49 @@ function createHitboxObject(
   hitZone.receiveShadow = false;
   hitZone.renderOrder = 20;
   hitZone.userData.isLampToggleZone = setting.action === "toggle-nearest-light";
+  hitZone.userData.isClickZone = true;
+  hitZone.userData.clickAction = setting.action;
   group.add(hitZone);
+
+  return group;
+}
+
+function createSpeakerCompositeObject(
+  setting: SpeakerCompositeSetting,
+  sourceModel: THREE.Object3D,
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
+) {
+  const group = new THREE.Group();
+  group.name = "editable-speaker-composite";
+  applyObjectPlacement(group, setting);
+
+  const speaker = createNormalizedModel(sourceModel);
+  speaker.name = "speaker-composite-model";
+  speaker.userData.baseScale = speaker.scale.clone();
+  group.add(speaker);
+
+  const hitZone = new THREE.Mesh(
+    makeGeometry(new THREE.BoxGeometry(1, 1, 1), geometries),
+    makeMaterial(
+      new THREE.MeshBasicMaterial({
+        color: "#38bdf8",
+        depthWrite: false,
+        opacity: 0,
+        transparent: true,
+        wireframe: true,
+      }),
+      materials,
+    ),
+  );
+  hitZone.name = SPEAKER_CLICK_ZONE_NAME;
+  hitZone.castShadow = false;
+  hitZone.receiveShadow = false;
+  hitZone.renderOrder = 20;
+  hitZone.userData.isClickZone = true;
+  hitZone.userData.clickAction = setting.action;
+  group.add(hitZone);
+  syncSpeakerCompositeObject(group, setting);
 
   return group;
 }
@@ -876,6 +1483,217 @@ function createModelObject(
   });
   group.add(model);
 
+  return group;
+}
+
+function createNormalizedModel(sourceModel: THREE.Object3D) {
+  const model = sourceModel.clone(true);
+  const modelBox = new THREE.Box3().setFromObject(model);
+  const modelSize = modelBox.getSize(new THREE.Vector3());
+  const modelCenter = modelBox.getCenter(new THREE.Vector3());
+  const normalizingScale = modelSize.y > 0 ? 1 / modelSize.y : 1;
+
+  model.position.set(-modelCenter.x * normalizingScale, -modelBox.min.y * normalizingScale, -modelCenter.z * normalizingScale);
+  model.scale.setScalar(normalizingScale);
+  model.traverse((object) => {
+    if (object instanceof THREE.Mesh) {
+      object.castShadow = true;
+      object.receiveShadow = true;
+    }
+  });
+
+  return model;
+}
+
+function createAnimatedImageTexture(
+  source: string,
+  textures: THREE.Texture[],
+  onSceneError: (error: Error) => void,
+) {
+  const texture = new THREE.TextureLoader().load(
+    source,
+    undefined,
+    undefined,
+    () => onSceneError(new Error(`Image failed to load: ${source}`)),
+  );
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(1 / candleFlameAtlas.columns, 1 / candleFlameAtlas.rows);
+  updateAnimatedImageTexture(texture, 0);
+
+  textures.push(texture);
+  return texture;
+}
+
+function updateAnimatedImageTexture(texture: THREE.Texture, timeSeconds: number) {
+  const frame = Math.floor((timeSeconds * 1000) / candleFlameAtlas.frameDurationMs) %
+    candleFlameAtlas.frameCount;
+  if (texture.userData.currentFrame === frame) {
+    return;
+  }
+
+  const column = frame % candleFlameAtlas.columns;
+  const row = Math.floor(frame / candleFlameAtlas.columns);
+  texture.offset.set(
+    column / candleFlameAtlas.columns,
+    1 - (row + 1) / candleFlameAtlas.rows,
+  );
+  texture.userData.currentFrame = frame;
+}
+
+function createSpeakerAudioChain(): SpeakerAudioChain {
+  const context = new AudioContext();
+  const element = new Audio(SPEAKER_MUSIC_AUDIO_PATH);
+  element.preload = "auto";
+  element.loop = true;
+  element.volume = 0.21;
+
+  const source = context.createMediaElementSource(element);
+
+  const highpass = context.createBiquadFilter();
+  highpass.type = "highpass";
+  highpass.frequency.value = 95;
+  highpass.Q.value = 0.55;
+
+  const lowpass = context.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.value = 1150;
+  lowpass.Q.value = 0.65;
+
+  const roomTone = context.createBiquadFilter();
+  roomTone.type = "lowshelf";
+  roomTone.frequency.value = 420;
+  roomTone.gain.value = -2.5;
+
+  const compressor = context.createDynamicsCompressor();
+  compressor.threshold.value = -20;
+  compressor.knee.value = 24;
+  compressor.ratio.value = 3;
+  compressor.attack.value = 0.012;
+  compressor.release.value = 0.28;
+
+  const outputGain = context.createGain();
+  outputGain.gain.value = 0.32;
+
+  source
+    .connect(highpass)
+    .connect(lowpass)
+    .connect(roomTone)
+    .connect(compressor)
+    .connect(outputGain)
+    .connect(context.destination);
+
+  return { context, element };
+}
+
+function syncCandleCompositeObject(group: THREE.Group, setting: CandleCompositeSetting) {
+  const candleRoot = group.getObjectByName("candle-composite-candle-root");
+  if (candleRoot) {
+    candleRoot.position.set(...setting.candleOffset);
+    candleRoot.scale.setScalar(setting.candleScale);
+  }
+
+  const flame = group.getObjectByName("candle-composite-flame");
+  if (flame instanceof THREE.Mesh) {
+    flame.position.set(...setting.flameOffset);
+    flame.scale.setScalar(setting.flameScale);
+    if (flame.material instanceof THREE.MeshBasicMaterial) {
+      flame.material.opacity = setting.flameOpacity;
+      flame.material.needsUpdate = true;
+    }
+  }
+
+  const light = group.getObjectByName("candle-composite-flame-light");
+  if (light instanceof THREE.PointLight) {
+    light.position.set(...setting.flameOffset);
+    light.color.set(setting.flameLightColor);
+    light.intensity = setting.flameLightIntensity;
+    light.distance = setting.flameLightDistance;
+  }
+}
+
+function syncCandleCompositeAnimation(
+  group: THREE.Group,
+  camera: THREE.Camera,
+  timeSeconds: number,
+) {
+  const flame = group.getObjectByName("candle-composite-flame");
+  if (!(flame instanceof THREE.Mesh)) {
+    return;
+  }
+
+  flame.lookAt(camera.position);
+  const texture = flame.userData.animatedTexture as THREE.Texture | undefined;
+  if (texture) {
+    updateAnimatedImageTexture(texture, timeSeconds);
+  }
+}
+
+function createCandleCompositeObject(
+  setting: CandleCompositeSetting,
+  sourceModels: Map<string, THREE.Object3D>,
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
+  textures: THREE.Texture[],
+  onSceneError: (error: Error) => void,
+) {
+  const holderSource = sourceModels.get(setting.holderModel);
+  const candleSource = sourceModels.get(setting.candleModel);
+  if (!holderSource || !candleSource) {
+    throw new Error("Candle composite model assets did not load.");
+  }
+
+  const group = new THREE.Group();
+  group.name = "editable-candle-composite";
+  applyObjectPlacement(group, setting);
+
+  const holder = createNormalizedModel(holderSource);
+  holder.name = "candle-composite-holder";
+  group.add(holder);
+
+  const candleRoot = new THREE.Group();
+  candleRoot.name = "candle-composite-candle-root";
+  candleRoot.add(createNormalizedModel(candleSource));
+  group.add(candleRoot);
+
+  const flameTexture = createAnimatedImageTexture(setting.flameTexture, textures, onSceneError);
+  const flameMaterial = makeMaterial(
+    new THREE.MeshBasicMaterial({
+      map: flameTexture,
+      transparent: true,
+      opacity: setting.flameOpacity,
+      depthTest: true,
+      depthWrite: false,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+      blending: THREE.NormalBlending,
+    }),
+    materials,
+  );
+  const flame = new THREE.Mesh(
+    makeGeometry(new THREE.PlaneGeometry(0.3, 1), geometries),
+    flameMaterial,
+  );
+  flame.name = "candle-composite-flame";
+  flame.renderOrder = 10;
+  flame.userData.isCandleFlameBillboard = true;
+  flame.userData.animatedTexture = flameTexture;
+  group.add(flame);
+
+  const flameLight = new THREE.PointLight(
+    new THREE.Color(setting.flameLightColor),
+    setting.flameLightIntensity,
+    setting.flameLightDistance,
+    1.85,
+  );
+  flameLight.name = "candle-composite-flame-light";
+  flameLight.castShadow = false;
+  group.add(flameLight);
+
+  syncCandleCompositeObject(group, setting);
   return group;
 }
 
@@ -1336,6 +2154,35 @@ function syncLightObject(group: THREE.Group, setting: LightSetting) {
   }
 }
 
+function syncSpeakerCompositeObject(group: THREE.Group, setting: SpeakerCompositeSetting) {
+  const hitZone = group.getObjectByName(SPEAKER_CLICK_ZONE_NAME);
+  if (hitZone) {
+    hitZone.position.set(...setting.hitboxOffset);
+    hitZone.scale.set(...setting.hitboxSize);
+    hitZone.userData.clickAction = setting.action;
+  }
+}
+
+function syncSpeakerCompositePulse(
+  group: THREE.Group,
+  timeSeconds: number,
+  speakerPlaying: boolean,
+) {
+  const speaker = group.getObjectByName("speaker-composite-model");
+  if (!speaker) {
+    return;
+  }
+
+  const baseScale = speaker.userData.baseScale as THREE.Vector3 | undefined;
+  if (!baseScale) {
+    speaker.userData.baseScale = speaker.scale.clone();
+    return;
+  }
+
+  const pulse = speakerPlaying ? 1.0225 + Math.sin(timeSeconds * 8.2) * 0.061875 : 1;
+  speaker.scale.copy(baseScale).multiplyScalar(pulse);
+}
+
 function syncSceneObject(group: THREE.Group, setting: SceneObjectSetting) {
   if (setting.kind === "light") {
     applyLightPlacement(group, setting);
@@ -1345,7 +2192,7 @@ function syncSceneObject(group: THREE.Group, setting: SceneObjectSetting) {
 
   applyObjectPlacement(group, setting);
 
-  if (setting.kind === "frame") {
+  if (setting.kind === "frame" || setting.kind === "bio-frame" || setting.kind === "image-frame") {
     const aperture = visibleSize(setting);
     group.traverse((child) => {
       if (!(child instanceof THREE.Mesh) || !child.userData?.isFrameCaption) {
@@ -1358,6 +2205,14 @@ function syncSceneObject(group: THREE.Group, setting: SceneObjectSetting) {
       );
       child.scale.setScalar(setting.captionScale);
     });
+  }
+
+  if (setting.kind === "candle-composite") {
+    syncCandleCompositeObject(group, setting);
+  }
+
+  if (setting.kind === "speaker-composite") {
+    syncSpeakerCompositeObject(group, setting);
   }
 }
 
@@ -1389,8 +2244,24 @@ function syncClockPendulum(group: THREE.Object3D, timeSeconds: number) {
 async function loadSceneModels(settings: SceneObjectSetting[]) {
   const loader = new GLTFLoader();
   const objectModels = settings.flatMap((setting) => {
-    if (setting.kind === "frame" || setting.kind === "model") {
+    if (
+      setting.kind === "frame" ||
+      setting.kind === "bio-frame" ||
+      setting.kind === "image-frame" ||
+      setting.kind === "model"
+    ) {
       return [safeAssetPath(setting.model, "")];
+    }
+
+    if (setting.kind === "candle-composite") {
+      return [
+        safeAssetPath(setting.holderModel, ""),
+        safeAssetPath(setting.candleModel, ""),
+      ];
+    }
+
+    if (setting.kind === "speaker-composite") {
+      return [safeAssetPath(setting.speakerModel, "")];
     }
 
     if (setting.kind === "clock") {
@@ -1436,11 +2307,15 @@ function ThreeWallCanvas({
   freeOrbit,
   captionFont,
   captionPlacement,
+  captionDisplayMode,
+  speakerPlaying,
   onSceneError,
   onCameraInfoChange,
   onFrameClick,
+  onBioClick,
   onFrameHover,
   onLampToggle,
+  onSpeakerClick,
 }: {
   settings: SceneObjectSetting[];
   lighting: SceneLighting;
@@ -1451,11 +2326,15 @@ function ThreeWallCanvas({
   freeOrbit: boolean;
   captionFont: CaptionFontOption;
   captionPlacement: CaptionPlacementId;
+  captionDisplayMode: CaptionDisplayMode;
+  speakerPlaying: boolean;
   onSceneError: (error: Error) => void;
   onCameraInfoChange?: (info: CameraInfo) => void;
   onFrameClick?: (workSlug: string) => void;
+  onBioClick?: () => void;
   onFrameHover?: (info: FrameHoverInfo | null) => void;
   onLampToggle?: (position: VectorTuple) => void;
+  onSpeakerClick?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const settingsRef = useRef(settings);
@@ -1463,6 +2342,8 @@ function ThreeWallCanvas({
   const showSceneLightMarkersRef = useRef(showSceneLightMarkers);
   const showHitboxHelpersRef = useRef(showHitboxHelpers);
   const activeCaptionFrameIdRef = useRef(activeCaptionFrameId ?? null);
+  const captionDisplayModeRef = useRef(captionDisplayMode);
+  const speakerPlayingRef = useRef(speakerPlaying);
   const syncLightingRef = useRef<(() => void) | null>(null);
   const syncHitboxHelpersRef = useRef<(() => void) | null>(null);
   const syncFrameCaptionVisibilityRef = useRef<(() => void) | null>(null);
@@ -1471,8 +2352,10 @@ function ThreeWallCanvas({
   const sceneObjectsRef = useRef<THREE.Group[]>([]);
   const cameraInfoCallbackRef = useRef(onCameraInfoChange);
   const frameClickCallbackRef = useRef(onFrameClick);
+  const bioClickCallbackRef = useRef(onBioClick);
   const frameHoverCallbackRef = useRef(onFrameHover);
   const lampToggleCallbackRef = useRef(onLampToggle);
+  const speakerClickCallbackRef = useRef(onSpeakerClick);
 
   useEffect(() => {
     cameraInfoCallbackRef.current = onCameraInfoChange;
@@ -1483,12 +2366,20 @@ function ThreeWallCanvas({
   }, [onFrameClick]);
 
   useEffect(() => {
+    bioClickCallbackRef.current = onBioClick;
+  }, [onBioClick]);
+
+  useEffect(() => {
     frameHoverCallbackRef.current = onFrameHover;
   }, [onFrameHover]);
 
   useEffect(() => {
     lampToggleCallbackRef.current = onLampToggle;
   }, [onLampToggle]);
+
+  useEffect(() => {
+    speakerClickCallbackRef.current = onSpeakerClick;
+  }, [onSpeakerClick]);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -1522,6 +2413,15 @@ function ThreeWallCanvas({
     activeCaptionFrameIdRef.current = activeCaptionFrameId ?? null;
     syncFrameCaptionVisibilityRef.current?.();
   }, [activeCaptionFrameId]);
+
+  useEffect(() => {
+    captionDisplayModeRef.current = captionDisplayMode;
+    syncFrameCaptionVisibilityRef.current?.();
+  }, [captionDisplayMode]);
+
+  useEffect(() => {
+    speakerPlayingRef.current = speakerPlaying;
+  }, [speakerPlaying]);
 
   useEffect(() => {
     freeOrbitRef.current = freeOrbit;
@@ -1850,25 +2750,29 @@ function ThreeWallCanvas({
     let startPanX = 0;
     let startPanY = 0;
     let pointerMode: "orbit" | "pan" = "orbit";
-    let targetRotationX = 0;
-    let targetRotationY = 0;
-    let currentPanX = 0;
-    let currentPanY = 0;
-    let targetPanX = 0;
-    let targetPanY = 0;
+    let viewportMode: "desktop" | "mobile" | null = null;
+    let activeCameraDefaults = DESKTOP_CAMERA_DEFAULTS;
+    let targetRotationX = DESKTOP_CAMERA_DEFAULTS.pitch;
+    let targetRotationY = DESKTOP_CAMERA_DEFAULTS.yaw;
+    let basePanX = DESKTOP_CAMERA_DEFAULTS.panX;
+    let basePanY = DESKTOP_CAMERA_DEFAULTS.panY;
+    let currentPanX = basePanX;
+    let currentPanY = basePanY;
+    let targetPanX = basePanX;
+    let targetPanY = basePanY;
     let animationFrame = 0;
     let disposed = false;
     let cameraBaseY = 0.32;
-    let baseCameraDistance = DESKTOP_CAMERA_DISTANCE;
+    let baseCameraDistance = DESKTOP_CAMERA_DEFAULTS.distance;
     let targetCameraDistance = baseCameraDistance;
 
     const resetViewTargets = () => {
       pointerIsDown = false;
       pointerMode = "orbit";
-      targetRotationX = 0;
-      targetRotationY = 0;
-      targetPanX = 0;
-      targetPanY = 0;
+      targetRotationX = activeCameraDefaults.pitch;
+      targetRotationY = activeCameraDefaults.yaw;
+      targetPanX = basePanX;
+      targetPanY = basePanY;
       targetCameraDistance = baseCameraDistance;
     };
 
@@ -1876,21 +2780,28 @@ function ThreeWallCanvas({
       const width = Math.max(1, host.clientWidth);
       const height = Math.max(1, host.clientHeight);
       const isPhone = width < 720;
-      const nextBaseDistance = isPhone ? PHONE_CAMERA_DISTANCE : DESKTOP_CAMERA_DISTANCE;
+      const nextViewportMode = isPhone ? "mobile" : "desktop";
+      const nextCameraDefaults = isPhone ? MOBILE_CAMERA_DEFAULTS : DESKTOP_CAMERA_DEFAULTS;
+      const viewportModeChanged = viewportMode !== nextViewportMode;
+      viewportMode = nextViewportMode;
+      activeCameraDefaults = nextCameraDefaults;
+      baseCameraDistance = nextCameraDefaults.distance;
+      basePanX = nextCameraDefaults.panX;
+      basePanY = nextCameraDefaults.panY;
 
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
       renderer.setSize(width, height, false);
 
       camera.aspect = width / height;
-      camera.fov = isPhone ? 54 : 43;
+      camera.fov = nextCameraDefaults.fov;
       cameraBaseY = isPhone ? 0.1 : 0.32;
-      targetCameraDistance = THREE.MathUtils.clamp(
-        targetCameraDistance + nextBaseDistance - baseCameraDistance,
-        nextBaseDistance * 0.6,
-        nextBaseDistance * 5,
-      );
-      baseCameraDistance = nextBaseDistance;
-      if (!freeOrbitRef.current) {
+      if (viewportModeChanged) {
+        resetViewTargets();
+        root.rotation.set(nextCameraDefaults.pitch, nextCameraDefaults.yaw, 0);
+        currentPanX = nextCameraDefaults.panX;
+        currentPanY = nextCameraDefaults.panY;
+        camera.position.z = nextCameraDefaults.distance;
+      } else if (!freeOrbitRef.current) {
         resetViewTargets();
       }
       camera.position.set(currentPanX, cameraBaseY + currentPanY, targetCameraDistance);
@@ -1919,19 +2830,23 @@ function ThreeWallCanvas({
     };
 
     const shouldShowFrameCaption = (clip: THREE.Mesh) => {
-      if (showSceneLightMarkersRef.current) {
-        return false;
-      }
-
-      const sceneObjectId = clip.userData?.sceneObjectId as string | undefined;
-      return clip === hoveredFrameClip || sceneObjectId === activeCaptionFrameIdRef.current;
+      return Boolean(clip.userData?.captionMesh);
     };
 
     const syncFrameCaptionVisibility = () => {
       collectFrameClipMeshes().forEach((clip) => {
         const caption = clip.userData.captionMesh as THREE.Mesh | undefined;
         if (caption) {
-          caption.visible = shouldShowFrameCaption(clip);
+          const sceneObjectId = clip.userData?.sceneObjectId as string | undefined;
+          const isActive =
+            clip === hoveredFrameClip || sceneObjectId === activeCaptionFrameIdRef.current;
+          caption.visible =
+            shouldShowFrameCaption(clip) &&
+            (captionDisplayModeRef.current === "always" || isActive);
+          if (caption.material instanceof THREE.MeshBasicMaterial) {
+            caption.material.opacity = isActive ? 1 : 0.58;
+            caption.material.needsUpdate = true;
+          }
         }
       });
     };
@@ -1941,14 +2856,24 @@ function ThreeWallCanvas({
       target.push(...collectFrameClipMeshes());
     };
 
-    const collectLampToggleZones = (target: THREE.Object3D[]) => {
+    const isFrameClipInteractive = (clip: THREE.Mesh | null) => {
+      if (!clip) {
+        return false;
+      }
+      return Boolean(clip.userData?.workSlug || clip.userData?.bioSlug);
+    };
+
+    const collectClickZones = (target: THREE.Object3D[]) => {
       sceneObjectsRef.current.forEach((group) => {
         if (!group.visible) {
           return;
         }
 
         group.traverse((child) => {
-          if (child instanceof THREE.Mesh && child.userData?.isLampToggleZone) {
+          if (
+            child instanceof THREE.Mesh &&
+            (child.userData?.isClickZone || child.userData?.isLampToggleZone)
+          ) {
             target.push(child);
           }
         });
@@ -1959,7 +2884,10 @@ function ThreeWallCanvas({
       const opacity = showHitboxHelpersRef.current ? 0.55 : 0;
       sceneObjectsRef.current.forEach((group) => {
         group.traverse((child) => {
-          if (!(child instanceof THREE.Mesh) || !child.userData?.isLampToggleZone) {
+          if (
+            !(child instanceof THREE.Mesh) ||
+            !(child.userData?.isClickZone || child.userData?.isLampToggleZone)
+          ) {
             return;
           }
           const material = child.material;
@@ -2057,20 +2985,22 @@ function ThreeWallCanvas({
         frameTargets.length > 0 ? hoverRaycaster.intersectObjects(frameTargets, false) : [];
       const nextClip = (frameHits[0]?.object as THREE.Mesh | undefined) ?? null;
 
-      const lampTargets: THREE.Object3D[] = [];
-      collectLampToggleZones(lampTargets);
-      const lampHovered =
+      const clickTargets: THREE.Object3D[] = [];
+      collectClickZones(clickTargets);
+      const clickZoneHovered =
         !nextClip &&
-        lampTargets.length > 0 &&
-        hoverRaycaster.intersectObjects(lampTargets, false).length > 0;
+        clickTargets.length > 0 &&
+        hoverRaycaster.intersectObjects(clickTargets, false).length > 0;
 
       if (nextClip === hoveredFrameClip) {
         if (nextClip) {
           syncHoveredWork(nextClip);
         }
         syncFrameCaptionVisibility();
-        if (!nextClip) {
-          host.style.cursor = lampHovered ? "pointer" : "";
+        if (nextClip) {
+          host.style.cursor = isFrameClipInteractive(nextClip) ? "pointer" : "";
+        } else {
+          host.style.cursor = clickZoneHovered ? "pointer" : "";
         }
         return;
       }
@@ -2083,9 +3013,9 @@ function ThreeWallCanvas({
       syncFrameCaptionVisibility();
       if (hoveredFrameClip) {
         playFrame(hoveredFrameClip);
-        host.style.cursor = "pointer";
+        host.style.cursor = isFrameClipInteractive(hoveredFrameClip) ? "pointer" : "";
       } else {
-        host.style.cursor = lampHovered ? "pointer" : "";
+        host.style.cursor = clickZoneHovered ? "pointer" : "";
       }
     };
 
@@ -2147,11 +3077,7 @@ function ThreeWallCanvas({
       targetRotationX = 0;
     };
 
-    const tryLampToggleClick = (clientX: number, clientY: number) => {
-      const handler = lampToggleCallbackRef.current;
-      if (!handler) {
-        return false;
-      }
+    const tryClickZoneClick = (clientX: number, clientY: number) => {
       const rect = host.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) {
         return false;
@@ -2160,7 +3086,7 @@ function ThreeWallCanvas({
       hoverPointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
       hoverRaycaster.setFromCamera(hoverPointer, camera);
       const targets: THREE.Object3D[] = [];
-      collectLampToggleZones(targets);
+      collectClickZones(targets);
       if (targets.length === 0) {
         return false;
       }
@@ -2168,14 +3094,28 @@ function ThreeWallCanvas({
       if (!hit) {
         return false;
       }
-      const localPoint = root.worldToLocal(hit.point.clone());
-      handler([formatNumber(localPoint.x), formatNumber(localPoint.y), formatNumber(localPoint.z)]);
+      const action = hit.object.userData?.clickAction as ClickZoneAction | undefined;
+      if (action === "toggle-nearest-light" || hit.object.userData?.isLampToggleZone) {
+        const handler = lampToggleCallbackRef.current;
+        if (!handler) {
+          return false;
+        }
+        const localPoint = root.worldToLocal(hit.point.clone());
+        handler([
+          formatNumber(localPoint.x),
+          formatNumber(localPoint.y),
+          formatNumber(localPoint.z),
+        ]);
+      } else if (action === "speaker-click") {
+        speakerClickCallbackRef.current?.();
+      }
       return true;
     };
 
     const tryFrameClick = (clientX: number, clientY: number) => {
-      const handler = frameClickCallbackRef.current;
-      if (!handler) {
+      const frameHandler = frameClickCallbackRef.current;
+      const bioHandler = bioClickCallbackRef.current;
+      if (!frameHandler && !bioHandler) {
         return;
       }
       const rect = host.getBoundingClientRect();
@@ -2192,9 +3132,14 @@ function ThreeWallCanvas({
       }
       const hits = hoverRaycaster.intersectObjects(targets, false);
       const hit = hits[0]?.object as THREE.Mesh | undefined;
+      const bioSlug = hit?.userData?.bioSlug as string | undefined;
+      if (bioSlug === "yaslynn") {
+        bioHandler?.();
+        return;
+      }
       const slug = hit?.userData?.workSlug as string | undefined;
       if (slug) {
-        handler(slug);
+        frameHandler?.(slug);
       }
     };
 
@@ -2207,7 +3152,7 @@ function ThreeWallCanvas({
         host.releasePointerCapture(event.pointerId);
       }
       if (event.type === "pointerup" && wasDown && !wasDragged) {
-        if (!tryLampToggleClick(event.clientX, event.clientY)) {
+        if (!tryClickZoneClick(event.clientX, event.clientY)) {
           tryFrameClick(event.clientX, event.clientY);
         }
       }
@@ -2236,8 +3181,8 @@ function ThreeWallCanvas({
     let lastCameraInfoReport = 0;
     const animate = () => {
       if (!freeOrbitRef.current) {
-        targetPanX = 0;
-        targetPanY = 0;
+        targetPanX = basePanX;
+        targetPanY = basePanY;
         targetCameraDistance = baseCameraDistance;
       }
 
@@ -2254,6 +3199,12 @@ function ThreeWallCanvas({
         if (group.name === "editable-live-clock") {
           syncClockHands(group);
           syncClockPendulum(group, timeSeconds);
+        }
+        if (group.name === "editable-candle-composite") {
+          syncCandleCompositeAnimation(group, camera, timeSeconds);
+        }
+        if (group.name === "editable-speaker-composite") {
+          syncSpeakerCompositePulse(group, timeSeconds, speakerPlayingRef.current);
         }
       });
 
@@ -2344,6 +3295,25 @@ function ThreeWallCanvas({
             return createHitboxObject(setting, geometries, materials);
           }
 
+          if (setting.kind === "candle-composite") {
+            return createCandleCompositeObject(
+              setting,
+              models,
+              geometries,
+              materials,
+              textures,
+              onSceneError,
+            );
+          }
+
+          if (setting.kind === "speaker-composite") {
+            const speakerSource = models.get(setting.speakerModel);
+            if (!speakerSource) {
+              throw new Error(`Speaker model did not load: ${setting.speakerModel}`);
+            }
+            return createSpeakerCompositeObject(setting, speakerSource, geometries, materials);
+          }
+
           const sourceModel = models.get(setting.model);
           if (!sourceModel) {
             throw new Error(`Object model did not load: ${setting.model}`);
@@ -2351,6 +3321,19 @@ function ThreeWallCanvas({
 
           if (setting.kind === "model") {
             return createModelObject(setting, sourceModel);
+          }
+
+          if (setting.kind === "bio-frame" || setting.kind === "image-frame") {
+            return createImageFrame(
+              setting,
+              sourceModel,
+              geometries,
+              materials,
+              textures,
+              captionFont,
+              captionPlacement,
+              onSceneError,
+            );
           }
 
           return createFrame(
@@ -2409,22 +3392,7 @@ function ThreeWallCanvas({
   return <div ref={hostRef} className="absolute inset-0" />;
 }
 
-function normalizeSceneSettings(
-  parsed: Partial<SceneObjectSetting>[] | undefined,
-  {
-    includeLegacyDefaults = false,
-    addDefaultLampLight = false,
-    addDefaultLampHitbox = false,
-    markLampLightMigration = false,
-    markLampHitboxMigration = false,
-  }: {
-    includeLegacyDefaults?: boolean;
-    addDefaultLampLight?: boolean;
-    addDefaultLampHitbox?: boolean;
-    markLampLightMigration?: boolean;
-    markLampHitboxMigration?: boolean;
-  } = {},
-) {
+function normalizeSceneSettings(parsed: Partial<SceneObjectSetting>[] | undefined) {
   if (!Array.isArray(parsed) || parsed.length === 0) {
     return defaultSceneSettings;
   }
@@ -2442,6 +3410,22 @@ function normalizeSceneSettings(
       return createHitboxSetting(setting as Partial<HitboxSetting>);
     }
 
+    if (setting.kind === "candle-composite") {
+      return createCandleCompositeSetting(setting as Partial<CandleCompositeSetting>);
+    }
+
+    if (setting.kind === "speaker-composite") {
+      return createSpeakerCompositeSetting(setting as Partial<SpeakerCompositeSetting>);
+    }
+
+    if (setting.kind === "bio-frame") {
+      return createBioFrameSetting(index, setting as Partial<BioFrameSetting>);
+    }
+
+    if (setting.kind === "image-frame") {
+      return createImageFrameSetting(index, setting as Partial<ImageFrameSetting>);
+    }
+
     if (setting.kind === "model" && "catalogId" in setting && setting.catalogId) {
       if (deprecatedPropModelIds.has(setting.catalogId)) {
         return [];
@@ -2453,57 +3437,7 @@ function normalizeSceneSettings(
     return createFrameSetting(index, setting as Partial<FrameSetting>);
   });
 
-  const existingCatalogIds = new Set(
-    migrated
-      .filter((setting): setting is ModelSetting => setting.kind === "model")
-      .map((setting) => setting.catalogId),
-  );
-  const missingDefaultModels = defaultSceneSettings.filter(
-    (setting): setting is ModelSetting =>
-      setting.kind === "model" &&
-      !existingCatalogIds.has(setting.catalogId) &&
-      (includeLegacyDefaults || requiredDefaultPropModelIds.has(setting.catalogId)),
-  );
-  const hasLightSource = migrated.some((setting) => setting.kind === "light");
-  const shouldAddDefaultLampLight = !hasLightSource && addDefaultLampLight;
-  const missingDefaultLights = shouldAddDefaultLampLight
-    ? defaultSceneSettings.filter((setting): setting is LightSetting => setting.kind === "light")
-    : [];
-  const hasLampHitbox = migrated.some(
-    (setting) => setting.kind === "hitbox" && setting.action === "toggle-nearest-light",
-  );
-  const lampAnchor =
-    migrated.find(
-      (setting): setting is ModelSetting =>
-        setting.kind === "model" && setting.catalogId === "small-end-table",
-    ) ??
-    defaultSceneSettings.find(
-      (setting): setting is ModelSetting =>
-        setting.kind === "model" && setting.catalogId === "small-end-table",
-    );
-  const missingDefaultHitboxes =
-    !hasLampHitbox && addDefaultLampHitbox && lampAnchor
-      ? [
-          createHitboxSetting({
-            id: "hitbox-lamp-toggle",
-            ...lampHitboxPlacementFromModel(lampAnchor),
-          }),
-        ]
-      : [];
-
-  if (shouldAddDefaultLampLight && markLampLightMigration && typeof window !== "undefined") {
-    window.localStorage.setItem(DEFAULT_LAMP_LIGHT_MIGRATION_KEY, "1");
-  }
-
-  if (
-    (hasLampHitbox || missingDefaultHitboxes.length > 0) &&
-    markLampHitboxMigration &&
-    typeof window !== "undefined"
-  ) {
-    window.localStorage.setItem(DEFAULT_LAMP_HITBOX_MIGRATION_KEY, "1");
-  }
-
-  return [...migrated, ...missingDefaultModels, ...missingDefaultLights, ...missingDefaultHitboxes];
+  return migrated;
 }
 
 function readStoredSettings() {
@@ -2519,20 +3453,7 @@ function readStoredSettings() {
     return defaultSceneSettings;
   }
 
-  const shouldAddDefaultLampLight =
-    Boolean(frameStored || legacyStored) ||
-    (Boolean(stored) && window.localStorage.getItem(DEFAULT_LAMP_LIGHT_MIGRATION_KEY) !== "1");
-  const shouldAddDefaultLampHitbox =
-    Boolean(frameStored || legacyStored) ||
-    (Boolean(stored) && window.localStorage.getItem(DEFAULT_LAMP_HITBOX_MIGRATION_KEY) !== "1");
-
-  return normalizeSceneSettings(JSON.parse(storedValue) as Partial<SceneObjectSetting>[], {
-    includeLegacyDefaults: Boolean(frameStored || legacyStored),
-    addDefaultLampLight: shouldAddDefaultLampLight,
-    addDefaultLampHitbox: shouldAddDefaultLampHitbox,
-    markLampLightMigration: true,
-    markLampHitboxMigration: true,
-  });
+  return normalizeSceneSettings(JSON.parse(storedValue) as Partial<SceneObjectSetting>[]);
 }
 
 function readStoredLighting() {
@@ -2557,15 +3478,8 @@ async function readPersistedEnvironment(): Promise<{
     const response = await fetch("/api/environment", { cache: "no-store" });
     if (response.ok) {
       const environment = (await response.json()) as StoredEnvironment;
-      const shouldAddDefaultLampHitbox =
-        typeof window === "undefined" ||
-        window.localStorage.getItem(DEFAULT_LAMP_HITBOX_MIGRATION_KEY) !== "1";
       return {
-        settings: normalizeSceneSettings(environment.objects, {
-          addDefaultLampLight: true,
-          addDefaultLampHitbox: shouldAddDefaultLampHitbox,
-          markLampHitboxMigration: true,
-        }),
+        settings: normalizeSceneSettings(environment.objects),
         lighting: normalizeSceneLighting(environment.lighting),
       };
     }
@@ -2609,6 +3523,34 @@ function labelForSetting(setting: SceneObjectSetting) {
     };
   }
 
+  if (setting.kind === "candle-composite") {
+    return {
+      title: setting.label,
+      detail: `${statusPrefix}candle composite`,
+    };
+  }
+
+  if (setting.kind === "speaker-composite") {
+    return {
+      title: setting.label,
+      detail: `${statusPrefix}speaker composite`,
+    };
+  }
+
+  if (setting.kind === "bio-frame") {
+    return {
+      title: setting.label,
+      detail: `${statusPrefix}bio image`,
+    };
+  }
+
+  if (setting.kind === "image-frame") {
+    return {
+      title: setting.label,
+      detail: `${statusPrefix}still image`,
+    };
+  }
+
   if (setting.kind === "clock") {
     return {
       title: setting.label,
@@ -2642,6 +3584,8 @@ function ObjectPreviewButton({
   onClick: () => void;
 }) {
   const work = setting.kind === "frame" ? workForSetting(setting) : null;
+  const imageSrc =
+    setting.kind === "bio-frame" || setting.kind === "image-frame" ? setting.imageSrc : null;
   const visible = isSceneObjectVisible(setting);
   const label = labelForSetting(setting);
   const previewIcon =
@@ -2651,6 +3595,8 @@ function ObjectPreviewButton({
       <Clock size={24} />
     ) : setting.kind === "hitbox" ? (
       <ScanSearch size={24} />
+    ) : setting.kind === "speaker-composite" ? (
+      <Box size={24} />
     ) : (
       <Box size={24} />
     );
@@ -2676,6 +3622,14 @@ function ObjectPreviewButton({
             playsInline
             autoPlay
             preload="metadata"
+          />
+        ) : imageSrc ? (
+          <Image
+            fill
+            className="size-full object-cover"
+            src={imageSrc}
+            alt=""
+            sizes="11rem"
           />
         ) : (
           <div className="flex size-full items-center justify-center text-[#d8cdbb]">
@@ -2788,7 +3742,7 @@ function SceneLightingControls({
             tooltip="The tint of the room's base light. Warmer colors feel candlelit; cooler colors feel duskier."
           />
           <input
-            className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+            className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
             type="color"
             value={lighting.ambientColor}
             onChange={(event) => onChange({ ambientColor: event.target.value })}
@@ -2800,7 +3754,7 @@ function SceneLightingControls({
             tooltip="The tint of the main shadow-casting light source."
           />
           <input
-            className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+            className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
             type="color"
             value={lighting.keyColor}
             onChange={(event) => onChange({ keyColor: event.target.value })}
@@ -2812,7 +3766,7 @@ function SceneLightingControls({
             tooltip="The tint of the softer secondary light that fills shadows without casting its own."
           />
           <input
-            className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+            className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
             type="color"
             value={lighting.fillColor}
             onChange={(event) => onChange({ fillColor: event.target.value })}
@@ -2903,6 +3857,8 @@ function TooltipLabel({ label, tooltip }: { label: string; tooltip?: string }) {
 export function GalleryScene() {
   const storageReadyRef = useRef(false);
   const saveTimeoutRef = useRef<number | null>(null);
+  const speakerAudioRef = useRef<SpeakerAudioChain | null>(null);
+  const speakerButtonAudioRef = useRef<HTMLAudioElement | null>(null);
   const [showChrome, setShowChrome] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [lightingOpen, setLightingOpen] = useState(false);
@@ -2914,19 +3870,21 @@ export function GalleryScene() {
   const [pendingReset, setPendingReset] = useState<"layout" | "lighting" | null>(null);
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [openWorkSlug, setOpenWorkSlug] = useState<string | null>(null);
+  const [bioOpen, setBioOpen] = useState(false);
+  const [speakerPlaying, setSpeakerPlaying] = useState(false);
   const [hoveredFrameInfo, setHoveredFrameInfo] = useState<FrameHoverInfo | null>(null);
   const [captionFontId, setCaptionFontId] = useState<CaptionFontId>(() => {
     if (typeof window === "undefined") {
-      return "brik";
+      return "sobria";
     }
 
     try {
       return normalizeCaptionFontId(window.localStorage.getItem(CAPTION_FONT_STORAGE_KEY));
     } catch {
-      return "brik";
+      return "sobria";
     }
   });
-  const [captionPlacementId, setCaptionPlacementId] = useState<CaptionPlacementId>(() => {
+  const [captionPlacementId] = useState<CaptionPlacementId>(() => {
     if (typeof window === "undefined") {
       return "frame";
     }
@@ -2935,6 +3893,19 @@ export function GalleryScene() {
       return normalizeCaptionPlacementId(window.localStorage.getItem(CAPTION_PLACEMENT_STORAGE_KEY));
     } catch {
       return "frame";
+    }
+  });
+  const [captionDisplayMode, setCaptionDisplayMode] = useState<CaptionDisplayMode>(() => {
+    if (typeof window === "undefined") {
+      return "always";
+    }
+
+    try {
+      return normalizeCaptionDisplayMode(
+        window.localStorage.getItem(CAPTION_DISPLAY_STORAGE_KEY),
+      );
+    } catch {
+      return "always";
     }
   });
   const openWork = useMemo(
@@ -2996,6 +3967,14 @@ export function GalleryScene() {
       // Non-critical preference.
     }
   }, [captionPlacementId]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CAPTION_DISPLAY_STORAGE_KEY, captionDisplayMode);
+    } catch {
+      // Non-critical preference.
+    }
+  }, [captionDisplayMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3091,6 +4070,73 @@ export function GalleryScene() {
     setSceneError(error.message);
   }, []);
 
+  const playSpeakerButtonSound = useCallback(() => {
+    speakerButtonAudioRef.current?.pause();
+    const element = new Audio(SPEAKER_BUTTON_AUDIO_PATH);
+    element.preload = "auto";
+    element.volume = 0.375;
+    speakerButtonAudioRef.current = element;
+
+    element.addEventListener(
+      "ended",
+      () => {
+        if (speakerButtonAudioRef.current === element) {
+          speakerButtonAudioRef.current = null;
+        }
+      },
+      { once: true },
+    );
+    element.play().catch((error: unknown) => {
+      setSceneError(error instanceof Error ? error.message : String(error));
+    });
+  }, []);
+
+  const handleSpeakerClick = useCallback(() => {
+    setSceneError(null);
+    playSpeakerButtonSound();
+
+    const chain = speakerAudioRef.current ?? createSpeakerAudioChain();
+    speakerAudioRef.current = chain;
+
+    const togglePlayback = async () => {
+      if (chain.context.state === "suspended") {
+        await chain.context.resume();
+      }
+
+      if (chain.element.paused) {
+        if (chain.element.currentTime < 0.25) {
+          chain.element.currentTime = SPEAKER_AUDIO_START_SECONDS;
+        }
+        setSpeakerPlaying(true);
+        await chain.element.play();
+      } else {
+        setSpeakerPlaying(false);
+        chain.element.pause();
+      }
+    };
+
+    togglePlayback().catch((error: unknown) => {
+      setSpeakerPlaying(false);
+      setSceneError(error instanceof Error ? error.message : String(error));
+    });
+  }, [playSpeakerButtonSound]);
+
+  useEffect(() => {
+    return () => {
+      const chain = speakerAudioRef.current;
+      if (chain) {
+        chain.element.pause();
+        chain.context.close().catch(() => undefined);
+        speakerAudioRef.current = null;
+      }
+
+      if (speakerButtonAudioRef.current) {
+        speakerButtonAudioRef.current.pause();
+        speakerButtonAudioRef.current = null;
+      }
+    };
+  }, []);
+
   const updateSelectedObject = useCallback(
     (partial: Partial<SceneObjectSetting>) => {
       setSceneError(null);
@@ -3107,44 +4153,61 @@ export function GalleryScene() {
     setLighting((current) => normalizeSceneLighting({ ...current, ...partial }));
   }, []);
 
-  const toggleNearestLight = useCallback((position: VectorTuple) => {
-    setSceneError(null);
-    setSettings((current) => {
-      const hasVisibleLight = current.some(
-        (setting) => setting.kind === "light" && isSceneObjectVisible(setting),
-      );
-      let nearestIndex = -1;
-      let nearestDistance = Number.POSITIVE_INFINITY;
-
-      current.forEach((setting, index) => {
-        if (setting.kind !== "light") {
-          return;
-        }
-        if (hasVisibleLight && !isSceneObjectVisible(setting)) {
-          return;
-        }
-
-        const dx = setting.position[0] - position[0];
-        const dy = setting.position[1] - position[1];
-        const dz = setting.position[2] - position[2];
-        const distance = dx * dx + dy * dy + dz * dz;
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          nearestIndex = index;
-        }
-      });
-
-      if (nearestIndex === -1) {
-        return current;
-      }
-
-      return current.map((setting, index) =>
-        index === nearestIndex && setting.kind === "light"
-          ? { ...setting, enabled: !setting.enabled }
-          : setting,
-      );
+  const playLampSwitchSound = useCallback((turningOn: boolean) => {
+    const element = new Audio(turningOn ? LAMP_SWITCH_ON_AUDIO_PATH : LAMP_SWITCH_OFF_AUDIO_PATH);
+    element.preload = "auto";
+    element.volume = 0.205;
+    element.play().catch((error: unknown) => {
+      setSceneError(error instanceof Error ? error.message : String(error));
     });
   }, []);
+
+  const toggleNearestLight = useCallback((position: VectorTuple) => {
+    setSceneError(null);
+    const hasVisibleLight = settings.some(
+      (setting) => setting.kind === "light" && isSceneObjectVisible(setting),
+    );
+    let nearestIndex = -1;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    settings.forEach((setting, index) => {
+      if (setting.kind !== "light") {
+        return;
+      }
+      if (hasVisibleLight && !isSceneObjectVisible(setting)) {
+        return;
+      }
+
+      const dx = setting.position[0] - position[0];
+      const dy = setting.position[1] - position[1];
+      const dz = setting.position[2] - position[2];
+      const distance = dx * dx + dy * dy + dz * dz;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    if (nearestIndex === -1) {
+      return;
+    }
+
+    const nearest = settings[nearestIndex];
+    if (nearest.kind !== "light") {
+      return;
+    }
+
+    const nextEnabled = !nearest.enabled;
+    playLampSwitchSound(nextEnabled);
+
+    setSettings((current) =>
+      current.map((setting, index) =>
+        index === nearestIndex && setting.kind === "light"
+          ? { ...setting, enabled: nextEnabled }
+          : setting,
+      ),
+    );
+  }, [playLampSwitchSound, settings]);
 
   const updateSelectedPosition = (axis: 0 | 1 | 2, value: number) => {
     if (!selected) {
@@ -3170,7 +4233,7 @@ export function GalleryScene() {
     updateSelectedObject({ wallScale: value });
   };
 
-  const addObject = (kind: ObjectKind) => {
+  const addObject = (kind: ObjectKind, modelCatalogId = "small-end-table") => {
     const source = selected ?? settings[settings.length - 1] ?? defaultSceneSettings[0];
     const nextIndex = settings.length;
     const nextPosition: VectorTuple = [
@@ -3198,8 +4261,38 @@ export function GalleryScene() {
               position: nextPosition,
             })
         : kind === "model"
-          ? createModelSetting("small-end-table", {
+          ? createModelSetting(modelCatalogId, {
               id: `prop-${Date.now().toString(36)}`,
+              position: nextPosition,
+            })
+        : kind === "bio-frame"
+          ? createBioFrameSetting(nextIndex, {
+              id: `bio-frame-${Date.now().toString(36)}`,
+              position: nextPosition,
+              rotation: [
+                source.rotation[0],
+                source.rotation[1] * -1 || -0.025,
+                formatNumber(source.rotation[2] * -1 || -0.012),
+              ],
+            })
+        : kind === "image-frame"
+          ? createImageFrameSetting(nextIndex, {
+              id: `image-frame-${Date.now().toString(36)}`,
+              position: nextPosition,
+              rotation: [
+                source.rotation[0],
+                source.rotation[1] * -1 || -0.025,
+                formatNumber(source.rotation[2] * -1 || -0.012),
+              ],
+            })
+        : kind === "candle-composite"
+          ? createCandleCompositeSetting({
+              id: `candle-composite-${Date.now().toString(36)}`,
+              position: nextPosition,
+            })
+        : kind === "speaker-composite"
+          ? createSpeakerCompositeSetting({
+              id: `speaker-composite-${Date.now().toString(36)}`,
               position: nextPosition,
             })
         : kind === "hitbox"
@@ -3283,19 +4376,30 @@ export function GalleryScene() {
         lighting={lighting}
         showSceneLightMarkers={lightingOpen}
         showHitboxHelpers={editorOpen}
-        activeCaptionFrameId={editorOpen && selected?.kind === "frame" ? selected.id : null}
+        activeCaptionFrameId={
+          editorOpen &&
+          (selected?.kind === "frame" ||
+            selected?.kind === "bio-frame" ||
+            selected?.kind === "image-frame")
+            ? selected.id
+            : null
+        }
         resetSignal={resetSignal}
         freeOrbit={freeOrbit}
         captionFont={captionFont}
         captionPlacement={captionPlacementId}
+        captionDisplayMode={captionDisplayMode}
+        speakerPlaying={speakerPlaying}
         onSceneError={handleSceneError}
         onCameraInfoChange={setCameraInfo}
         onFrameClick={setOpenWorkSlug}
+        onBioClick={() => setBioOpen(true)}
         onFrameHover={setHoveredFrameInfo}
         onLampToggle={toggleNearestLight}
+        onSpeakerClick={handleSpeakerClick}
       />
 
-      {hoveredWork && captionPlacementId === "corner" && !editorOpen && !lightingOpen && !openWork ? (
+      {hoveredWork && captionPlacementId === "corner" && !editorOpen && !lightingOpen && !openWork && !bioOpen ? (
         <div
           className="pointer-events-none absolute bottom-7 left-5 max-w-[calc(100vw-2.5rem)] break-words text-5xl leading-none text-[#f6f0e5] sm:bottom-9 sm:left-8 sm:text-7xl lg:text-8xl"
           style={{
@@ -3310,7 +4414,7 @@ export function GalleryScene() {
 
       <div className="pointer-events-none absolute right-4 top-4 flex items-start justify-end p-0 sm:right-6 sm:top-6">
         <div className="flex flex-col items-end gap-2">
-          <div className="pointer-events-auto flex items-center gap-2 rounded border border-white/10 bg-[#16120d]/78 p-1 shadow-2xl backdrop-blur">
+          <div className="pointer-events-auto flex items-center gap-2 rounded border border-white/10 bg-[#16120d]/58 p-1 shadow-2xl backdrop-blur-[2px]">
             {showChrome ? (
               <>
                 <Link
@@ -3328,6 +4432,14 @@ export function GalleryScene() {
                   title="Open clock composite editor"
                 >
                   Clock
+                </Link>
+                <Link
+                  className="grid size-10 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
+                  href="/candle-editor"
+                  aria-label="Open candle composite editor"
+                  title="Open candle composite editor"
+                >
+                  <Flame size={17} />
                 </Link>
                 <Link
                   className="grid size-10 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
@@ -3424,7 +4536,7 @@ export function GalleryScene() {
           </div>
 
           {showChrome && cameraInfo ? (
-            <div className="pointer-events-none rounded border border-white/10 bg-[#16120d]/78 px-3 py-2 font-mono text-[11px] leading-snug text-[#f6f0e5] shadow-2xl backdrop-blur">
+            <div className="pointer-events-none rounded border border-white/10 bg-[#16120d]/58 px-3 py-2 font-mono text-[11px] leading-snug text-[#f6f0e5] shadow-2xl backdrop-blur-[2px]">
               <div>dist&nbsp;&nbsp;{cameraInfo.distance.toFixed(2)}</div>
               <div>pan&nbsp;&nbsp;&nbsp;{cameraInfo.panX.toFixed(2)},&nbsp;{cameraInfo.panY.toFixed(2)}</div>
               <div>yaw&nbsp;&nbsp;&nbsp;{((cameraInfo.yaw * 180) / Math.PI).toFixed(1)}°</div>
@@ -3436,7 +4548,7 @@ export function GalleryScene() {
       </div>
 
       {lightingOpen ? (
-        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/92 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
+        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
           <SceneLightingControls
             lighting={lighting}
             onChange={updateLighting}
@@ -3446,33 +4558,33 @@ export function GalleryScene() {
       ) : null}
 
       {showChrome && captionOpen ? (
-        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/92 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
+        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
           <div className="mb-3">
             <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
-              Caption typography
+              Caption options
             </div>
           </div>
 
-          <div className="mb-4">
-            <div className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
-              Placement
+          <div className="mb-4 grid gap-2">
+            <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+              Display
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: "frame", label: "Below frame" },
-                { id: "corner", label: "Lower left" },
+                { id: "always", label: "Always quiet" },
+                { id: "hover", label: "Hover only" },
               ].map((option) => {
-                const selectedPlacement = option.id === captionPlacementId;
+                const selectedDisplay = option.id === captionDisplayMode;
                 return (
                   <button
                     key={option.id}
                     type="button"
                     className={`rounded border px-3 py-2 text-left text-xs transition ${
-                      selectedPlacement
+                      selectedDisplay
                         ? "border-sky-300 bg-sky-300/15 text-sky-100"
                         : "border-white/10 bg-white/5 text-[#f6f0e5] hover:bg-white/10"
                     }`}
-                    onClick={() => setCaptionPlacementId(option.id as CaptionPlacementId)}
+                    onClick={() => setCaptionDisplayMode(option.id as CaptionDisplayMode)}
                   >
                     {option.label}
                   </button>
@@ -3481,6 +4593,9 @@ export function GalleryScene() {
             </div>
           </div>
 
+          <div className="mb-2 text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+            Typography
+          </div>
           <div className="grid gap-2">
             {captionFontOptions.map((option) => {
               const selectedFont = option.id === captionFontId;
@@ -3517,7 +4632,7 @@ export function GalleryScene() {
       ) : null}
 
       {editorOpen && selected ? (
-        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/92 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
+        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
               <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
@@ -3561,9 +4676,48 @@ export function GalleryScene() {
             <button
               type="button"
               className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
-              onClick={() => addObject("model")}
+              onClick={() => addObject("bio-frame")}
             >
-              Add model
+              Add bio
+            </button>
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addObject("image-frame")}
+            >
+              Add image
+            </button>
+            <select
+              className="min-w-0 rounded border border-white/10 bg-[#221d17]/70 px-3 py-2 text-xs text-[#f6f0e5] hover:bg-white/10"
+              value=""
+              aria-label="Add model"
+              onChange={(event) => {
+                const catalogId = event.currentTarget.value;
+                if (catalogId) {
+                  addObject("model", catalogId);
+                }
+              }}
+            >
+              <option value="">Add model...</option>
+              {propModels.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addObject("candle-composite")}
+            >
+              Add candle
+            </button>
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addObject("speaker-composite")}
+            >
+              Add speaker
             </button>
             <button
               type="button"
@@ -3603,7 +4757,7 @@ export function GalleryScene() {
           <label className="mb-3 grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
             Name
             <input
-              className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
+              className="w-full min-w-0 rounded border border-white/10 bg-[#221d17]/70 px-3 py-2 text-sm text-[#f6f0e5]"
               type="text"
               value={selected.label}
               onChange={(event) => updateSelectedObject({ label: event.currentTarget.value })}
@@ -3627,7 +4781,7 @@ export function GalleryScene() {
             <label className="mb-3 grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
               Model
               <select
-                className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
+                className="w-full min-w-0 rounded border border-white/10 bg-[#221d17]/70 px-3 py-2 text-sm text-[#f6f0e5]"
                 value={selected.catalogId}
                 onChange={(event) => updateSelectedModel(event.target.value)}
               >
@@ -3654,8 +4808,14 @@ export function GalleryScene() {
             />
             <RangeControl
               label="Wall Y"
-              min={selected.kind === "frame" ? -2.7 : -4.2}
-              max={2}
+              min={
+                selected.kind === "frame" ||
+                selected.kind === "bio-frame" ||
+                selected.kind === "image-frame"
+                  ? -2.7
+                  : -4.2
+              }
+              max={selected.kind === "clock" || selected.kind === "bio-frame" ? 4.2 : 2}
               step={0.02}
               value={selected.position[1]}
               onChange={(value) => updateSelectedPosition(1, value)}
@@ -3672,12 +4832,22 @@ export function GalleryScene() {
               label={
                 selected.kind === "model"
                   ? "Height"
+                  : selected.kind === "candle-composite"
+                    ? "Height"
+                  : selected.kind === "speaker-composite"
+                    ? "Height"
                   : selected.kind === "light"
                     ? "Marker"
                     : "Size"
               }
               min={selected.kind === "light" ? 0.04 : 0.35}
-              max={selected.kind === "light" ? 0.5 : 2.4}
+              max={
+                selected.kind === "model" && selected.catalogId === "human"
+                  ? 6
+                  : selected.kind === "light"
+                    ? 0.5
+                    : 2.4
+              }
               step={selected.kind === "light" ? 0.005 : 0.01}
               value={selected.wallScale}
               onChange={updateSelectedSize}
@@ -3694,7 +4864,9 @@ export function GalleryScene() {
             </button>
           ) : null}
 
-          {selected.kind === "frame" ? (
+          {selected.kind === "frame" ||
+          selected.kind === "bio-frame" ||
+          selected.kind === "image-frame" ? (
             <div className="mt-4 grid gap-3">
               <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
                 Caption
@@ -3744,6 +4916,68 @@ export function GalleryScene() {
             </div>
           ) : null}
 
+          {selected.kind === "image-frame" ? (
+            <div className="mt-4 grid gap-3">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+                Photo treatment
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <RangeControl
+                  label="Warm tint"
+                  min={0}
+                  max={0.3}
+                  step={0.01}
+                  value={selected.imageTintStrength}
+                  onChange={(value) =>
+                    updateSelectedObject({
+                      imageTintStrength: value,
+                    } as Partial<SceneObjectSetting>)
+                  }
+                />
+                <RangeControl
+                  label="Haze"
+                  min={0}
+                  max={0.35}
+                  step={0.01}
+                  value={selected.imageHazeOpacity}
+                  onChange={(value) =>
+                    updateSelectedObject({
+                      imageHazeOpacity: value,
+                    } as Partial<SceneObjectSetting>)
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
+                  Tint color
+                  <input
+                    className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
+                    type="color"
+                    value={selected.imageTintColor}
+                    onChange={(event) =>
+                      updateSelectedObject({
+                        imageTintColor: event.target.value,
+                      } as Partial<SceneObjectSetting>)
+                    }
+                  />
+                </label>
+                <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
+                  Haze color
+                  <input
+                    className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
+                    type="color"
+                    value={selected.imageHazeColor}
+                    onChange={(event) =>
+                      updateSelectedObject({
+                        imageHazeColor: event.target.value,
+                      } as Partial<SceneObjectSetting>)
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+          ) : null}
+
           {selected.kind === "clock" ? (
             <Link
               className="mt-3 inline-block rounded border border-sky-300/30 bg-sky-300/15 px-3 py-2 text-xs text-sky-100 hover:bg-sky-300/20"
@@ -3751,6 +4985,109 @@ export function GalleryScene() {
             >
               Clock editor
             </Link>
+          ) : null}
+
+          {selected.kind === "candle-composite" ? (
+            <Link
+              className="mt-3 inline-block rounded border border-amber-300/30 bg-amber-300/15 px-3 py-2 text-xs text-amber-100 hover:bg-amber-300/20"
+              href="/candle-editor"
+            >
+              Candle editor
+            </Link>
+          ) : null}
+
+          {selected.kind === "speaker-composite" ? (
+            <div className="mt-4 grid gap-3">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+                Speaker hitbox
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <RangeControl
+                  label="Hitbox X"
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  value={selected.hitboxOffset[0]}
+                  onChange={(value) => {
+                    const hitboxOffset = [...selected.hitboxOffset] as VectorTuple;
+                    hitboxOffset[0] = value;
+                    updateSelectedObject({
+                      hitboxOffset,
+                    } as Partial<SceneObjectSetting>);
+                  }}
+                />
+                <RangeControl
+                  label="Hitbox Y"
+                  min={-0.25}
+                  max={1.4}
+                  step={0.01}
+                  value={selected.hitboxOffset[1]}
+                  onChange={(value) => {
+                    const hitboxOffset = [...selected.hitboxOffset] as VectorTuple;
+                    hitboxOffset[1] = value;
+                    updateSelectedObject({
+                      hitboxOffset,
+                    } as Partial<SceneObjectSetting>);
+                  }}
+                />
+                <RangeControl
+                  label="Hitbox Z"
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  value={selected.hitboxOffset[2]}
+                  onChange={(value) => {
+                    const hitboxOffset = [...selected.hitboxOffset] as VectorTuple;
+                    hitboxOffset[2] = value;
+                    updateSelectedObject({
+                      hitboxOffset,
+                    } as Partial<SceneObjectSetting>);
+                  }}
+                />
+                <RangeControl
+                  label="Hitbox W"
+                  min={0.05}
+                  max={2}
+                  step={0.01}
+                  value={selected.hitboxSize[0]}
+                  onChange={(value) => {
+                    const hitboxSize = [...selected.hitboxSize] as VectorTuple;
+                    hitboxSize[0] = value;
+                    updateSelectedObject({
+                      hitboxSize,
+                    } as Partial<SceneObjectSetting>);
+                  }}
+                />
+                <RangeControl
+                  label="Hitbox H"
+                  min={0.05}
+                  max={2}
+                  step={0.01}
+                  value={selected.hitboxSize[1]}
+                  onChange={(value) => {
+                    const hitboxSize = [...selected.hitboxSize] as VectorTuple;
+                    hitboxSize[1] = value;
+                    updateSelectedObject({
+                      hitboxSize,
+                    } as Partial<SceneObjectSetting>);
+                  }}
+                />
+                <RangeControl
+                  label="Hitbox D"
+                  min={0.05}
+                  max={2}
+                  step={0.01}
+                  value={selected.hitboxSize[2]}
+                  onChange={(value) => {
+                    const hitboxSize = [...selected.hitboxSize] as VectorTuple;
+                    hitboxSize[2] = value;
+                    updateSelectedObject({
+                      hitboxSize,
+                    } as Partial<SceneObjectSetting>);
+                  }}
+                />
+              </div>
+            </div>
           ) : null}
 
           {selected.kind === "light" ? (
@@ -3770,7 +5107,7 @@ export function GalleryScene() {
               <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
                 Color
                 <input
-                  className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+                  className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
                   type="color"
                   value={selected.color}
                   onChange={(event) => updateSelectedLight({ color: event.target.value })}
@@ -3895,13 +5232,46 @@ export function GalleryScene() {
       ) : null}
 
       {openWork ? (
-        <WorkModal work={openWork} onClose={() => setOpenWorkSlug(null)} />
+        <WorkModal
+          work={openWork}
+          onClose={() => setOpenWorkSlug(null)}
+          onSelectWork={setOpenWorkSlug}
+        />
+      ) : null}
+      {bioOpen ? (
+        <BioModal onClose={() => setBioOpen(false)} />
       ) : null}
     </section>
   );
 }
 
-function WorkModal({ work, onClose }: { work: WorkItem; onClose: () => void }) {
+function youtubeEmbedUrl(sourceUrl: string) {
+  try {
+    const url = new URL(sourceUrl);
+    const videoId =
+      url.hostname === "youtu.be"
+        ? url.pathname.split("/").filter(Boolean)[0]
+        : url.searchParams.get("v") ?? url.pathname.split("/").filter(Boolean).pop();
+    return videoId ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1` : null;
+  } catch {
+    return null;
+  }
+}
+
+function WorkModal({
+  work,
+  onClose,
+  onSelectWork,
+}: {
+  work: WorkItem;
+  onClose: () => void;
+  onSelectWork: (slug: string) => void;
+}) {
+  const embedUrl = youtubeEmbedUrl(work.sourceUrl);
+  const relatedWorks = works.filter(
+    (candidate) => candidate.artist === work.artist && candidate.slug !== work.slug,
+  );
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -3926,18 +5296,166 @@ function WorkModal({ work, onClose }: { work: WorkItem; onClose: () => void }) {
       aria-label={work.slug}
     >
       <div
-        className="relative w-full max-w-4xl rounded-lg border border-white/10 bg-[#16120d]/95 shadow-2xl"
-        style={{ aspectRatio: "16 / 9" }}
+        className="relative grid max-h-[min(90vh,58rem)] w-full max-w-6xl overflow-hidden rounded-lg border border-white/10 bg-[#16120d]/95 shadow-2xl lg:grid-cols-[1.35fr_0.75fr]"
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-3 top-3 grid size-9 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
+          className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
         >
           <X size={18} />
         </button>
+        <div className="grid min-h-[20rem] bg-black/35">
+          {embedUrl ? (
+            <iframe
+              className="size-full min-h-[20rem] lg:min-h-[36rem]"
+              src={embedUrl}
+              title={work.sourceTitle}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          ) : (
+            <video
+              className="size-full object-cover"
+              src={work.clipSrc}
+              controls
+              playsInline
+              preload="metadata"
+            />
+          )}
+        </div>
+        <div className="min-h-0 overflow-y-auto px-5 py-6 text-[#f6f0e5] sm:px-7 sm:py-8">
+          <div className="mb-5 pr-10">
+            <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-[#b9aa92]">
+              {work.projectType}
+            </p>
+            <h2 className="text-3xl leading-tight sm:text-4xl">
+              {work.title}
+            </h2>
+            <p className="mt-2 text-base text-[#d8cdbb]">{work.artist}</p>
+          </div>
+
+          <div className="border-y border-white/10 py-4">
+            <p className="mb-3 text-[11px] uppercase tracking-[0.16em] text-[#a99d8a]">
+              Yaslynn&rsquo;s Role
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {work.roles.map((role) => (
+                <span
+                  key={role}
+                  className="rounded border border-[#d8cdbb]/25 px-2.5 py-1 text-sm text-[#f3e6d3]"
+                >
+                  {role}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <p className="mt-5 text-sm leading-6 text-[#d8cdbb]">
+            {work.modalDescription}
+          </p>
+
+          <a
+            className="mt-5 inline-flex items-center gap-2 rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-[#f6f0e5] transition hover:bg-white/15"
+            href={work.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Play size={15} />
+            Watch on YouTube
+            <ExternalLink size={14} />
+          </a>
+
+          {relatedWorks.length > 0 ? (
+            <div className="mt-7">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.16em] text-[#a99d8a]">
+                More with {work.artist}
+              </p>
+              <div className="grid gap-2">
+                {relatedWorks.map((related) => (
+                  <button
+                    key={related.slug}
+                    type="button"
+                    className="rounded border border-white/10 bg-white/[0.04] px-3 py-2 text-left transition hover:bg-white/10"
+                    onClick={() => onSelectWork(related.slug)}
+                  >
+                    <span className="block truncate text-sm text-[#f6f0e5]">
+                      {related.title}
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-[#b9aa92]">
+                      {related.credit}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BioModal({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Yaslynn Rivera bio"
+    >
+      <div
+        className="relative grid h-[min(88vh,54rem)] w-full max-w-5xl grid-rows-[minmax(15rem,38vh)_minmax(0,1fr)] overflow-hidden rounded-lg border border-white/10 bg-[#16120d]/95 shadow-2xl md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
+        >
+          <X size={18} />
+        </button>
+        <div className="relative min-h-0 bg-black/35">
+          <Image
+            fill
+            className="object-contain object-center md:object-cover md:object-center"
+            src={BIO_FRAME_IMAGE_PATH}
+            alt="Yaslynn Rivera"
+            sizes="(min-width: 768px) 42vw, 100vw"
+          />
+        </div>
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-7 pr-14 text-[#f6f0e5] md:px-8 md:py-9 md:pr-14">
+          <h2
+            className="mb-5 text-4xl leading-none md:text-5xl"
+            style={{ fontFamily: '"Yaz Sobria", Sobria, serif' }}
+          >
+            Yaslynn Rivera
+          </h2>
+          <div className="space-y-4 text-sm leading-7 text-[#e8dccb] md:text-[15px]">
+            {yaslynnBio.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

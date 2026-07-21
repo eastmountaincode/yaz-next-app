@@ -20,78 +20,77 @@
   },
   "objects": [
     {
-      "id": "frame-01",
-      "kind": "frame",
-      "label": "Video frame 1",
-      "visible": true,
-      "model": "/3d-models/frames/picture_frame_1520_dimensions.glb",
-      "workSlug": "snoop-ten-til-midnight",
-      "maskShape": "rectangle",
-      "position": [
-        -0.9,
-        1.6,
-        0
-      ],
-      "width": 1.6,
-      "height": 2,
-      "frameRotationX": -0.001592653589793,
-      "frameRotationY": -0.131592653589793,
-      "frameRotationZ": -1.57159265358979,
-      "rotation": [
-        0,
-        0.035,
-        0.015
-      ],
-      "wallScale": 1.02,
-      "clipX": 0.006,
-      "clipY": -0.01,
-      "clipZ": 0.015,
-      "clipWidth": 1.372,
-      "clipHeight": 1.0290000000000001,
-      "videoScale": 1.25,
-      "videoOffsetX": 0,
-      "videoOffsetY": 0,
-      "captionOffsetX": 0,
-      "captionOffsetY": -0.18,
-      "captionOffsetZ": 0.03,
-      "captionScale": 1.24
-    },
-    {
       "id": "frame-02",
       "kind": "frame",
-      "label": "Video frame 2",
+      "label": "Director reel",
       "visible": true,
-      "model": "/3d-models/frames/fancy_picture_frame_01-freepoly.org.glb",
+      "model": "/3d-models/frames/vintage_frame_06.glb",
       "workSlug": "dani-offline-angel",
-      "maskShape": "oval",
+      "maskShape": "rectangle",
       "position": [
-        1.28,
-        0.68,
-        0
+        -0.16,
+        1.04,
+        -0.02
       ],
       "width": 2.3,
       "height": 2.34,
-      "frameRotationX": 0.018407346410207,
-      "frameRotationY": 0.008407346410207,
-      "frameRotationZ": 0,
+      "frameRotationX": -0.001592653589793,
+      "frameRotationY": -0.001592653589793,
+      "frameRotationZ": -1.57159265358979,
       "rotation": [
         0,
-        -0.025,
-        -0.02
+        0.008407346410207,
+        0.008407346410207
       ],
-      "wallScale": 1.08,
-      "clipX": -0.001,
-      "clipY": -0.015,
-      "clipZ": -0.005,
-      "clipWidth": 2.098,
-      "clipHeight": 1.4510757220921155,
+      "wallScale": 1.24,
+      "clipX": 0.011,
+      "clipY": -0.026,
+      "clipZ": -0.01,
+      "clipWidth": 2.789,
+      "clipHeight": 1.9290039032006248,
       "videoScale": 1.25,
-      "videoOffsetX": 0.25,
-      "videoOffsetY": 0,
+      "videoOffsetX": 0.12,
+      "videoOffsetY": 0.06,
       "captionOffsetX": 0,
-      "captionOffsetY": -0.18,
-      "captionOffsetZ": 0.068,
-      "captionScale": 1
+      "captionOffsetY": -0.13,
+      "captionOffsetZ": 0.146,
+      "captionScale": 2.03
+    },
+    {
+      "id": "candle-holder-composite",
+      "kind": "candle-composite",
+      "label": "Candle holder",
+      "visible": true,
+      "position": [
+        1.76,
+        0.38,
+        0.065
+      ],
+      "rotation": [
+        -0.011592653589793,
+        0.028407346410207,
+        -0.001592653589793
+      ],
+      "wallScale": 0.92,
+      "holderModel": "/3d-models/candle-and-holder/holder.glb",
+      "candleModel": "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
+      "flameTexture": "/3d-models/candle-and-holder/candleflame_atlas.png",
+      "candleOffset": [
+        0,
+        0.015,
+        0.05
+      ],
+      "candleScale": 0.58,
+      "flameOffset": [
+        0,
+        0.61,
+        0.05
+      ],
+      "flameScale": 0.065,
+      "flameOpacity": 0.92,
+      "flameLightColor": "#ffb86b",
+      "flameLightIntensity": 0.1,
+      "flameLightDistance": 4
     },
     {
       "id": "clock-vintage-wall",
@@ -99,113 +98,118 @@
       "label": "Vintage clock",
       "visible": true,
       "position": [
-        -3.02,
-        0.78,
+        1.74,
+        2.5,
         -0.105
       ],
       "rotation": [
         0,
         0.038407346410207,
-        -0.001592653589793
+        0.028407346410207
       ],
       "wallScale": 0.82
     },
     {
-      "id": "prop-small-end-table",
+      "id": "prop-mrv83kao",
       "kind": "model",
-      "catalogId": "small-end-table",
-      "label": "Small end table",
+      "catalogId": "wooden-cross",
+      "label": "Wooden Cross",
       "visible": true,
-      "model": "/3d-models/Meshy_AI_small_simple_end_tabl_0510164139_texture.glb",
+      "model": "/3d-models/decor/wooden_cross.glb",
       "position": [
-        -2.02,
-        -3.28,
-        0.52
+        -1.12,
+        1.86,
+        0.025
       ],
       "rotation": [
         0,
-        0.31,
+        0,
         0
       ],
-      "wallScale": 1.63
+      "wallScale": 1.1
     },
     {
-      "id": "prop-victorian-bed",
-      "kind": "model",
-      "catalogId": "victorian-bed",
-      "label": "Victorian bed",
-      "visible": false,
-      "model": "/3d-models/bed/victorian_bed.glb",
+      "id": "bio-yaslynn-frame",
+      "kind": "bio-frame",
+      "label": "Bio portrait",
+      "visible": true,
+      "model": "/3d-models/frames/photo_frame_with_mat_2026_05_31.glb",
+      "workSlug": "blk-odyssy-nativity-of-chaos",
+      "maskShape": "rectangle",
       "position": [
-        1.5,
-        -2.44,
-        1.935
+        -0.14,
+        3.04,
+        0.025
       ],
+      "width": 1.42,
+      "height": 2.02,
+      "frameRotationX": 0,
+      "frameRotationY": 0,
+      "frameRotationZ": 0,
       "rotation": [
-        0,
-        -0.55,
-        0
+        -0.001592653589793,
+        0.028407346410207,
+        0.008407346410207
       ],
-      "wallScale": 1.28
+      "wallScale": 0.78,
+      "clipX": 0,
+      "clipY": 0,
+      "clipZ": -0.01,
+      "clipWidth": 1.31,
+      "clipHeight": 1.9756846267918937,
+      "videoScale": 1,
+      "videoOffsetX": 0,
+      "videoOffsetY": 0.07,
+      "captionOffsetX": 0.35,
+      "captionOffsetY": 0.26,
+      "captionOffsetZ": 0.108,
+      "captionScale": 1.88,
+      "imageSrc": "/image/yaz_headshot.jpeg",
+      "bioSlug": "yaslynn",
+      "captionText": "Bio"
     },
     {
-      "id": "prop-potted-plant",
-      "kind": "model",
-      "catalogId": "potted-plant",
-      "label": "Potted plant",
+      "id": "stills-frame",
+      "kind": "image-frame",
+      "label": "Stills",
       "visible": true,
-      "model": "/3d-models/plants/potted_plant_02_optimized_webp.glb",
+      "model": "/3d-models/frames/vintage_frame_04.glb",
+      "workSlug": "blk-odyssy-nativity-of-chaos",
+      "maskShape": "rectangle",
       "position": [
-        3.15,
-        -2.44,
-        0.72
+        -2.36,
+        0.72,
+        0.025
       ],
+      "width": 1.42,
+      "height": 2.02,
+      "frameRotationX": 0,
+      "frameRotationY": 0,
+      "frameRotationZ": 0,
       "rotation": [
-        0,
-        -0.2,
-        0
+        -0.001592653589793,
+        -0.028407346410207,
+        -0.008407346410207
       ],
-      "wallScale": 1.35
-    },
-    {
-      "id": "light-table-lamp",
-      "kind": "light",
-      "label": "Lamp light source",
-      "visible": true,
-      "position": [
-        -1.98,
-        -0.94,
-        0.575
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "wallScale": 0.12,
-      "color": "#ffd08a",
-      "intensity": 3,
-      "distance": 3.2,
-      "decay": 1.8,
-      "enabled": false
-    },
-    {
-      "id": "hitbox-lamp-toggle",
-      "kind": "hitbox",
-      "label": "Lamp click zone",
-      "visible": true,
-      "position": [
-        -2.02,
-        -1.32,
-        0.52
-      ],
-      "rotation": [
-        0,
-        0.31,
-        0
-      ],
-      "wallScale": 1.63,
-      "action": "toggle-nearest-light"
+      "wallScale": 0.78,
+      "clipX": 0,
+      "clipY": 0.1,
+      "clipZ": -0.01,
+      "clipWidth": 1.2,
+      "clipHeight": 1.5,
+      "videoScale": 1,
+      "videoOffsetX": 0,
+      "videoOffsetY": 0,
+      "captionOffsetX": 0,
+      "captionOffsetY": -0.2,
+      "captionOffsetZ": 0.108,
+      "captionScale": 1.6,
+      "imageSrc": "/image/stills_nativity_of_chaos.jpg",
+      "captionText": "Stills",
+      "imageTintColor": "#ead8bf",
+      "imageTintStrength": 0.05,
+      "imageHazeColor": "#ead8bf",
+      "imageHazeOpacity": 0.08
     }
   ]
 }

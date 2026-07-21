@@ -2,17 +2,28 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import {
+  bioFramePicture,
+  familyFramePicture,
+  framePictures,
+} from "@/content/framePictures";
 import { works } from "@/content/works";
 
 type MaskShape = "rectangle" | "oval";
 type DragMode = "move" | "nw" | "ne" | "se" | "sw";
+type CompositeKind = "video-frame" | "bio-frame" | "image-frame";
 
 type CompositeConfig = {
   id: string;
+  kind: CompositeKind;
   model: string;
   workSlug: string;
+  imageSrc: string;
+  bioSlug?: "yaslynn";
+  captionText?: string;
   maskShape: MaskShape;
   frameWidth: number;
   frameHeight: number;
@@ -37,6 +48,10 @@ const LEGACY_FRAME_STORAGE_KEY = "yaz-frame-editor-v2";
 const FRAME_ROTATION_LIMIT = Math.PI;
 const PREVIEW_YAW_LIMIT = Math.PI;
 const PREVIEW_PITCH_LIMIT = Math.PI / 2;
+const BIO_FRAME_IMAGE_PATH = bioFramePicture.src;
+const BIO_IMAGE_ASPECT = bioFramePicture.aspect;
+const FAMILY_FRAME_IMAGE_PATH = familyFramePicture.src;
+const FAMILY_IMAGE_ASPECT = familyFramePicture.aspect;
 
 const frameModels = [
   "/3d-models/frames/picture_frame_1520_dimensions.glb",
@@ -44,10 +59,30 @@ const frameModels = [
   "/3d-models/frames/picture_frame_2.glb",
   "/3d-models/frames/fancy_picture_frame_01-freepoly.org.glb",
   "/3d-models/frames/picture_frame.glb",
+  "/3d-models/frames/picture_frame_2026_07_21_optimized.glb",
+  "/3d-models/frames/backrooms_ff2_painting_bacteria_room_2026_07_21_optimized.glb",
+  "/3d-models/frames/thick_simple_picture_frame_2026_07_21_optimized.glb",
   "/3d-models/frames/vintage_picture_frame..glb",
+  "/3d-models/frames/wooden_picture_frame_2026_05_31_optimized.glb",
+  "/3d-models/frames/new_frame_default_2026_05_31_pbr.glb",
+  "/3d-models/frames/vintage_frame_04.glb",
+  "/3d-models/frames/vintage_frame_06.glb",
+  "/3d-models/frames/photo_frame_with_mat_2026_05_31.glb",
+  "/3d-models/frames/photo_frame_with_mat_wider_2026_05_31.glb",
+  "/3d-models/frames/red_cardinal_snowing_in_winter.glb",
+  "/3d-models/frames/thin_brass_2026_05_31.glb",
+  "/3d-models/frames/old_soviet_paints_first.glb",
+  "/3d-models/frames/old_soviet_paints_second.glb",
 ];
 
 function normalizeFrameModelPath(model: string) {
+  if (
+    model === "/3d-models/frames/frame_1_default.glb" ||
+    model === "/3d-models/frames/new_frame_default_2026_05_31.glb"
+  ) {
+    return "/3d-models/frames/new_frame_default_2026_05_31_pbr.glb";
+  }
+
   if (model.startsWith("/3d-models/frames/")) {
     return model;
   }
@@ -65,8 +100,10 @@ function normalizeMaskShape(maskShape: string | undefined): MaskShape {
 
 const defaultComposite: CompositeConfig = {
   id: "composite-01",
+  kind: "video-frame",
   model: frameModels[1],
   workSlug: works[0]?.slug ?? "",
+  imageSrc: "",
   maskShape: "rectangle",
   frameWidth: 1.6,
   frameHeight: 2.0,
@@ -84,21 +121,93 @@ const defaultComposite: CompositeConfig = {
   cropY: 0,
 };
 
+const defaultBioComposite: CompositeConfig = {
+  ...defaultComposite,
+  id: "bio-yaslynn-frame",
+  kind: "bio-frame",
+  model: "/3d-models/frames/vintage_frame_06.glb",
+  workSlug: works[0]?.slug ?? "",
+  imageSrc: BIO_FRAME_IMAGE_PATH,
+  bioSlug: "yaslynn",
+  captionText: bioFramePicture.defaultCaption,
+  frameWidth: 1.42,
+  frameHeight: 2.02,
+  frameRotationX: 0,
+  frameRotationY: 0,
+  frameRotationZ: 0,
+  videoX: 0,
+  videoY: 0,
+  videoZ: 0.09,
+  videoWidth: 0.82,
+  videoHeight: 0.82 / BIO_IMAGE_ASPECT,
+  videoAspect: BIO_IMAGE_ASPECT,
+  videoZoom: 1,
+  cropX: 0,
+  cropY: 0,
+};
+
+const defaultFamilyComposite: CompositeConfig = {
+  ...defaultComposite,
+  id: "family-portrait-frame",
+  kind: "image-frame",
+  model: "/3d-models/frames/photo_frame_with_mat_2026_05_31.glb",
+  workSlug: works[0]?.slug ?? "",
+  imageSrc: FAMILY_FRAME_IMAGE_PATH,
+  bioSlug: undefined,
+  captionText: "",
+  frameWidth: 1.9,
+  frameHeight: 1.3,
+  frameRotationX: 0,
+  frameRotationY: 0,
+  frameRotationZ: 0,
+  videoX: 0,
+  videoY: 0,
+  videoZ: 0.09,
+  videoWidth: 1.46,
+  videoHeight: 1.46 / FAMILY_IMAGE_ASPECT,
+  videoAspect: FAMILY_IMAGE_ASPECT,
+  videoZoom: 1,
+  cropX: 0,
+  cropY: 0,
+};
+
 const defaultComposites = [
-  defaultComposite,
-  normalizeComposite({
+  {
     ...defaultComposite,
-    id: "composite-02",
-    workSlug: works[1]?.slug ?? defaultComposite.workSlug,
-  }),
+    id: "frame-02",
+    model: "/3d-models/frames/vintage_frame_06.glb",
+    workSlug: "dani-offline-angel",
+    frameWidth: 2.3,
+    frameHeight: 2.34,
+    frameRotationX: -0.001592653589793,
+    frameRotationY: -0.001592653589793,
+    frameRotationZ: -1.57159265358979,
+    videoX: 0.011,
+    videoY: -0.026,
+    videoZ: -0.01,
+    videoWidth: 2.789,
+    videoHeight: 1.9290039032006248,
+    videoAspect: 1.445823927765237,
+    videoZoom: 1.25,
+    cropX: 0.12,
+    cropY: 0.06,
+  },
 ] satisfies CompositeConfig[];
 
 type SceneFrameSetting = {
   id?: string;
   kind?: string;
+  label?: string;
+  visible?: boolean;
   model?: string;
   workSlug?: string;
+  imageSrc?: string;
+  bioSlug?: "yaslynn";
+  captionText?: string;
   maskShape?: string;
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  wallScale?: number;
   width?: number;
   height?: number;
   frameRotationX?: number;
@@ -119,12 +228,28 @@ type StoredEnvironment = {
   objects?: SceneFrameSetting[];
 };
 
-function normalizeComposite(composite: Partial<CompositeConfig>) {
-  const parsed = { ...defaultComposite, ...composite };
-  const videoAspect = parsed.videoAspect || defaultComposite.videoAspect;
+function normalizeComposite(composite: Partial<CompositeConfig>): CompositeConfig {
+  const kind: CompositeKind =
+    composite.kind === "bio-frame" || composite.id === defaultBioComposite.id
+      ? "bio-frame"
+      : composite.kind === "image-frame" || composite.id === defaultFamilyComposite.id
+        ? "image-frame"
+      : "video-frame";
+  const fallback =
+    kind === "bio-frame"
+      ? defaultBioComposite
+      : kind === "image-frame"
+        ? defaultFamilyComposite
+        : defaultComposite;
+  const parsed = { ...fallback, ...composite, kind };
+  const videoAspect = parsed.videoAspect || fallback.videoAspect;
   return {
     ...parsed,
     model: normalizeFrameModelPath(parsed.model),
+    imageSrc: kind === "bio-frame" || kind === "image-frame" ? parsed.imageSrc || fallback.imageSrc : "",
+    bioSlug: kind === "bio-frame" ? parsed.bioSlug ?? "yaslynn" : undefined,
+    captionText:
+      kind === "bio-frame" || kind === "image-frame" ? parsed.captionText ?? fallback.captionText : undefined,
     maskShape: normalizeMaskShape(parsed.maskShape),
     frameRotationX: parsed.frameRotationX ?? 0,
     frameRotationY: parsed.frameRotationY ?? 0,
@@ -152,25 +277,44 @@ function readStoredComposites() {
 }
 
 function ensureDefaultCompositeCount(composites: CompositeConfig[]) {
-  if (composites.length >= defaultComposites.length) {
-    return composites;
+  return composites.length > 0 ? composites : defaultComposites;
+}
+
+function mergeCompositeLists(
+  baseComposites: CompositeConfig[],
+  overrideComposites: CompositeConfig[],
+) {
+  if (overrideComposites.length === 0) {
+    return baseComposites;
   }
 
-  const existingIds = new Set(composites.map((composite) => composite.id));
-  const missingDefaults = defaultComposites.filter((composite) => !existingIds.has(composite.id));
-  return [...composites, ...missingDefaults].slice(0, defaultComposites.length);
+  const baseById = new Map(baseComposites.map((composite) => [composite.id, composite]));
+  const overridesById = new Map(overrideComposites.map((composite) => [composite.id, composite]));
+  const merged = baseComposites.map((composite) => overridesById.get(composite.id) ?? composite);
+  const appendedOverrides = overrideComposites.filter((composite) => !baseById.has(composite.id));
+  return [...merged, ...appendedOverrides];
 }
 
 function sceneFrameToComposite(frame: SceneFrameSetting, index: number): CompositeConfig {
-  const fallback = defaultComposites[index] ?? defaultComposite;
+  const isBioFrame = frame.kind === "bio-frame";
+  const isImageFrame = frame.kind === "image-frame";
+  const fallback = isBioFrame
+    ? defaultBioComposite
+    : isImageFrame
+      ? defaultFamilyComposite
+      : defaultComposites[index] ?? defaultComposite;
   const videoWidth = frame.clipWidth ?? fallback.videoWidth;
   const videoHeight = frame.clipHeight ?? fallback.videoHeight;
   const videoAspect = videoWidth / Math.max(0.001, videoHeight);
 
   return normalizeComposite({
     id: frame.id ?? `scene-frame-${String(index + 1).padStart(2, "0")}`,
+    kind: isBioFrame ? "bio-frame" : isImageFrame ? "image-frame" : "video-frame",
     model: frame.model ?? fallback.model,
     workSlug: frame.workSlug ?? works[index % Math.max(works.length, 1)]?.slug ?? fallback.workSlug,
+    imageSrc: frame.imageSrc ?? fallback.imageSrc,
+    bioSlug: frame.bioSlug ?? fallback.bioSlug,
+    captionText: frame.captionText ?? fallback.captionText,
     maskShape: normalizeMaskShape(frame.maskShape),
     frameWidth: frame.width ?? fallback.frameWidth,
     frameHeight: frame.height ?? fallback.frameHeight,
@@ -205,14 +349,19 @@ function readSceneFrameComposites() {
   const parsed = JSON.parse(stored) as SceneFrameSetting[] | SceneFrameSetting;
   const settings = Array.isArray(parsed) ? parsed : [parsed];
   return settings
-    .filter((setting) => !setting.kind || setting.kind === "frame")
+    .filter(
+      (setting) =>
+        !setting.kind ||
+        setting.kind === "frame" ||
+        setting.kind === "bio-frame" ||
+        setting.kind === "image-frame",
+    )
     .map(sceneFrameToComposite);
 }
 
 function compositeToSceneFramePatch(composite: CompositeConfig): Partial<SceneFrameSetting> {
-  return {
+  const common = {
     model: composite.model,
-    workSlug: composite.workSlug,
     maskShape: composite.maskShape,
     width: composite.frameWidth,
     height: composite.frameHeight,
@@ -228,6 +377,49 @@ function compositeToSceneFramePatch(composite: CompositeConfig): Partial<SceneFr
     videoOffsetX: composite.cropX,
     videoOffsetY: composite.cropY,
   };
+
+  return composite.kind === "bio-frame" || composite.kind === "image-frame"
+    ? {
+        ...common,
+        imageSrc:
+          composite.imageSrc ||
+          (composite.kind === "bio-frame" ? BIO_FRAME_IMAGE_PATH : defaultFamilyComposite.imageSrc),
+        bioSlug: composite.kind === "bio-frame" ? composite.bioSlug ?? "yaslynn" : undefined,
+        captionText: composite.captionText,
+      }
+    : {
+        ...common,
+        workSlug: composite.workSlug,
+      };
+}
+
+function compositeToSceneFrame(composite: CompositeConfig, index: number): SceneFrameSetting {
+  return {
+    id: composite.id,
+    kind:
+      composite.kind === "bio-frame"
+        ? "bio-frame"
+        : composite.kind === "image-frame"
+          ? "image-frame"
+          : "frame",
+    label:
+      composite.kind === "bio-frame"
+        ? "Bio portrait"
+        : composite.kind === "image-frame"
+          ? composite.captionText ?? "Family portrait"
+          : `Video frame ${index + 1}`,
+    visible: true,
+    position:
+      composite.kind === "bio-frame"
+        ? [2.55, 0.92, 0]
+        : composite.kind === "image-frame"
+          ? [-0.05, 1.1, -0.03]
+          : [0.95, 0.12, 0],
+    rotation: [0, index % 2 === 0 ? 0.035 : -0.025, index % 2 === 0 ? 0.015 : -0.02],
+    wallScale:
+      composite.kind === "bio-frame" ? 0.78 : composite.kind === "image-frame" ? 0.82 : index === 0 ? 1 : 0.86,
+    ...compositeToSceneFramePatch(composite),
+  };
 }
 
 function applyCompositesToSceneFrames(
@@ -240,11 +432,21 @@ function applyCompositesToSceneFrames(
     .filter((index) => index >= 0);
 
   composites.forEach((composite, index) => {
+    const isStillComposite = composite.kind === "bio-frame" || composite.kind === "image-frame";
     const matchingFrameIndex = nextObjects.findIndex(
-      (object) => (!object.kind || object.kind === "frame") && object.id === composite.id,
+      (object) =>
+        isStillComposite
+          ? object.kind === composite.kind && object.id === composite.id
+          : (!object.kind || object.kind === "frame") && object.id === composite.id,
     );
-    const targetIndex = matchingFrameIndex >= 0 ? matchingFrameIndex : frameIndexes[index];
+    const targetIndex =
+      matchingFrameIndex >= 0
+        ? matchingFrameIndex
+        : isStillComposite
+          ? -1
+          : frameIndexes[index];
     if (targetIndex === undefined || targetIndex < 0) {
+      nextObjects.push(compositeToSceneFrame(composite, nextObjects.length));
       return;
     }
 
@@ -444,12 +646,17 @@ function CompositeCanvas({
     let animationFrame = 0;
     let dragMode: DragMode | null = null;
     let orbiting = false;
+    let panning = false;
     let dragStartPoint = new THREE.Vector3();
     let dragStartConfig = configRef.current;
     let orbitStartX = 0;
     let orbitStartY = 0;
     let orbitStartRotationX = 0;
     let orbitStartRotationY = 0;
+    let panStartX = 0;
+    let panStartY = 0;
+    let panStartTargetX = 0;
+    let panStartTargetY = 0;
     let cameraDistance = 5.2;
     let baseCameraDistance = 5.2;
     const activePointers = new Map<number, { x: number; y: number }>();
@@ -473,8 +680,12 @@ function CompositeCanvas({
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-    camera.position.set(0, 0, cameraDistance);
-    camera.lookAt(0, 0, 0);
+    const cameraTarget = new THREE.Vector3(0, 0, 0);
+    const updateCameraPlacement = () => {
+      camera.position.set(cameraTarget.x, cameraTarget.y, cameraTarget.z + cameraDistance);
+      camera.lookAt(cameraTarget);
+    };
+    updateCameraPlacement();
 
     const compositeRoot = new THREE.Group();
     const frameRoot = new THREE.Group();
@@ -500,6 +711,7 @@ function CompositeCanvas({
     let loadedFrameCenter = new THREE.Vector3();
 
     const loader = new GLTFLoader();
+    const imageLoader = new THREE.TextureLoader();
     const video = document.createElement("video");
     const videoTexture = new THREE.VideoTexture(video);
     videoTexture.colorSpace = THREE.SRGBColorSpace;
@@ -509,6 +721,34 @@ function CompositeCanvas({
     videoTexture.wrapT = THREE.ClampToEdgeWrapping;
     textures.push(videoTexture);
     videos.push(video);
+    let imageTexture: THREE.Texture | null = null;
+    let imageTextureSource = "";
+
+    const getImageTexture = (source: string) => {
+      const nextSource = source || BIO_FRAME_IMAGE_PATH;
+      if (imageTexture && imageTextureSource === nextSource) {
+        return imageTexture;
+      }
+
+      if (imageTexture) {
+        imageTexture.dispose();
+      }
+
+      imageTexture = imageLoader.load(
+        nextSource,
+        () => renderConfig(),
+        undefined,
+        (error) => onError(error instanceof Error ? error : new Error(String(error))),
+      );
+      imageTexture.colorSpace = THREE.SRGBColorSpace;
+      imageTexture.minFilter = THREE.LinearFilter;
+      imageTexture.magFilter = THREE.LinearFilter;
+      imageTexture.wrapS = THREE.ClampToEdgeWrapping;
+      imageTexture.wrapT = THREE.ClampToEdgeWrapping;
+      imageTextureSource = nextSource;
+      textures.push(imageTexture);
+      return imageTexture;
+    };
 
     const disposeGroup = (group: THREE.Group) => {
       while (group.children.length) {
@@ -532,7 +772,7 @@ function CompositeCanvas({
 
     const updateCameraDistance = (distance: number) => {
       cameraDistance = THREE.MathUtils.clamp(distance, 1.8, 8);
-      camera.position.z = cameraDistance;
+      updateCameraPlacement();
       camera.updateProjectionMatrix();
     };
 
@@ -574,13 +814,17 @@ function CompositeCanvas({
       handleMeshes.length = 0;
 
       updateFrameTransform();
-      applyVideoCrop(videoTexture, current);
+      const mediaTexture =
+        current.kind === "bio-frame" || current.kind === "image-frame"
+          ? getImageTexture(current.imageSrc)
+          : videoTexture;
+      applyVideoCrop(mediaTexture, current);
       dragPlane.constant = -current.videoZ;
 
       const shape = createVideoGeometry(current, geometries);
       const videoMaterial = makeMaterial(
         new THREE.MeshBasicMaterial({
-          map: videoTexture,
+          map: mediaTexture,
           toneMapped: false,
           side: THREE.DoubleSide,
         }),
@@ -627,6 +871,11 @@ function CompositeCanvas({
     };
 
     const updateVideoSource = () => {
+      if (configRef.current.kind === "bio-frame" || configRef.current.kind === "image-frame") {
+        video.pause();
+        return;
+      }
+
       const work = works.find((candidate) => candidate.slug === configRef.current.workSlug);
       if (!work || video.src.endsWith(work.clipSrc)) {
         return;
@@ -693,10 +942,10 @@ function CompositeCanvas({
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       baseCameraDistance = width < 720 ? 6.2 : 5.2;
-      if (!activePointers.size && !orbiting && !dragMode) {
+      if (!activePointers.size && !orbiting && !panning && !dragMode) {
         cameraDistance = THREE.MathUtils.clamp(cameraDistance || baseCameraDistance, 1.8, 8);
       }
-      camera.position.z = cameraDistance || baseCameraDistance;
+      updateCameraPlacement();
       camera.updateProjectionMatrix();
     };
 
@@ -707,8 +956,22 @@ function CompositeCanvas({
         host.setPointerCapture(event.pointerId);
         dragMode = null;
         orbiting = false;
+        panning = false;
         pinchStartDistance = distanceBetweenActivePointers();
         pinchStartCameraDistance = cameraDistance || baseCameraDistance;
+        return;
+      }
+
+      if (event.shiftKey) {
+        event.preventDefault();
+        host.setPointerCapture(event.pointerId);
+        dragMode = null;
+        orbiting = false;
+        panning = true;
+        panStartX = event.clientX;
+        panStartY = event.clientY;
+        panStartTargetX = cameraTarget.x;
+        panStartTargetY = cameraTarget.y;
         return;
       }
 
@@ -751,6 +1014,16 @@ function CompositeCanvas({
           const softenedRatio = 1 + (pinchRatio - 1) * 0.35;
           updateCameraDistance(pinchStartCameraDistance / Math.max(0.1, softenedRatio));
         }
+        return;
+      }
+
+      if (panning) {
+        const deltaX = event.clientX - panStartX;
+        const deltaY = event.clientY - panStartY;
+        const panSensitivity = cameraDistance * 0.00075;
+        cameraTarget.x = THREE.MathUtils.clamp(panStartTargetX - deltaX * panSensitivity, -2.5, 2.5);
+        cameraTarget.y = THREE.MathUtils.clamp(panStartTargetY + deltaY * panSensitivity, -2.2, 2.2);
+        updateCameraPlacement();
         return;
       }
 
@@ -815,6 +1088,7 @@ function CompositeCanvas({
         pinchStartDistance = 0;
       }
       orbiting = false;
+      panning = false;
       dragMode = null;
       if (host.hasPointerCapture(event.pointerId)) {
         host.releasePointerCapture(event.pointerId);
@@ -902,6 +1176,7 @@ export function ObjectCompositeEditor() {
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const config = composites[selectedComposite] ?? composites[0] ?? defaultComposite;
+  const isImageComposite = config.kind === "bio-frame" || config.kind === "image-frame";
   const exportedConfig = useMemo(() => JSON.stringify(config, null, 2), [config]);
 
   useEffect(() => {
@@ -913,16 +1188,12 @@ export function ObjectCompositeEditor() {
             throw new Error("Failed to load composites: " + response.status);
           }
           const loaded = (await response.json()) as Partial<CompositeConfig>[];
-          const sceneComposites = readSceneFrameComposites();
-          setComposites(
-            sceneComposites.length > 0
-              ? sceneComposites
-              : ensureDefaultCompositeCount(loaded.map(normalizeComposite)),
-          );
+          const loadedComposites = ensureDefaultCompositeCount(loaded.map(normalizeComposite));
+          setComposites(loadedComposites);
         } catch (nextError) {
           try {
             const sceneComposites = readSceneFrameComposites();
-            setComposites(sceneComposites.length > 0 ? sceneComposites : readStoredComposites());
+            setComposites(mergeCompositeLists(readStoredComposites(), sceneComposites));
           } catch {
             setComposites(defaultComposites);
           }
@@ -1022,13 +1293,54 @@ export function ObjectCompositeEditor() {
     setViewResetSignal((current) => current + 1);
   };
 
+  const addComposite = (kind: "video-frame" | "bio-frame") => {
+    const nextIndex = composites.length;
+    const nextComposite = normalizeComposite({
+      ...(kind === "bio-frame" ? defaultBioComposite : defaultComposite),
+      id: `${kind === "bio-frame" ? "picture" : "video"}-${Date.now().toString(36)}`,
+      workSlug:
+        kind === "video-frame"
+          ? works[nextIndex % Math.max(works.length, 1)]?.slug ?? defaultComposite.workSlug
+          : defaultBioComposite.workSlug,
+    });
+
+    setError(null);
+    setSaveStatus(null);
+    setComposites((current) => [...current, nextComposite]);
+    setSelectedComposite(nextIndex);
+    setViewResetSignal((current) => current + 1);
+  };
+
+  const selectPicture = (imageSrc: string) => {
+    const picture = framePictures.find((candidate) => candidate.src === imageSrc);
+    if (!picture) {
+      return;
+    }
+
+    updateConfig({
+      kind: picture.kind,
+      imageSrc: picture.src,
+      bioSlug: picture.bioSlug,
+      captionText: picture.defaultCaption,
+      videoAspect: picture.aspect,
+      videoHeight: formatNumber(config.videoWidth / picture.aspect),
+    });
+  };
+
   const resetComposite = () => {
     setError(null);
     setSaveStatus(null);
     setComposites((current) =>
       current.map((composite, index) =>
         index === selectedComposite
-          ? normalizeComposite({ ...defaultComposite, id: composite.id })
+          ? normalizeComposite({
+              ...(composite.kind === "bio-frame"
+                ? defaultBioComposite
+                : composite.kind === "image-frame"
+                  ? defaultFamilyComposite
+                  : defaultComposite),
+              id: composite.id,
+            })
           : composite,
       ),
     );
@@ -1076,6 +1388,7 @@ export function ObjectCompositeEditor() {
             {composites.map((composite, index) => {
               const work = workForComposite(composite);
               const selected = index === selectedComposite;
+              const isStillImage = composite.kind === "bio-frame" || composite.kind === "image-frame";
               return (
                 <button
                   key={composite.id}
@@ -1087,7 +1400,18 @@ export function ObjectCompositeEditor() {
                   }`}
                   onClick={() => selectComposite(index)}
                 >
-                  {work ? (
+                  {isStillImage ? (
+                    <span className="relative block h-12 w-full overflow-hidden rounded bg-black/35">
+                      <Image
+                        fill
+                        unoptimized
+                        className="object-cover object-top"
+                        src={composite.imageSrc || (composite.kind === "bio-frame" ? BIO_FRAME_IMAGE_PATH : FAMILY_FRAME_IMAGE_PATH)}
+                        alt=""
+                        sizes="4.5rem"
+                      />
+                    </span>
+                  ) : work ? (
                     <video
                       className="h-12 w-full rounded object-cover"
                       src={work.clipSrc}
@@ -1102,10 +1426,14 @@ export function ObjectCompositeEditor() {
                   )}
                   <span className="min-w-0">
                     <span className="block truncate text-xs font-medium">
-                      Object {index + 1}
+                      {isStillImage ? composite.captionText ?? "Still image" : `Object ${index + 1}`}
                     </span>
                     <span className="block truncate text-[11px] text-[#d8cdbb]">
-                      {work?.artist ?? composite.id}
+                      {isStillImage
+                        ? composite.kind === "bio-frame"
+                          ? "Yaslynn Rivera"
+                          : "Still image"
+                        : work?.artist ?? composite.id}
                     </span>
                   </span>
                 </button>
@@ -1131,6 +1459,23 @@ export function ObjectCompositeEditor() {
             </button>
           </div>
 
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addComposite("video-frame")}
+            >
+              Add video
+            </button>
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addComposite("bio-frame")}
+            >
+              Add picture
+            </button>
+          </div>
+
           <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
             Frame model
             <select
@@ -1146,19 +1491,44 @@ export function ObjectCompositeEditor() {
             </select>
           </label>
 
+          {isImageComposite ? (
+            <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
+              Caption
+              <input
+                className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
+                value={config.captionText ?? ""}
+                onChange={(event) => updateConfig({ captionText: event.target.value })}
+              />
+            </label>
+          ) : null}
+
           <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
-            Clip
-            <select
-              className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
-              value={config.workSlug}
-              onChange={(event) => updateConfig({ workSlug: event.target.value })}
-            >
-              {works.map((work) => (
-                <option key={work.slug} value={work.slug}>
-                  {work.artist} - {work.title}
-                </option>
-              ))}
-            </select>
+            {isImageComposite ? "Picture" : "Clip"}
+            {isImageComposite ? (
+              <select
+                className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
+                value={config.imageSrc || (config.kind === "bio-frame" ? BIO_FRAME_IMAGE_PATH : FAMILY_FRAME_IMAGE_PATH)}
+                onChange={(event) => selectPicture(event.target.value)}
+              >
+                {framePictures.map((picture) => (
+                  <option key={picture.id} value={picture.src}>
+                    {picture.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
+                value={config.workSlug}
+                onChange={(event) => updateConfig({ workSlug: event.target.value })}
+              >
+                {works.map((work) => (
+                  <option key={work.slug} value={work.slug}>
+                    {work.artist} - {work.title}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
 
           <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
@@ -1215,7 +1585,7 @@ export function ObjectCompositeEditor() {
               onChange={(value) => updateConfig({ frameRotationZ: value })}
             />
             <RangeControl
-              label="Video X"
+              label={isImageComposite ? "Image X" : "Video X"}
               min={-1.2}
               max={1.2}
               step={0.01}
@@ -1223,7 +1593,7 @@ export function ObjectCompositeEditor() {
               onChange={(value) => updateConfig({ videoX: value })}
             />
             <RangeControl
-              label="Video Y"
+              label={isImageComposite ? "Image Y" : "Video Y"}
               min={-1.2}
               max={1.2}
               step={0.01}
@@ -1231,7 +1601,7 @@ export function ObjectCompositeEditor() {
               onChange={(value) => updateConfig({ videoY: value })}
             />
             <RangeControl
-              label="Video Z"
+              label={isImageComposite ? "Image Z" : "Video Z"}
               min={-0.12}
               max={0.24}
               step={0.005}
@@ -1239,7 +1609,7 @@ export function ObjectCompositeEditor() {
               onChange={(value) => updateConfig({ videoZ: value })}
             />
             <RangeControl
-              label="Video Zoom"
+              label={isImageComposite ? "Image Zoom" : "Video Zoom"}
               min={1}
               max={3}
               step={0.02}
@@ -1253,7 +1623,7 @@ export function ObjectCompositeEditor() {
               }
             />
             <RangeControl
-              label="Video Size"
+              label={isImageComposite ? "Image Size" : "Video Size"}
               min={0.12}
               max={2.4}
               step={0.01}
