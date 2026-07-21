@@ -248,7 +248,14 @@ const DESKTOP_CAMERA_DEFAULTS = {
   pitch: 0,
   fov: 43,
 };
-const PHONE_CAMERA_DISTANCE = 11;
+const MOBILE_CAMERA_DEFAULTS = {
+  distance: 8.51,
+  panX: -0.17,
+  panY: 0.85,
+  yaw: 0,
+  pitch: 0,
+  fov: 54,
+};
 const CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(29.4);
 
 type CaptionFontId =
@@ -2741,6 +2748,8 @@ function ThreeWallCanvas({
     let startPanX = 0;
     let startPanY = 0;
     let pointerMode: "orbit" | "pan" = "orbit";
+    let viewportMode: "desktop" | "mobile" | null = null;
+    let activeCameraDefaults = DESKTOP_CAMERA_DEFAULTS;
     let targetRotationX = DESKTOP_CAMERA_DEFAULTS.pitch;
     let targetRotationY = DESKTOP_CAMERA_DEFAULTS.yaw;
     let basePanX = DESKTOP_CAMERA_DEFAULTS.panX;
@@ -2758,8 +2767,8 @@ function ThreeWallCanvas({
     const resetViewTargets = () => {
       pointerIsDown = false;
       pointerMode = "orbit";
-      targetRotationX = DESKTOP_CAMERA_DEFAULTS.pitch;
-      targetRotationY = DESKTOP_CAMERA_DEFAULTS.yaw;
+      targetRotationX = activeCameraDefaults.pitch;
+      targetRotationY = activeCameraDefaults.yaw;
       targetPanX = basePanX;
       targetPanY = basePanY;
       targetCameraDistance = baseCameraDistance;
@@ -2769,37 +2778,28 @@ function ThreeWallCanvas({
       const width = Math.max(1, host.clientWidth);
       const height = Math.max(1, host.clientHeight);
       const isPhone = width < 720;
-      const nextBaseDistance = isPhone
-        ? PHONE_CAMERA_DISTANCE
-        : DESKTOP_CAMERA_DEFAULTS.distance;
-      const nextBasePanX = isPhone ? 0 : DESKTOP_CAMERA_DEFAULTS.panX;
-      const nextBasePanY = isPhone ? 0 : DESKTOP_CAMERA_DEFAULTS.panY;
+      const nextViewportMode = isPhone ? "mobile" : "desktop";
+      const nextCameraDefaults = isPhone ? MOBILE_CAMERA_DEFAULTS : DESKTOP_CAMERA_DEFAULTS;
+      const viewportModeChanged = viewportMode !== nextViewportMode;
+      viewportMode = nextViewportMode;
+      activeCameraDefaults = nextCameraDefaults;
+      baseCameraDistance = nextCameraDefaults.distance;
+      basePanX = nextCameraDefaults.panX;
+      basePanY = nextCameraDefaults.panY;
 
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
       renderer.setSize(width, height, false);
 
       camera.aspect = width / height;
-      camera.fov = isPhone ? 54 : DESKTOP_CAMERA_DEFAULTS.fov;
+      camera.fov = nextCameraDefaults.fov;
       cameraBaseY = isPhone ? 0.1 : 0.32;
-      targetCameraDistance = THREE.MathUtils.clamp(
-        targetCameraDistance + nextBaseDistance - baseCameraDistance,
-        nextBaseDistance * 0.6,
-        nextBaseDistance * 5,
-      );
-      baseCameraDistance = nextBaseDistance;
-      targetPanX = THREE.MathUtils.clamp(
-        targetPanX + nextBasePanX - basePanX,
-        -3.6,
-        3.6,
-      );
-      targetPanY = THREE.MathUtils.clamp(
-        targetPanY + nextBasePanY - basePanY,
-        -2.1,
-        2.1,
-      );
-      basePanX = nextBasePanX;
-      basePanY = nextBasePanY;
-      if (!freeOrbitRef.current) {
+      if (viewportModeChanged) {
+        resetViewTargets();
+        root.rotation.set(nextCameraDefaults.pitch, nextCameraDefaults.yaw, 0);
+        currentPanX = nextCameraDefaults.panX;
+        currentPanY = nextCameraDefaults.panY;
+        camera.position.z = nextCameraDefaults.distance;
+      } else if (!freeOrbitRef.current) {
         resetViewTargets();
       }
       camera.position.set(currentPanX, cameraBaseY + currentPanY, targetCameraDistance);
