@@ -55,6 +55,8 @@ const frameModels = [
   "/3d-models/frames/fancy_picture_frame_01-freepoly.org.glb",
   "/3d-models/frames/picture_frame.glb",
   "/3d-models/frames/picture_frame_2026_07_21_optimized.glb",
+  "/3d-models/frames/backrooms_ff2_painting_bacteria_room_2026_07_21_optimized.glb",
+  "/3d-models/frames/thick_simple_picture_frame_2026_07_21_optimized.glb",
   "/3d-models/frames/vintage_picture_frame..glb",
   "/3d-models/frames/wooden_picture_frame_2026_05_31_optimized.glb",
   "/3d-models/frames/new_frame_default_2026_05_31_pbr.glb",
