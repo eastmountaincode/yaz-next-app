@@ -24,11 +24,9 @@
   {
     "id": "bio-yaslynn-frame",
     "kind": "bio-frame",
-    "model": "/3d-models/frames/vintage_frame_06.glb",
+    "model": "/3d-models/frames/vintage_frame_04.glb",
     "workSlug": "snoop-ten-til-midnight",
     "imageSrc": "/image/yaz_headshot.jpeg",
-    "bioSlug": "yaslynn",
-    "captionText": "Bio",
     "maskShape": "rectangle",
     "frameWidth": 1.42,
     "frameHeight": 2.02,
@@ -37,12 +35,14 @@
     "frameRotationZ": 0,
     "videoX": 0,
     "videoY": 0,
-    "videoZ": 0.09,
-    "videoWidth": 0.82,
-    "videoHeight": 1.2366880869995056,
+    "videoZ": -0.01,
+    "videoWidth": 1.31,
+    "videoHeight": 1.9756846267918937,
     "videoAspect": 0.6630612913798754,
     "videoZoom": 1,
     "cropX": 0,
-    "cropY": 0
+    "cropY": 0.07,
+    "bioSlug": "yaslynn",
+    "captionText": "Bio"
   }
 ]

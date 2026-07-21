@@ -62,8 +62,8 @@
       "label": "Candle holder",
       "visible": true,
       "position": [
-        1.48,
-        0.14,
+        1.76,
+        0.38,
         0.065
       ],
       "rotation": [
@@ -98,16 +98,75 @@
       "label": "Vintage clock",
       "visible": true,
       "position": [
-        -2.78,
-        0.78,
+        1.74,
+        2.5,
         -0.105
       ],
       "rotation": [
         0,
         0.038407346410207,
-        -0.001592653589793
+        0.028407346410207
       ],
       "wallScale": 0.82
+    },
+    {
+      "id": "prop-mrv83kao",
+      "kind": "model",
+      "catalogId": "wooden-cross",
+      "label": "Wooden Cross",
+      "visible": true,
+      "model": "/3d-models/decor/wooden_cross.glb",
+      "position": [
+        -1.12,
+        1.86,
+        0.025
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "wallScale": 1.1
+    },
+    {
+      "id": "bio-yaslynn-frame",
+      "kind": "bio-frame",
+      "label": "Bio portrait",
+      "visible": true,
+      "model": "/3d-models/frames/vintage_frame_04.glb",
+      "workSlug": "blk-odyssy-nativity-of-chaos",
+      "maskShape": "rectangle",
+      "position": [
+        -2.36,
+        2.56,
+        0.025
+      ],
+      "width": 1.42,
+      "height": 2.02,
+      "frameRotationX": 0,
+      "frameRotationY": 0,
+      "frameRotationZ": 0,
+      "rotation": [
+        -0.001592653589793,
+        0.028407346410207,
+        0.008407346410207
+      ],
+      "wallScale": 0.78,
+      "clipX": 0,
+      "clipY": 0,
+      "clipZ": -0.01,
+      "clipWidth": 1.31,
+      "clipHeight": 1.9756846267918937,
+      "videoScale": 1,
+      "videoOffsetX": 0,
+      "videoOffsetY": 0.07,
+      "captionOffsetX": 0.35,
+      "captionOffsetY": 0.26,
+      "captionOffsetZ": 0.108,
+      "captionScale": 1.88,
+      "imageSrc": "/image/yaz_headshot.jpeg",
+      "bioSlug": "yaslynn",
+      "captionText": "Bio"
     }
   ]
 }
