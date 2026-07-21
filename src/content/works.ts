@@ -3,6 +3,10 @@ export type WorkItem = {
   title: string;
   artist: string;
   credit: string;
+  roles: string[];
+  sourceTitle: string;
+  projectType: string;
+  modalDescription: string;
   sourceUrl: string;
   clipSrc: string;
   clipStartSeconds: number;
@@ -19,6 +23,11 @@ export const works: WorkItem[] = [
     title: "Ten Til Midnight",
     artist: "Snoop Dogg",
     credit: "Cowritten and directed",
+    roles: ["Co-writer", "Director"],
+    sourceTitle: "Snoop Dogg - Ten Til Midnight",
+    projectType: "Music video",
+    modalDescription:
+      "A music video project for Snoop Dogg, with Yaslynn's contribution spanning both the writing and direction of the piece.",
     sourceUrl: "https://www.youtube.com/watch?v=DKIgoOVF914",
     clipSrc: "/work-clips/snoop-ten-til-midnight.mp4",
     clipStartSeconds: 5,
@@ -29,6 +38,11 @@ export const works: WorkItem[] = [
     title: "Angel (Official Video)",
     artist: "Dani Offline",
     credit: "Directed and produced",
+    roles: ["Director", "Producer"],
+    sourceTitle: "Dani Offline - Angel (Official Video)",
+    projectType: "Official video",
+    modalDescription:
+      "A directed and produced music video for Dani Offline, built around Yaslynn's visual approach to performance, mood, and atmosphere.",
     sourceUrl: "https://www.youtube.com/watch?v=C9tFqe4EGEY",
     clipSrc: "/work-clips/dani-offline-angel.mp4",
     clipStartSeconds: 20,
@@ -39,9 +53,14 @@ export const works: WorkItem[] = [
     title: "POSSESSED (Official Visualizer)",
     artist: "BLK ODYSSY",
     credit: "Directed, produced, and choreographed",
+    roles: ["Director", "Producer", "Choreographer"],
+    sourceTitle: "BLK ODYSSY - POSSESSED (Official Visualizer)",
+    projectType: "Official visualizer",
+    modalDescription:
+      "One of Yaslynn's BLK ODYSSY visualizer collaborations, with her role extending across direction, production, and choreography.",
     sourceUrl: "https://www.youtube.com/watch?v=m1NGoBFtC-g",
     clipSrc: "/work-clips/blk-odyssy-possessed.mp4",
-    clipStartSeconds: 20,
+    clipStartSeconds: 70,
     clipDurationSeconds: 10,
   },
   {
@@ -49,6 +68,11 @@ export const works: WorkItem[] = [
     title: "SATURDAY (Official Visualizer)",
     artist: "BLK ODYSSY",
     credit: "Directed and produced",
+    roles: ["Director", "Producer"],
+    sourceTitle: "BLK ODYSSY - SATURDAY (Official Visualizer)",
+    projectType: "Official visualizer",
+    modalDescription:
+      "A BLK ODYSSY visualizer directed and produced by Yaslynn as part of a larger body of music-driven moving-image work.",
     sourceUrl: "https://www.youtube.com/watch?v=EB4VqICMUow",
     clipSrc: "/work-clips/blk-odyssy-saturday.mp4",
     clipStartSeconds: 20,
@@ -59,6 +83,11 @@ export const works: WorkItem[] = [
     title: "THE NATIVITY OF CHAOS (Official Visualizer)",
     artist: "BLK ODYSSY",
     credit: "Directed and produced",
+    roles: ["Director", "Producer"],
+    sourceTitle: "BLK ODYSSY - THE NATIVITY OF CHAOS (Official Visualizer)",
+    projectType: "Official visualizer",
+    modalDescription:
+      "A BLK ODYSSY visualizer directed and produced by Yaslynn, sitting within the same visual language as her other work with the artist.",
     sourceUrl: "https://www.youtube.com/watch?v=Snvh_8xWehI",
     clipSrc: "/work-clips/blk-odyssy-nativity-of-chaos.mp4",
     clipStartSeconds: 20,
@@ -69,6 +98,11 @@ export const works: WorkItem[] = [
     title: "MOOD CONTROL (Official Visualizer)",
     artist: "BLK ODYSSY",
     credit: "Directed and produced",
+    roles: ["Director", "Producer"],
+    sourceTitle: "BLK ODYSSY - MOOD CONTROL (Official Visualizer)",
+    projectType: "Official visualizer",
+    modalDescription:
+      "A BLK ODYSSY visualizer directed and produced by Yaslynn, connecting performance and atmosphere within the artist's visual world.",
     sourceUrl: "https://www.youtube.com/watch?v=893PEdU4_eY",
     clipSrc: "/work-clips/blk-odyssy-mood-control.mp4",
     clipStartSeconds: 20,
