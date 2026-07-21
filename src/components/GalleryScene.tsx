@@ -243,7 +243,7 @@ const LAMP_TOGGLE_ZONE_LOCAL_SIZE: VectorTuple = [0.34, 0.64, 0.34];
 const DESKTOP_CAMERA_DEFAULTS = {
   distance: 6.81,
   panX: -0.19,
-  panY: 0.87,
+  panY: 1,
   yaw: 0,
   pitch: 0,
   fov: 43,
