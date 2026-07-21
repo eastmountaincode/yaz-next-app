@@ -133,12 +133,12 @@
       "kind": "bio-frame",
       "label": "Bio portrait",
       "visible": true,
-      "model": "/3d-models/frames/vintage_frame_04.glb",
+      "model": "/3d-models/frames/photo_frame_with_mat_2026_05_31.glb",
       "workSlug": "blk-odyssy-nativity-of-chaos",
       "maskShape": "rectangle",
       "position": [
-        -2.36,
-        2.56,
+        -0.14,
+        3.04,
         0.025
       ],
       "width": 1.42,
@@ -167,6 +167,49 @@
       "imageSrc": "/image/yaz_headshot.jpeg",
       "bioSlug": "yaslynn",
       "captionText": "Bio"
+    },
+    {
+      "id": "stills-frame",
+      "kind": "image-frame",
+      "label": "Stills",
+      "visible": true,
+      "model": "/3d-models/frames/vintage_frame_04.glb",
+      "workSlug": "blk-odyssy-nativity-of-chaos",
+      "maskShape": "rectangle",
+      "position": [
+        -2.36,
+        0.72,
+        0.025
+      ],
+      "width": 1.42,
+      "height": 2.02,
+      "frameRotationX": 0,
+      "frameRotationY": 0,
+      "frameRotationZ": 0,
+      "rotation": [
+        -0.001592653589793,
+        -0.028407346410207,
+        -0.008407346410207
+      ],
+      "wallScale": 0.78,
+      "clipX": 0,
+      "clipY": 0.1,
+      "clipZ": -0.01,
+      "clipWidth": 1.2,
+      "clipHeight": 1.5,
+      "videoScale": 1,
+      "videoOffsetX": 0,
+      "videoOffsetY": 0,
+      "captionOffsetX": 0,
+      "captionOffsetY": -0.2,
+      "captionOffsetZ": 0.108,
+      "captionScale": 1.6,
+      "imageSrc": "/image/stills_nativity_of_chaos.jpg",
+      "captionText": "Stills",
+      "imageTintColor": "#ead8bf",
+      "imageTintStrength": 0.05,
+      "imageHazeColor": "#ead8bf",
+      "imageHazeOpacity": 0.08
     }
   ]
 }

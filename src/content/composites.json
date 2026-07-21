@@ -24,7 +24,7 @@
   {
     "id": "bio-yaslynn-frame",
     "kind": "bio-frame",
-    "model": "/3d-models/frames/vintage_frame_04.glb",
+    "model": "/3d-models/frames/photo_frame_with_mat_2026_05_31.glb",
     "workSlug": "snoop-ten-til-midnight",
     "imageSrc": "/image/yaz_headshot.jpeg",
     "maskShape": "rectangle",
@@ -44,5 +44,28 @@
     "cropY": 0.07,
     "bioSlug": "yaslynn",
     "captionText": "Bio"
+  },
+  {
+    "id": "stills-frame",
+    "kind": "image-frame",
+    "model": "/3d-models/frames/vintage_frame_04.glb",
+    "workSlug": "blk-odyssy-nativity-of-chaos",
+    "imageSrc": "/image/stills_nativity_of_chaos.jpg",
+    "maskShape": "rectangle",
+    "frameWidth": 1.42,
+    "frameHeight": 2.02,
+    "frameRotationX": 0,
+    "frameRotationY": 0,
+    "frameRotationZ": 0,
+    "videoX": 0,
+    "videoY": 0.1,
+    "videoZ": -0.01,
+    "videoWidth": 1.2,
+    "videoHeight": 1.5,
+    "videoAspect": 0.8,
+    "videoZoom": 1,
+    "cropX": 0,
+    "cropY": 0,
+    "captionText": "Stills"
   }
 ]

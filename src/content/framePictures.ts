@@ -27,4 +27,17 @@ export const familyFramePicture: FramePicture = {
   defaultCaption: "",
 };
 
-export const framePictures: FramePicture[] = [bioFramePicture, familyFramePicture];
+export const stillsFramePicture: FramePicture = {
+  id: "stills-nativity-of-chaos",
+  label: "Stills — The Nativity of Chaos",
+  src: "/image/stills_nativity_of_chaos.jpg",
+  aspect: 4 / 5,
+  kind: "image-frame",
+  defaultCaption: "Stills",
+};
+
+export const framePictures: FramePicture[] = [
+  bioFramePicture,
+  stillsFramePicture,
+  familyFramePicture,
+];
