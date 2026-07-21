@@ -4815,7 +4815,7 @@ export function GalleryScene() {
                   ? -2.7
                   : -4.2
               }
-              max={2}
+              max={selected.kind === "clock" ? 4.2 : 2}
               step={0.02}
               value={selected.position[1]}
               onChange={(value) => updateSelectedPosition(1, value)}
