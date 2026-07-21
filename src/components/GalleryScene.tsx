@@ -3740,7 +3740,7 @@ function SceneLightingControls({
             tooltip="The tint of the room's base light. Warmer colors feel candlelit; cooler colors feel duskier."
           />
           <input
-            className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+            className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
             type="color"
             value={lighting.ambientColor}
             onChange={(event) => onChange({ ambientColor: event.target.value })}
@@ -3752,7 +3752,7 @@ function SceneLightingControls({
             tooltip="The tint of the main shadow-casting light source."
           />
           <input
-            className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+            className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
             type="color"
             value={lighting.keyColor}
             onChange={(event) => onChange({ keyColor: event.target.value })}
@@ -3764,7 +3764,7 @@ function SceneLightingControls({
             tooltip="The tint of the softer secondary light that fills shadows without casting its own."
           />
           <input
-            className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+            className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
             type="color"
             value={lighting.fillColor}
             onChange={(event) => onChange({ fillColor: event.target.value })}
@@ -4412,7 +4412,7 @@ export function GalleryScene() {
 
       <div className="pointer-events-none absolute right-4 top-4 flex items-start justify-end p-0 sm:right-6 sm:top-6">
         <div className="flex flex-col items-end gap-2">
-          <div className="pointer-events-auto flex items-center gap-2 rounded border border-white/10 bg-[#16120d]/78 p-1 shadow-2xl backdrop-blur">
+          <div className="pointer-events-auto flex items-center gap-2 rounded border border-white/10 bg-[#16120d]/58 p-1 shadow-2xl backdrop-blur-[2px]">
             {showChrome ? (
               <>
                 <Link
@@ -4534,7 +4534,7 @@ export function GalleryScene() {
           </div>
 
           {showChrome && cameraInfo ? (
-            <div className="pointer-events-none rounded border border-white/10 bg-[#16120d]/78 px-3 py-2 font-mono text-[11px] leading-snug text-[#f6f0e5] shadow-2xl backdrop-blur">
+            <div className="pointer-events-none rounded border border-white/10 bg-[#16120d]/58 px-3 py-2 font-mono text-[11px] leading-snug text-[#f6f0e5] shadow-2xl backdrop-blur-[2px]">
               <div>dist&nbsp;&nbsp;{cameraInfo.distance.toFixed(2)}</div>
               <div>pan&nbsp;&nbsp;&nbsp;{cameraInfo.panX.toFixed(2)},&nbsp;{cameraInfo.panY.toFixed(2)}</div>
               <div>yaw&nbsp;&nbsp;&nbsp;{((cameraInfo.yaw * 180) / Math.PI).toFixed(1)}°</div>
@@ -4546,7 +4546,7 @@ export function GalleryScene() {
       </div>
 
       {lightingOpen ? (
-        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/92 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
+        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
           <SceneLightingControls
             lighting={lighting}
             onChange={updateLighting}
@@ -4556,7 +4556,7 @@ export function GalleryScene() {
       ) : null}
 
       {showChrome && captionOpen ? (
-        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/92 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
+        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
           <div className="mb-3">
             <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
               Caption options
@@ -4630,7 +4630,7 @@ export function GalleryScene() {
       ) : null}
 
       {editorOpen && selected ? (
-        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/92 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
+        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
               <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
@@ -4686,7 +4686,7 @@ export function GalleryScene() {
               Add image
             </button>
             <select
-              className="min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-xs text-[#f6f0e5] hover:bg-white/10"
+              className="min-w-0 rounded border border-white/10 bg-[#221d17]/70 px-3 py-2 text-xs text-[#f6f0e5] hover:bg-white/10"
               value=""
               aria-label="Add model"
               onChange={(event) => {
@@ -4755,7 +4755,7 @@ export function GalleryScene() {
           <label className="mb-3 grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
             Name
             <input
-              className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
+              className="w-full min-w-0 rounded border border-white/10 bg-[#221d17]/70 px-3 py-2 text-sm text-[#f6f0e5]"
               type="text"
               value={selected.label}
               onChange={(event) => updateSelectedObject({ label: event.currentTarget.value })}
@@ -4779,7 +4779,7 @@ export function GalleryScene() {
             <label className="mb-3 grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
               Model
               <select
-                className="w-full min-w-0 rounded border border-white/10 bg-[#221d17] px-3 py-2 text-sm text-[#f6f0e5]"
+                className="w-full min-w-0 rounded border border-white/10 bg-[#221d17]/70 px-3 py-2 text-sm text-[#f6f0e5]"
                 value={selected.catalogId}
                 onChange={(event) => updateSelectedModel(event.target.value)}
               >
@@ -4949,7 +4949,7 @@ export function GalleryScene() {
                 <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
                   Tint color
                   <input
-                    className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+                    className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
                     type="color"
                     value={selected.imageTintColor}
                     onChange={(event) =>
@@ -4962,7 +4962,7 @@ export function GalleryScene() {
                 <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
                   Haze color
                   <input
-                    className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+                    className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
                     type="color"
                     value={selected.imageHazeColor}
                     onChange={(event) =>
@@ -5105,7 +5105,7 @@ export function GalleryScene() {
               <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
                 Color
                 <input
-                  className="h-9 w-full rounded border border-white/10 bg-[#221d17] p-1"
+                  className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
                   type="color"
                   value={selected.color}
                   onChange={(event) => updateSelectedLight({ color: event.target.value })}
