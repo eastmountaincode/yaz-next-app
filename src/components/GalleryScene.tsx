@@ -821,6 +821,13 @@ const defaultSceneSettings = [
     flameLightIntensity: 0.1,
     flameLightDistance: 4,
   }),
+  createClockSetting({
+    id: "clock-vintage-wall",
+    label: "Vintage clock",
+    position: [-2.78, 0.78, -0.105],
+    rotation: [0, 0.038407346410207, -0.001592653589793],
+    wallScale: 0.82,
+  }),
 ] satisfies SceneObjectSetting[];
 
 const defaultSceneLighting: SceneLighting = {

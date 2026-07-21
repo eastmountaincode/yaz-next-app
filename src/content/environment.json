@@ -91,6 +91,23 @@
       "flameLightColor": "#ffb86b",
       "flameLightIntensity": 0.1,
       "flameLightDistance": 4
+    },
+    {
+      "id": "clock-vintage-wall",
+      "kind": "clock",
+      "label": "Vintage clock",
+      "visible": true,
+      "position": [
+        -2.78,
+        0.78,
+        -0.105
+      ],
+      "rotation": [
+        0,
+        0.038407346410207,
+        -0.001592653589793
+      ],
+      "wallScale": 0.82
     }
   ]
 }
