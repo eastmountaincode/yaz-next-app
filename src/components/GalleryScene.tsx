@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Box,
+  ChevronDown,
   Clock,
   CircleHelp,
   Eye,
@@ -26,10 +26,15 @@ import {
 } from "lucide-react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import { SceneLoadingScreen } from "@/components/SceneLoadingScreen";
 import savedClockComposite from "@/content/clock.json";
 import savedComposites from "@/content/composites.json";
+import { framePictures } from "@/content/framePictures";
+import { yaslynnStills } from "@/content/stills";
 import { works, yaslynnBio, type WorkItem } from "@/content/works";
 import { candleFlameAtlas } from "@/lib/candleComposite";
+import { resolveModelAssetUrl } from "@/lib/modelAssetUrl";
 import {
   ClockCompositeConfig,
   clockHandAngles,
@@ -54,7 +59,30 @@ type ObjectKind =
   | "candle-composite"
   | "speaker-composite";
 type VectorTuple = [number, number, number];
-type ClickZoneAction = "toggle-nearest-light" | "speaker-click";
+type ClickZoneAction = "toggle-nearest-light" | "speaker-click" | "candle-toggle";
+type ImageFrameModalId = "stills" | "clients";
+
+function PreloadedImage({
+  src,
+  alt,
+  className = "",
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  return (
+    // Keep the exact public URL used by SceneLoadingScreen so this reuses the
+    // already-downloaded and decoded image instead of requesting a new variant.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className={`absolute inset-0 size-full ${className}`}
+      src={src}
+      alt={alt}
+      decoding="async"
+    />
+  );
+}
 
 type BaseObjectSetting = {
   id: string;
@@ -197,10 +225,11 @@ const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v3";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
 const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v1";
 const MODEL_FLOOR_Y = -2.88;
-const OBJECT_ROTATION_LIMIT = Math.PI;
+const ENVIRONMENT_FINE_DRAG_SENSITIVITY = 0.2;
+const OBJECT_ROTATION_LIMIT = Number((Math.PI * 1.875).toFixed(3));
 const ENVIRONMENT_WIDTH = 18;
 const WALL_PANEL_SPACING = 0.55;
-const WALL_HEIGHT = 6.85;
+const WALL_HEIGHT = 9.25;
 const WALL_TEXTURE_PATH = "/textures/plaster_wall.webp";
 const SHOW_WALL_PANEL_SEAMS = false;
 const FLOOR_COLOR_PATH = "/textures/floor/floor_color.webp";
@@ -214,7 +243,11 @@ const FAMILY_FRAME_IMAGE_PATH = "/image/family_portrait.jpg";
 // patch with a few planks running along U.
 const FLOOR_TILE_METERS = 1.4;
 const WALL_BOTTOM_Y = -2.62;
+const WALL_TOP_Y = WALL_BOTTOM_Y + WALL_HEIGHT;
 const WALL_CENTER_Y = WALL_BOTTOM_Y + WALL_HEIGHT / 2;
+const BIO_FRAME_MAX_Y = WALL_TOP_Y - 0.9;
+const BIO_FRAME_EXPANDED_MAX_Y = Number((BIO_FRAME_MAX_Y * 1.875).toFixed(3));
+const CAMERA_PAN_Y_MAX = WALL_TOP_Y - 2.1;
 const ROOM_SURFACE_DEPTH = 4.95;
 const ROOM_SURFACE_Z = 2.36;
 const ROOM_SURFACE_THICKNESS = 0.18;
@@ -238,10 +271,13 @@ const LAMP_SWITCH_ON_AUDIO_PATH = "/audio/lamp-switch-on.mp3";
 const LAMP_SWITCH_OFF_AUDIO_PATH = "/audio/lamp-switch-off.mp3";
 const LAMP_TOGGLE_ZONE_NAME = "lamp-toggle-zone";
 const SPEAKER_CLICK_ZONE_NAME = "speaker-click-zone";
+const CANDLE_CLICK_ZONE_NAME = "candle-click-zone";
+const CANDLE_CLICK_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.52, 0];
+const CANDLE_CLICK_ZONE_LOCAL_SIZE: VectorTuple = [1.1, 1.34, 0.82];
 const LAMP_TOGGLE_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.68, 0];
 const LAMP_TOGGLE_ZONE_LOCAL_SIZE: VectorTuple = [0.34, 0.64, 0.34];
 const DESKTOP_CAMERA_DEFAULTS = {
-  distance: 6.81,
+  distance: 7.41,
   panX: -0.19,
   panY: 1,
   yaw: 0,
@@ -570,16 +606,16 @@ function createFrameSetting(index: number, seed?: Partial<FrameSetting>): FrameS
     videoOffsetX: clampCropAmount(seed?.videoOffsetX ?? firstSavedComposite?.cropX ?? 0),
     videoOffsetY: clampCropAmount(seed?.videoOffsetY ?? firstSavedComposite?.cropY ?? 0),
     captionOffsetX: formatNumber(
-      THREE.MathUtils.clamp(seed?.captionOffsetX ?? 0, -1.5, 1.5),
+      THREE.MathUtils.clamp(seed?.captionOffsetX ?? 0, -2.813, 2.813),
     ),
     captionOffsetY: formatNumber(
-      THREE.MathUtils.clamp(seed?.captionOffsetY ?? -0.18, -2, 0.6),
+      THREE.MathUtils.clamp(seed?.captionOffsetY ?? -0.18, -3.75, 1.125),
     ),
     captionOffsetZ: formatNumber(
-      THREE.MathUtils.clamp(seed?.captionOffsetZ ?? 0.018, -0.05, 0.2),
+      THREE.MathUtils.clamp(seed?.captionOffsetZ ?? 0.018, -0.095, 0.375),
     ),
     captionScale: formatNumber(
-      THREE.MathUtils.clamp(seed?.captionScale ?? 1, 0.35, 2.5),
+      THREE.MathUtils.clamp(seed?.captionScale ?? 1, 0.132, 4.688),
     ),
   };
 }
@@ -796,7 +832,7 @@ const defaultSceneSettings = [
     id: "frame-02",
     label: "Director reel",
     model: "/3d-models/frames/vintage_frame_06.glb",
-    workSlug: "dani-offline-angel",
+    workSlug: "yaslynn-director-reel",
     maskShape: "rectangle",
     position: [-0.16, 1.04, -0.02],
     width: 2.3,
@@ -896,11 +932,11 @@ function normalizeHexColor(value: string | undefined, fallback: string) {
 }
 
 function normalizeImageTintStrength(value: number | undefined, fallback = 0) {
-  return formatNumber(THREE.MathUtils.clamp(value ?? fallback, 0, 0.3));
+  return formatNumber(THREE.MathUtils.clamp(value ?? fallback, 0, 0.563));
 }
 
 function normalizeImageHazeOpacity(value: number | undefined, fallback = 0) {
-  return formatNumber(THREE.MathUtils.clamp(value ?? fallback, 0, 0.35));
+  return formatNumber(THREE.MathUtils.clamp(value ?? fallback, 0, 0.657));
 }
 
 function makeMaterial<T extends THREE.Material>(material: T, disposables: THREE.Material[]) {
@@ -1085,7 +1121,7 @@ function createFrameCaptionMesh(
       new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
-        opacity: 0.58,
+        opacity: 1,
         depthWrite: false,
         toneMapped: false,
         side: THREE.DoubleSide,
@@ -1104,6 +1140,38 @@ function createFrameCaptionMesh(
   mesh.renderOrder = 2;
   mesh.userData.isFrameCaption = true;
   return mesh;
+}
+
+function createFrameInteractionMesh(
+  setting: FrameLikeSetting,
+  frameClip: THREE.Mesh,
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
+) {
+  const hitMesh = new THREE.Mesh(
+    makeGeometry(
+      new THREE.PlaneGeometry(
+        Math.max(0.04, setting.width),
+        Math.max(0.04, setting.height),
+      ),
+      geometries,
+    ),
+    makeMaterial(
+      new THREE.MeshBasicMaterial({
+        colorWrite: false,
+        depthWrite: false,
+        opacity: 0,
+        transparent: true,
+        side: THREE.DoubleSide,
+      }),
+      materials,
+    ),
+  );
+  hitMesh.position.set(0, 0, setting.clipZ + 0.02);
+  hitMesh.userData.isFrameHitTarget = true;
+  hitMesh.userData.frameClip = frameClip;
+  hitMesh.userData.sceneObjectId = setting.id;
+  return hitMesh;
 }
 
 function createFrame(
@@ -1244,11 +1312,14 @@ function createFrame(
   videoMesh.userData.workSlug = work.slug;
   videoMesh.userData.sceneObjectId = setting.id;
   group.add(videoMesh);
+  group.add(createFrameInteractionMesh(setting, videoMesh, geometries, materials));
 
-  if (captionPlacement === "frame" && setting.label !== "Director reel") {
+  if (captionPlacement === "frame") {
+    const captionText =
+      setting.workSlug === "yaslynn-director-reel" ? "Director's Reel" : work.artist;
     const captionMesh = createFrameCaptionMesh(
       setting,
-      work.artist,
+      captionText,
       captionFont,
       geometries,
       materials,
@@ -1348,9 +1419,15 @@ function createImageFrame(
   imageMesh.userData.isFrameClip = true;
   if (setting.kind === "bio-frame") {
     imageMesh.userData.bioSlug = setting.bioSlug;
+  } else {
+    const modalId = setting.captionText.trim().toLowerCase();
+    if (modalId === "stills" || modalId === "clients") {
+      imageMesh.userData.imageFrameModalId = modalId satisfies ImageFrameModalId;
+    }
   }
   imageMesh.userData.sceneObjectId = setting.id;
   group.add(imageMesh);
+  group.add(createFrameInteractionMesh(setting, imageMesh, geometries, materials));
 
   if (setting.kind === "image-frame" && setting.imageHazeOpacity > 0.001) {
     const hazeMaterial = makeMaterial(
@@ -1619,9 +1696,19 @@ function syncCandleCompositeAnimation(
   group: THREE.Group,
   camera: THREE.Camera,
   timeSeconds: number,
+  candleLit: boolean,
 ) {
   const flame = group.getObjectByName("candle-composite-flame");
   if (!(flame instanceof THREE.Mesh)) {
+    return;
+  }
+
+  flame.visible = candleLit;
+  const light = group.getObjectByName("candle-composite-flame-light");
+  if (light instanceof THREE.PointLight) {
+    light.visible = candleLit;
+  }
+  if (!candleLit) {
     return;
   }
 
@@ -1659,7 +1746,11 @@ function createCandleCompositeObject(
   candleRoot.add(createNormalizedModel(candleSource));
   group.add(candleRoot);
 
-  const flameTexture = createAnimatedImageTexture(setting.flameTexture, textures, onSceneError);
+  const flameTexture = createAnimatedImageTexture(
+    resolveModelAssetUrl(setting.flameTexture),
+    textures,
+    onSceneError,
+  );
   const flameMaterial = makeMaterial(
     new THREE.MeshBasicMaterial({
       map: flameTexture,
@@ -1692,6 +1783,29 @@ function createCandleCompositeObject(
   flameLight.name = "candle-composite-flame-light";
   flameLight.castShadow = false;
   group.add(flameLight);
+
+  const hitZone = new THREE.Mesh(
+    makeGeometry(new THREE.BoxGeometry(...CANDLE_CLICK_ZONE_LOCAL_SIZE), geometries),
+    makeMaterial(
+      new THREE.MeshBasicMaterial({
+        color: "#fbbf24",
+        depthWrite: false,
+        opacity: 0,
+        transparent: true,
+        wireframe: true,
+      }),
+      materials,
+    ),
+  );
+  hitZone.name = CANDLE_CLICK_ZONE_NAME;
+  hitZone.position.set(...CANDLE_CLICK_ZONE_LOCAL_POSITION);
+  hitZone.castShadow = false;
+  hitZone.receiveShadow = false;
+  hitZone.renderOrder = 20;
+  hitZone.userData.isClickZone = true;
+  hitZone.userData.clickAction = "candle-toggle" satisfies ClickZoneAction;
+  hitZone.userData.sceneObjectId = setting.id;
+  group.add(hitZone);
 
   syncCandleCompositeObject(group, setting);
   return group;
@@ -2241,8 +2355,7 @@ function syncClockPendulum(group: THREE.Object3D, timeSeconds: number) {
   );
 }
 
-async function loadSceneModels(settings: SceneObjectSetting[]) {
-  const loader = new GLTFLoader();
+function sceneModelPaths(settings: SceneObjectSetting[]) {
   const objectModels = settings.flatMap((setting) => {
     if (
       setting.kind === "frame" ||
@@ -2275,17 +2388,84 @@ async function loadSceneModels(settings: SceneObjectSetting[]) {
 
     return [];
   });
-  const uniqueModels = Array.from(
+  return Array.from(
     new Set(objectModels.filter((model) => typeof model === "string" && model.length > 0)),
   );
+}
+
+async function loadSceneModels(settings: SceneObjectSetting[]) {
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+  const uniqueModels = sceneModelPaths(settings);
   const loadedModels = await Promise.all(
     uniqueModels.map(async (model) => {
-      const gltf = await loader.loadAsync(model);
+      const gltf = await loader.loadAsync(resolveModelAssetUrl(model));
       return [model, gltf.scene] as const;
     }),
   );
 
   return new Map(loadedModels);
+}
+
+function scenePreloadAssets(settings: SceneObjectSetting[]) {
+  const assets = new Set<string>([
+    WALL_TEXTURE_PATH,
+    FLOOR_COLOR_PATH,
+    FLOOR_NORMAL_PATH,
+    FLOOR_ROUGHNESS_PATH,
+    resolveModelAssetUrl(clockComposite.faceTexture),
+    "/fonts/Sobria-Regular.ttf",
+    resolveModelAssetUrl(BASEBOARD_MODEL_PATH),
+  ]);
+
+  sceneModelPaths(settings).forEach((model) => assets.add(resolveModelAssetUrl(model)));
+  framePictures.forEach((picture) => assets.add(picture.src));
+  yaslynnStills.forEach((still) => assets.add(still.imageSrc));
+  works.forEach((work) => {
+    if (work.modalPosterSrc) {
+      assets.add(work.modalPosterSrc);
+    }
+  });
+  settings.forEach((setting) => {
+    if (setting.kind === "frame") {
+      const clip = workForSetting(setting)?.clipSrc;
+      if (clip) {
+        assets.add(clip);
+      }
+    } else if (setting.kind === "bio-frame" || setting.kind === "image-frame") {
+      if (setting.imageSrc) {
+        assets.add(setting.imageSrc);
+      }
+    } else if (setting.kind === "candle-composite") {
+      assets.add(resolveModelAssetUrl(setting.flameTexture));
+    }
+  });
+
+  return [...assets];
+}
+
+function waitForVideoFrame(video: HTMLVideoElement) {
+  if (video.readyState >= 2) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const onLoaded = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error(video.error?.message || `Video failed to load: ${video.currentSrc}`));
+    };
+    const cleanup = () => {
+      video.removeEventListener("loadeddata", onLoaded);
+      video.removeEventListener("error", onError);
+    };
+
+    video.addEventListener("loadeddata", onLoaded, { once: true });
+    video.addEventListener("error", onError, { once: true });
+    video.load();
+  });
 }
 
 export type CameraInfo = {
@@ -2309,13 +2489,17 @@ function ThreeWallCanvas({
   captionPlacement,
   captionDisplayMode,
   speakerPlaying,
+  candleLit,
   onSceneError,
   onCameraInfoChange,
   onFrameClick,
   onBioClick,
+  onImageFrameClick,
   onFrameHover,
   onLampToggle,
   onSpeakerClick,
+  onCandleClick,
+  onSceneReady,
 }: {
   settings: SceneObjectSetting[];
   lighting: SceneLighting;
@@ -2328,13 +2512,17 @@ function ThreeWallCanvas({
   captionPlacement: CaptionPlacementId;
   captionDisplayMode: CaptionDisplayMode;
   speakerPlaying: boolean;
+  candleLit: boolean;
   onSceneError: (error: Error) => void;
   onCameraInfoChange?: (info: CameraInfo) => void;
   onFrameClick?: (workSlug: string) => void;
   onBioClick?: () => void;
+  onImageFrameClick?: (modalId: ImageFrameModalId) => void;
   onFrameHover?: (info: FrameHoverInfo | null) => void;
   onLampToggle?: (position: VectorTuple) => void;
   onSpeakerClick?: () => void;
+  onCandleClick?: () => void;
+  onSceneReady?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const settingsRef = useRef(settings);
@@ -2344,6 +2532,7 @@ function ThreeWallCanvas({
   const activeCaptionFrameIdRef = useRef(activeCaptionFrameId ?? null);
   const captionDisplayModeRef = useRef(captionDisplayMode);
   const speakerPlayingRef = useRef(speakerPlaying);
+  const candleLitRef = useRef(candleLit);
   const syncLightingRef = useRef<(() => void) | null>(null);
   const syncHitboxHelpersRef = useRef<(() => void) | null>(null);
   const syncFrameCaptionVisibilityRef = useRef<(() => void) | null>(null);
@@ -2353,9 +2542,12 @@ function ThreeWallCanvas({
   const cameraInfoCallbackRef = useRef(onCameraInfoChange);
   const frameClickCallbackRef = useRef(onFrameClick);
   const bioClickCallbackRef = useRef(onBioClick);
+  const imageFrameClickCallbackRef = useRef(onImageFrameClick);
   const frameHoverCallbackRef = useRef(onFrameHover);
   const lampToggleCallbackRef = useRef(onLampToggle);
   const speakerClickCallbackRef = useRef(onSpeakerClick);
+  const candleClickCallbackRef = useRef(onCandleClick);
+  const sceneReadyCallbackRef = useRef(onSceneReady);
 
   useEffect(() => {
     cameraInfoCallbackRef.current = onCameraInfoChange;
@@ -2370,6 +2562,10 @@ function ThreeWallCanvas({
   }, [onBioClick]);
 
   useEffect(() => {
+    imageFrameClickCallbackRef.current = onImageFrameClick;
+  }, [onImageFrameClick]);
+
+  useEffect(() => {
     frameHoverCallbackRef.current = onFrameHover;
   }, [onFrameHover]);
 
@@ -2380,6 +2576,18 @@ function ThreeWallCanvas({
   useEffect(() => {
     speakerClickCallbackRef.current = onSpeakerClick;
   }, [onSpeakerClick]);
+
+  useEffect(() => {
+    candleClickCallbackRef.current = onCandleClick;
+  }, [onCandleClick]);
+
+  useEffect(() => {
+    sceneReadyCallbackRef.current = onSceneReady;
+  }, [onSceneReady]);
+
+  useEffect(() => {
+    candleLitRef.current = candleLit;
+  }, [candleLit]);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -2438,7 +2646,9 @@ function ThreeWallCanvas({
     const materials: THREE.Material[] = [];
     const textures: THREE.Texture[] = [];
     const videos: HTMLVideoElement[] = [];
-    const clockFaceTexture = new THREE.TextureLoader().load(clockComposite.faceTexture);
+    const clockFaceTexture = new THREE.TextureLoader().load(
+      resolveModelAssetUrl(clockComposite.faceTexture),
+    );
     clockFaceTexture.colorSpace = THREE.SRGBColorSpace;
     textures.push(clockFaceTexture);
 
@@ -2594,8 +2804,8 @@ function ThreeWallCanvas({
     baseboardHost.name = "baseboard-host";
     root.add(baseboardHost);
 
-    new GLTFLoader().load(
-      BASEBOARD_MODEL_PATH,
+    new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(
+      resolveModelAssetUrl(BASEBOARD_MODEL_PATH),
       (gltf) => {
         if (disposed) {
           return;
@@ -2717,7 +2927,7 @@ function ThreeWallCanvas({
         materials,
       ),
     );
-    ceiling.position.set(0, WALL_BOTTOM_Y + WALL_HEIGHT + 0.04, ROOM_SURFACE_Z);
+    ceiling.position.set(0, WALL_TOP_Y + 0.04, ROOM_SURFACE_Z);
     ceiling.castShadow = false;
     ceiling.receiveShadow = true;
     root.add(ceiling);
@@ -2838,13 +3048,13 @@ function ThreeWallCanvas({
         const caption = clip.userData.captionMesh as THREE.Mesh | undefined;
         if (caption) {
           const sceneObjectId = clip.userData?.sceneObjectId as string | undefined;
-          const isActive =
-            clip === hoveredFrameClip || sceneObjectId === activeCaptionFrameIdRef.current;
+          const isHovered = clip === hoveredFrameClip;
+          const isEditorActive = sceneObjectId === activeCaptionFrameIdRef.current;
           caption.visible =
             shouldShowFrameCaption(clip) &&
-            (captionDisplayModeRef.current === "always" || isActive);
+            (captionDisplayModeRef.current === "always" || isHovered || isEditorActive);
           if (caption.material instanceof THREE.MeshBasicMaterial) {
-            caption.material.opacity = isActive ? 1 : 0.58;
+            caption.material.opacity = isHovered ? 0.58 : 1;
             caption.material.needsUpdate = true;
           }
         }
@@ -2854,13 +3064,32 @@ function ThreeWallCanvas({
 
     const collectFrameClips = (target: THREE.Object3D[]) => {
       target.push(...collectFrameClipMeshes());
+      sceneObjectsRef.current.forEach((group) => {
+        if (!group.visible) {
+          return;
+        }
+
+        group.traverse((child) => {
+          if (child instanceof THREE.Mesh && child.userData?.isFrameHitTarget) {
+            target.push(child);
+          }
+        });
+      });
+    };
+
+    const canonicalFrameClip = (target: THREE.Mesh | undefined) => {
+      return (target?.userData?.frameClip as THREE.Mesh | undefined) ?? target ?? null;
     };
 
     const isFrameClipInteractive = (clip: THREE.Mesh | null) => {
       if (!clip) {
         return false;
       }
-      return Boolean(clip.userData?.workSlug || clip.userData?.bioSlug);
+      return Boolean(
+        clip.userData?.workSlug ||
+          clip.userData?.bioSlug ||
+          clip.userData?.imageFrameModalId,
+      );
     };
 
     const collectClickZones = (target: THREE.Object3D[]) => {
@@ -2983,7 +3212,7 @@ function ThreeWallCanvas({
       collectFrameClips(frameTargets);
       const frameHits =
         frameTargets.length > 0 ? hoverRaycaster.intersectObjects(frameTargets, false) : [];
-      const nextClip = (frameHits[0]?.object as THREE.Mesh | undefined) ?? null;
+      const nextClip = canonicalFrameClip(frameHits[0]?.object as THREE.Mesh | undefined);
 
       const clickTargets: THREE.Object3D[] = [];
       collectClickZones(clickTargets);
@@ -3060,7 +3289,11 @@ function ThreeWallCanvas({
         if (pointerMode === "pan") {
           const panSensitivity = targetCameraDistance * 0.00045;
           targetPanX = THREE.MathUtils.clamp(startPanX - deltaX * panSensitivity, -3.6, 3.6);
-          targetPanY = THREE.MathUtils.clamp(startPanY + deltaY * panSensitivity, -2.1, 2.1);
+          targetPanY = THREE.MathUtils.clamp(
+            startPanY + deltaY * panSensitivity,
+            -2.1,
+            CAMERA_PAN_Y_MAX,
+          );
           return;
         }
 
@@ -3108,6 +3341,8 @@ function ThreeWallCanvas({
         ]);
       } else if (action === "speaker-click") {
         speakerClickCallbackRef.current?.();
+      } else if (action === "candle-toggle") {
+        candleClickCallbackRef.current?.();
       }
       return true;
     };
@@ -3115,7 +3350,8 @@ function ThreeWallCanvas({
     const tryFrameClick = (clientX: number, clientY: number) => {
       const frameHandler = frameClickCallbackRef.current;
       const bioHandler = bioClickCallbackRef.current;
-      if (!frameHandler && !bioHandler) {
+      const imageFrameHandler = imageFrameClickCallbackRef.current;
+      if (!frameHandler && !bioHandler && !imageFrameHandler) {
         return;
       }
       const rect = host.getBoundingClientRect();
@@ -3131,10 +3367,17 @@ function ThreeWallCanvas({
         return;
       }
       const hits = hoverRaycaster.intersectObjects(targets, false);
-      const hit = hits[0]?.object as THREE.Mesh | undefined;
+      const hit = canonicalFrameClip(hits[0]?.object as THREE.Mesh | undefined);
       const bioSlug = hit?.userData?.bioSlug as string | undefined;
       if (bioSlug === "yaslynn") {
         bioHandler?.();
+        return;
+      }
+      const imageFrameModalId = hit?.userData?.imageFrameModalId as
+        | ImageFrameModalId
+        | undefined;
+      if (imageFrameModalId) {
+        imageFrameHandler?.(imageFrameModalId);
         return;
       }
       const slug = hit?.userData?.workSlug as string | undefined;
@@ -3170,7 +3413,14 @@ function ThreeWallCanvas({
       }
 
       event.preventDefault();
-      const zoomFactor = event.deltaY > 0 ? 1.018 : 0.982;
+      const deltaPixels =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? event.deltaY * 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? event.deltaY * Math.max(host.clientHeight, 1)
+            : event.deltaY;
+      const boundedDelta = THREE.MathUtils.clamp(deltaPixels, -120, 120);
+      const zoomFactor = Math.exp(boundedDelta * 0.00018);
       targetCameraDistance = THREE.MathUtils.clamp(
         targetCameraDistance * zoomFactor,
         baseCameraDistance * 0.6,
@@ -3201,7 +3451,7 @@ function ThreeWallCanvas({
           syncClockPendulum(group, timeSeconds);
         }
         if (group.name === "editable-candle-composite") {
-          syncCandleCompositeAnimation(group, camera, timeSeconds);
+          syncCandleCompositeAnimation(group, camera, timeSeconds, candleLitRef.current);
         }
         if (group.name === "editable-speaker-composite") {
           syncSpeakerCompositePulse(group, timeSeconds, speakerPlayingRef.current);
@@ -3353,6 +3603,17 @@ function ThreeWallCanvas({
         sceneObjects.forEach((sceneObject) => objectGroup.add(sceneObject));
         syncHitboxHelpers();
         syncFrameCaptionVisibility();
+        return Promise.all(videos.map((video) => waitForVideoFrame(video)));
+      })
+      .then(() => {
+        if (disposed) {
+          return;
+        }
+        window.requestAnimationFrame(() => {
+          if (!disposed) {
+            sceneReadyCallbackRef.current?.();
+          }
+        });
       })
       .catch((error: unknown) => {
         onSceneError(error instanceof Error ? error : new Error(String(error)));
@@ -3624,12 +3885,10 @@ function ObjectPreviewButton({
             preload="metadata"
           />
         ) : imageSrc ? (
-          <Image
-            fill
+          <PreloadedImage
             className="size-full object-cover"
             src={imageSrc}
             alt=""
-            sizes="11rem"
           />
         ) : (
           <div className="flex size-full items-center justify-center text-[#d8cdbb]">
@@ -3871,7 +4130,12 @@ export function GalleryScene() {
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [openWorkSlug, setOpenWorkSlug] = useState<string | null>(null);
   const [bioOpen, setBioOpen] = useState(false);
+  const [openImageFrameModal, setOpenImageFrameModal] = useState<ImageFrameModalId | null>(null);
   const [speakerPlaying, setSpeakerPlaying] = useState(false);
+  const [candleLit, setCandleLit] = useState(true);
+  const [initialAssetPaths, setInitialAssetPaths] = useState<string[] | null>(null);
+  const [initialAssetsReady, setInitialAssetsReady] = useState(false);
+  const [initialSceneReady, setInitialSceneReady] = useState(false);
   const [hoveredFrameInfo, setHoveredFrameInfo] = useState<FrameHoverInfo | null>(null);
   const [captionFontId, setCaptionFontId] = useState<CaptionFontId>(() => {
     if (typeof window === "undefined") {
@@ -3988,11 +4252,13 @@ export function GalleryScene() {
 
           setSettings(loadedSettings);
           setLighting(loadedLighting);
+          setInitialAssetPaths(scenePreloadAssets(loadedSettings));
           setSelectedObject((current) => Math.min(current, loadedSettings.length - 1));
           setResetSignal((current) => current + 1);
         } catch (error) {
           if (!cancelled) {
             setSceneError(error instanceof Error ? error.message : String(error));
+            setInitialAssetPaths(scenePreloadAssets(defaultSceneSettings));
           }
         } finally {
           if (!cancelled) {
@@ -4121,6 +4387,23 @@ export function GalleryScene() {
     });
   }, [playSpeakerButtonSound]);
 
+  const handleCandleClick = useCallback(() => {
+    setSceneError(null);
+    setCandleLit((current) => !current);
+  }, []);
+
+  const handleInitialAssetsReady = useCallback(() => {
+    setInitialAssetsReady(true);
+  }, []);
+
+  const handleInitialAssetError = useCallback((error: Error | null) => {
+    setSceneError(error?.message ?? null);
+  }, []);
+
+  const handleInitialSceneReady = useCallback(() => {
+    setInitialSceneReady(true);
+  }, []);
+
   useEffect(() => {
     return () => {
       const chain = speakerAudioRef.current;
@@ -4237,15 +4520,21 @@ export function GalleryScene() {
     const source = selected ?? settings[settings.length - 1] ?? defaultSceneSettings[0];
     const nextIndex = settings.length;
     const nextPosition: VectorTuple = [
-      formatNumber(THREE.MathUtils.clamp(source.position[0] + 0.65, -4.2, 4.2)),
-      formatNumber(THREE.MathUtils.clamp(source.position[1] - 0.18, -4.2, 2)),
+      formatNumber(THREE.MathUtils.clamp(source.position[0] + 0.65, -7.875, 7.875)),
+      formatNumber(THREE.MathUtils.clamp(source.position[1] - 0.18, -7.875, 3.75)),
       source.position[2],
     ];
     const nextLightPosition: VectorTuple =
       source.kind === "model"
         ? [
             source.position[0],
-            formatNumber(THREE.MathUtils.clamp(source.position[1] + source.wallScale * 1.45, -4.2, 2)),
+            formatNumber(
+              THREE.MathUtils.clamp(
+                source.position[1] + source.wallScale * 1.45,
+                -7.875,
+                3.75,
+              ),
+            ),
             source.position[2],
           ]
         : nextPosition;
@@ -4370,7 +4659,8 @@ export function GalleryScene() {
 
   return (
     <section className="relative h-full min-h-screen w-full supports-[height:100dvh]:min-h-dvh">
-      <ThreeWallCanvas
+      {initialAssetsReady ? (
+        <ThreeWallCanvas
         key={resetSignal}
         settings={settings}
         lighting={lighting}
@@ -4390,16 +4680,30 @@ export function GalleryScene() {
         captionPlacement={captionPlacementId}
         captionDisplayMode={captionDisplayMode}
         speakerPlaying={speakerPlaying}
+        candleLit={candleLit}
         onSceneError={handleSceneError}
         onCameraInfoChange={setCameraInfo}
         onFrameClick={setOpenWorkSlug}
         onBioClick={() => setBioOpen(true)}
+        onImageFrameClick={setOpenImageFrameModal}
         onFrameHover={setHoveredFrameInfo}
         onLampToggle={toggleNearestLight}
         onSpeakerClick={handleSpeakerClick}
+        onCandleClick={handleCandleClick}
+        onSceneReady={handleInitialSceneReady}
+      />
+      ) : null}
+
+      <SceneLoadingScreen
+        assets={initialAssetPaths}
+        assetsReady={initialAssetsReady}
+        sceneReady={initialSceneReady}
+        sceneError={sceneError}
+        onAssetsReady={handleInitialAssetsReady}
+        onError={handleInitialAssetError}
       />
 
-      {hoveredWork && captionPlacementId === "corner" && !editorOpen && !lightingOpen && !openWork && !bioOpen ? (
+      {hoveredWork && captionPlacementId === "corner" && !editorOpen && !lightingOpen && !openWork && !bioOpen && !openImageFrameModal ? (
         <div
           className="pointer-events-none absolute bottom-7 left-5 max-w-[calc(100vw-2.5rem)] break-words text-5xl leading-none text-[#f6f0e5] sm:bottom-9 sm:left-8 sm:text-7xl lg:text-8xl"
           style={{
@@ -4571,7 +4875,7 @@ export function GalleryScene() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: "always", label: "Always quiet" },
+                { id: "always", label: "Always visible" },
                 { id: "hover", label: "Hover only" },
               ].map((option) => {
                 const selectedDisplay = option.id === captionDisplayMode;
@@ -4800,11 +5104,12 @@ export function GalleryScene() {
           <div className="grid grid-cols-2 gap-3">
             <RangeControl
               label="Wall X"
-              min={-4.2}
-              max={4.2}
-              step={0.02}
+              min={-7.875}
+              max={7.875}
+              step={0.001}
               value={selected.position[0]}
               onChange={(value) => updateSelectedPosition(0, value)}
+              fine
             />
             <RangeControl
               label="Wall Y"
@@ -4812,21 +5117,29 @@ export function GalleryScene() {
                 selected.kind === "frame" ||
                 selected.kind === "bio-frame" ||
                 selected.kind === "image-frame"
-                  ? -2.7
-                  : -4.2
+                  ? -5.063
+                  : -7.875
               }
-              max={selected.kind === "clock" || selected.kind === "bio-frame" ? 4.2 : 2}
-              step={0.02}
+              max={
+                selected.kind === "bio-frame"
+                  ? BIO_FRAME_EXPANDED_MAX_Y
+                  : selected.kind === "clock"
+                    ? 7.875
+                    : 3.75
+              }
+              step={0.001}
               value={selected.position[1]}
               onChange={(value) => updateSelectedPosition(1, value)}
+              fine
             />
             <RangeControl
               label="Depth Z"
-              min={-0.35}
-              max={2.8}
-              step={0.005}
+              min={-0.657}
+              max={5.25}
+              step={0.001}
               value={selected.position[2]}
               onChange={(value) => updateSelectedPosition(2, value)}
+              fine
             />
             <RangeControl
               label={
@@ -4840,17 +5153,18 @@ export function GalleryScene() {
                     ? "Marker"
                     : "Size"
               }
-              min={selected.kind === "light" ? 0.04 : 0.35}
+              min={selected.kind === "light" ? 0.015 : 0.132}
               max={
                 selected.kind === "model" && selected.catalogId === "human"
-                  ? 6
+                  ? 11.25
                   : selected.kind === "light"
-                    ? 0.5
-                    : 2.4
+                    ? 0.938
+                    : 4.5
               }
-              step={selected.kind === "light" ? 0.005 : 0.01}
+              step={0.001}
               value={selected.wallScale}
               onChange={updateSelectedSize}
+              fine
             />
           </div>
 
@@ -4874,43 +5188,47 @@ export function GalleryScene() {
               <div className="grid grid-cols-2 gap-3">
                 <RangeControl
                   label="Caption X"
-                  min={-1.5}
-                  max={1.5}
-                  step={0.01}
+                  min={-2.813}
+                  max={2.813}
+                  step={0.001}
                   value={selected.captionOffsetX}
                   onChange={(value) =>
                     updateSelectedObject({ captionOffsetX: value } as Partial<SceneObjectSetting>)
                   }
+                  fine
                 />
                 <RangeControl
                   label="Caption Y"
-                  min={-2}
-                  max={0.6}
-                  step={0.01}
+                  min={-3.75}
+                  max={1.125}
+                  step={0.001}
                   value={selected.captionOffsetY}
                   onChange={(value) =>
                     updateSelectedObject({ captionOffsetY: value } as Partial<SceneObjectSetting>)
                   }
+                  fine
                 />
                 <RangeControl
                   label="Caption Z"
-                  min={-0.05}
-                  max={0.2}
-                  step={0.002}
+                  min={-0.095}
+                  max={0.375}
+                  step={0.001}
                   value={selected.captionOffsetZ}
                   onChange={(value) =>
                     updateSelectedObject({ captionOffsetZ: value } as Partial<SceneObjectSetting>)
                   }
+                  fine
                 />
                 <RangeControl
                   label="Caption Size"
-                  min={0.35}
-                  max={2.5}
-                  step={0.01}
+                  min={0.132}
+                  max={4.688}
+                  step={0.001}
                   value={selected.captionScale}
                   onChange={(value) =>
                     updateSelectedObject({ captionScale: value } as Partial<SceneObjectSetting>)
                   }
+                  fine
                 />
               </div>
             </div>
@@ -4925,26 +5243,28 @@ export function GalleryScene() {
                 <RangeControl
                   label="Warm tint"
                   min={0}
-                  max={0.3}
-                  step={0.01}
+                  max={0.563}
+                  step={0.001}
                   value={selected.imageTintStrength}
                   onChange={(value) =>
                     updateSelectedObject({
                       imageTintStrength: value,
                     } as Partial<SceneObjectSetting>)
                   }
+                  fine
                 />
                 <RangeControl
                   label="Haze"
                   min={0}
-                  max={0.35}
-                  step={0.01}
+                  max={0.657}
+                  step={0.001}
                   value={selected.imageHazeOpacity}
                   onChange={(value) =>
                     updateSelectedObject({
                       imageHazeOpacity: value,
                     } as Partial<SceneObjectSetting>)
                   }
+                  fine
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -5004,9 +5324,9 @@ export function GalleryScene() {
               <div className="grid grid-cols-2 gap-3">
                 <RangeControl
                   label="Hitbox X"
-                  min={-1}
-                  max={1}
-                  step={0.01}
+                  min={-1.875}
+                  max={1.875}
+                  step={0.001}
                   value={selected.hitboxOffset[0]}
                   onChange={(value) => {
                     const hitboxOffset = [...selected.hitboxOffset] as VectorTuple;
@@ -5015,12 +5335,13 @@ export function GalleryScene() {
                       hitboxOffset,
                     } as Partial<SceneObjectSetting>);
                   }}
+                  fine
                 />
                 <RangeControl
                   label="Hitbox Y"
-                  min={-0.25}
-                  max={1.4}
-                  step={0.01}
+                  min={-0.47}
+                  max={2.625}
+                  step={0.001}
                   value={selected.hitboxOffset[1]}
                   onChange={(value) => {
                     const hitboxOffset = [...selected.hitboxOffset] as VectorTuple;
@@ -5029,12 +5350,13 @@ export function GalleryScene() {
                       hitboxOffset,
                     } as Partial<SceneObjectSetting>);
                   }}
+                  fine
                 />
                 <RangeControl
                   label="Hitbox Z"
-                  min={-1}
-                  max={1}
-                  step={0.01}
+                  min={-1.875}
+                  max={1.875}
+                  step={0.001}
                   value={selected.hitboxOffset[2]}
                   onChange={(value) => {
                     const hitboxOffset = [...selected.hitboxOffset] as VectorTuple;
@@ -5043,12 +5365,13 @@ export function GalleryScene() {
                       hitboxOffset,
                     } as Partial<SceneObjectSetting>);
                   }}
+                  fine
                 />
                 <RangeControl
                   label="Hitbox W"
-                  min={0.05}
-                  max={2}
-                  step={0.01}
+                  min={0.019}
+                  max={3.75}
+                  step={0.001}
                   value={selected.hitboxSize[0]}
                   onChange={(value) => {
                     const hitboxSize = [...selected.hitboxSize] as VectorTuple;
@@ -5057,12 +5380,13 @@ export function GalleryScene() {
                       hitboxSize,
                     } as Partial<SceneObjectSetting>);
                   }}
+                  fine
                 />
                 <RangeControl
                   label="Hitbox H"
-                  min={0.05}
-                  max={2}
-                  step={0.01}
+                  min={0.019}
+                  max={3.75}
+                  step={0.001}
                   value={selected.hitboxSize[1]}
                   onChange={(value) => {
                     const hitboxSize = [...selected.hitboxSize] as VectorTuple;
@@ -5071,12 +5395,13 @@ export function GalleryScene() {
                       hitboxSize,
                     } as Partial<SceneObjectSetting>);
                   }}
+                  fine
                 />
                 <RangeControl
                   label="Hitbox D"
-                  min={0.05}
-                  max={2}
-                  step={0.01}
+                  min={0.019}
+                  max={3.75}
+                  step={0.001}
                   value={selected.hitboxSize[2]}
                   onChange={(value) => {
                     const hitboxSize = [...selected.hitboxSize] as VectorTuple;
@@ -5085,6 +5410,7 @@ export function GalleryScene() {
                       hitboxSize,
                     } as Partial<SceneObjectSetting>);
                   }}
+                  fine
                 />
               </div>
             </div>
@@ -5117,26 +5443,29 @@ export function GalleryScene() {
                 <RangeControl
                   label="Intensity"
                   min={0}
-                  max={16}
-                  step={0.1}
+                  max={30}
+                  step={0.01}
                   value={selected.intensity}
                   onChange={(value) => updateSelectedLight({ intensity: value })}
+                  fine
                 />
                 <RangeControl
                   label="Distance"
-                  min={0.4}
-                  max={8}
-                  step={0.1}
+                  min={0.15}
+                  max={15}
+                  step={0.01}
                   value={selected.distance}
                   onChange={(value) => updateSelectedLight({ distance: value })}
+                  fine
                 />
                 <RangeControl
                   label="Falloff"
-                  min={0.4}
-                  max={3}
-                  step={0.05}
+                  min={0.15}
+                  max={5.625}
+                  step={0.01}
                   value={selected.decay}
                   onChange={(value) => updateSelectedLight({ decay: value })}
+                  fine
                 />
               </div>
             </div>
@@ -5152,25 +5481,28 @@ export function GalleryScene() {
                   label="Pitch X"
                   min={-OBJECT_ROTATION_LIMIT}
                   max={OBJECT_ROTATION_LIMIT}
-                  step={0.01}
+                  step={0.001}
                   value={selected.rotation[0]}
                   onChange={(value) => updateSelectedRotation(0, value)}
+                  fine
                 />
                 <RangeControl
                   label="Yaw Y"
                   min={-OBJECT_ROTATION_LIMIT}
                   max={OBJECT_ROTATION_LIMIT}
-                  step={0.01}
+                  step={0.001}
                   value={selected.rotation[1]}
                   onChange={(value) => updateSelectedRotation(1, value)}
+                  fine
                 />
                 <RangeControl
                   label="Roll Z"
                   min={-OBJECT_ROTATION_LIMIT}
                   max={OBJECT_ROTATION_LIMIT}
-                  step={0.01}
+                  step={0.001}
                   value={selected.rotation[2]}
                   onChange={(value) => updateSelectedRotation(2, value)}
+                  fine
                 />
               </div>
             </>
@@ -5233,6 +5565,7 @@ export function GalleryScene() {
 
       {openWork ? (
         <WorkModal
+          key={openWork.slug}
           work={openWork}
           onClose={() => setOpenWorkSlug(null)}
           onSelectWork={setOpenWorkSlug}
@@ -5241,18 +5574,52 @@ export function GalleryScene() {
       {bioOpen ? (
         <BioModal onClose={() => setBioOpen(false)} />
       ) : null}
+      {openImageFrameModal === "stills" ? (
+        <StillsModal onClose={() => setOpenImageFrameModal(null)} />
+      ) : null}
+      {openImageFrameModal === "clients" ? (
+        <ClientsModal
+          onClose={() => setOpenImageFrameModal(null)}
+          onSelectWork={(slug) => {
+            setOpenImageFrameModal(null);
+            setOpenWorkSlug(slug);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
 
-function youtubeEmbedUrl(sourceUrl: string) {
+type VideoEmbed = {
+  src: string;
+  platform: "Vimeo" | "YouTube";
+};
+
+function videoEmbed(sourceUrl: string): VideoEmbed | null {
   try {
     const url = new URL(sourceUrl);
+    const hostname = url.hostname.replace(/^www\./, "");
+
+    if (hostname === "vimeo.com" || hostname === "player.vimeo.com") {
+      const videoId = url.pathname.split("/").find((part) => /^\d+$/.test(part));
+      return videoId
+        ? {
+            src: `https://player.vimeo.com/video/${videoId}?title=0&byline=0&portrait=0`,
+            platform: "Vimeo",
+          }
+        : null;
+    }
+
     const videoId =
-      url.hostname === "youtu.be"
+      hostname === "youtu.be"
         ? url.pathname.split("/").filter(Boolean)[0]
         : url.searchParams.get("v") ?? url.pathname.split("/").filter(Boolean).pop();
-    return videoId ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1` : null;
+    return videoId
+      ? {
+          src: `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`,
+          platform: "YouTube",
+        }
+      : null;
   } catch {
     return null;
   }
@@ -5267,7 +5634,8 @@ function WorkModal({
   onClose: () => void;
   onSelectWork: (slug: string) => void;
 }) {
-  const embedUrl = youtubeEmbedUrl(work.sourceUrl);
+  const embed = videoEmbed(work.sourceUrl);
+  const [embedReady, setEmbedReady] = useState(false);
   const relatedWorks = works.filter(
     (candidate) => candidate.artist === work.artist && candidate.slug !== work.slug,
   );
@@ -5307,14 +5675,26 @@ function WorkModal({
         >
           <X size={18} />
         </button>
-        <div className="grid min-h-[20rem] bg-black/35">
-          {embedUrl ? (
+        <div className="relative grid min-h-[20rem] overflow-hidden bg-black/35">
+          {work.modalPosterSrc ? (
+            <PreloadedImage
+              className={`pointer-events-none object-contain object-center transition-opacity duration-300 ${
+                embedReady ? "opacity-0" : "opacity-100"
+              }`}
+              src={work.modalPosterSrc}
+              alt=""
+            />
+          ) : null}
+          {embed ? (
             <iframe
-              className="size-full min-h-[20rem] lg:min-h-[36rem]"
-              src={embedUrl}
+              className={`relative size-full min-h-[20rem] transition-opacity duration-300 lg:min-h-[36rem] ${
+                work.modalPosterSrc && !embedReady ? "opacity-0" : "opacity-100"
+              }`}
+              src={embed.src}
               title={work.sourceTitle}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
+              onLoad={() => setEmbedReady(true)}
             />
           ) : (
             <video
@@ -5364,7 +5744,7 @@ function WorkModal({
             rel="noreferrer"
           >
             <Play size={15} />
-            Watch on YouTube
+            Watch on {embed?.platform ?? "source"}
             <ExternalLink size={14} />
           </a>
 
@@ -5435,12 +5815,10 @@ function BioModal({ onClose }: { onClose: () => void }) {
           <X size={18} />
         </button>
         <div className="relative min-h-0 bg-black/35">
-          <Image
-            fill
+          <PreloadedImage
             className="object-contain object-center md:object-cover md:object-center"
             src={BIO_FRAME_IMAGE_PATH}
             alt="Yaslynn Rivera"
-            sizes="(min-width: 768px) 42vw, 100vw"
           />
         </div>
         <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-7 pr-14 text-[#f6f0e5] md:px-8 md:py-9 md:pr-14">
@@ -5461,6 +5839,221 @@ function BioModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function StillsModal({ onClose }: { onClose: () => void }) {
+  const [selectedStillId, setSelectedStillId] = useState(yaslynnStills[0]?.id ?? "");
+  const selectedStill =
+    yaslynnStills.find((still) => still.id === selectedStillId) ?? yaslynnStills[0];
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  if (!selectedStill) {
+    return null;
+  }
+
+  return (
+    <div
+      className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Yaslynn Rivera stills"
+    >
+      <div
+        className="relative grid h-[min(90vh,58rem)] w-full max-w-6xl grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-lg border border-white/10 bg-[#16120d]/95 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 z-10 grid size-9 cursor-pointer place-items-center rounded bg-black/35 text-[#f6f0e5] transition hover:bg-black/55"
+        >
+          <X size={18} />
+        </button>
+
+        <div className="relative min-h-0 bg-black/45">
+          <PreloadedImage
+            className="object-contain object-center"
+            src={selectedStill.imageSrc}
+            alt={selectedStill.alt}
+          />
+        </div>
+
+        <div className="border-t border-white/10 px-5 py-4 text-[#f6f0e5] sm:px-7">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-[#b9aa92]">
+            Stills
+          </p>
+          <h2 className="mt-1 text-2xl leading-tight sm:text-3xl">{selectedStill.title}</h2>
+
+          {yaslynnStills.length > 1 ? (
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+              {yaslynnStills.map((still) => (
+                <button
+                  key={still.id}
+                  type="button"
+                  className={`relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded border transition ${
+                    still.id === selectedStill.id
+                      ? "border-[#f6f0e5]"
+                      : "border-white/15 opacity-65 hover:opacity-100"
+                  }`}
+                  aria-label={`Show ${still.title}`}
+                  onClick={() => setSelectedStillId(still.id)}
+                >
+                  <PreloadedImage
+                    className="object-cover"
+                    src={still.imageSrc}
+                    alt=""
+                  />
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ClientsModal({
+  onClose,
+  onSelectWork,
+}: {
+  onClose: () => void;
+  onSelectWork: (slug: string) => void;
+}) {
+  const clientGroups = useMemo(() => {
+    const groups = new Map<string, WorkItem[]>();
+
+    works.forEach((work) => {
+      if (work.artist === "Yaslynn Rivera") {
+        return;
+      }
+      groups.set(work.artist, [...(groups.get(work.artist) ?? []), work]);
+    });
+
+    return Array.from(groups, ([name, clientWorks]) => ({ name, works: clientWorks }));
+  }, []);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="clients-modal-title"
+    >
+      <div
+        className="relative flex max-h-[min(90vh,58rem)] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-white/10 bg-[#16120d]/95 text-[#f6f0e5] shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 z-10 grid size-9 cursor-pointer place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
+        >
+          <X size={18} />
+        </button>
+
+        <header className="border-b border-white/10 px-6 py-6 pr-16 sm:px-8 sm:py-8">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-[#b9aa92]">
+            Selected work
+          </p>
+          <h2
+            id="clients-modal-title"
+            className="mt-1 text-4xl leading-none sm:text-5xl"
+            style={{ fontFamily: '"Yaz Sobria", Sobria, serif' }}
+          >
+            Clients
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#d8cdbb]">
+            Explore Yaslynn&rsquo;s work by client. Expand a name to see the projects
+            created for them.
+          </p>
+        </header>
+
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-6">
+          <div className="grid gap-3">
+            {clientGroups.map((client, index) => (
+              <details
+                key={client.name}
+                open={index === 0}
+                className="group overflow-hidden rounded border border-white/10 bg-white/[0.035]"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 transition hover:bg-white/[0.06] marker:content-none sm:px-5">
+                  <span>
+                    <span className="block text-xl leading-tight sm:text-2xl">{client.name}</span>
+                    <span className="mt-1 block text-xs text-[#b9aa92]">
+                      {client.works.length} {client.works.length === 1 ? "project" : "projects"}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className="shrink-0 text-[#b9aa92] transition-transform group-open:rotate-180"
+                    size={20}
+                    aria-hidden="true"
+                  />
+                </summary>
+
+                <div className="grid gap-2 border-t border-white/10 p-3 sm:p-4">
+                  {client.works.map((work) => (
+                    <button
+                      key={work.slug}
+                      type="button"
+                      onClick={() => onSelectWork(work.slug)}
+                      className="group/project flex cursor-pointer items-center justify-between gap-4 rounded border border-white/10 bg-black/15 px-4 py-3 text-left transition hover:border-white/20 hover:bg-white/[0.07]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-base leading-tight text-[#f6f0e5]">
+                          {work.title}
+                        </span>
+                        <span className="mt-1 block text-xs text-[#b9aa92]">
+                          {work.credit}
+                        </span>
+                      </span>
+                      <span className="inline-flex shrink-0 items-center gap-2 text-xs uppercase tracking-[0.12em] text-[#d8cdbb] transition group-hover/project:text-white">
+                        <Play size={14} fill="currentColor" />
+                        Watch
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RangeControl({
   label,
   tooltip,
@@ -5469,6 +6062,7 @@ function RangeControl({
   step,
   value,
   onChange,
+  fine = false,
 }: {
   label: string;
   tooltip?: string;
@@ -5477,7 +6071,26 @@ function RangeControl({
   step: number;
   value: number;
   onChange: (value: number) => void;
+  fine?: boolean;
 }) {
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startValue: number;
+    width: number;
+  } | null>(null);
+
+  const endFineDrag = (event: React.PointerEvent<HTMLInputElement>) => {
+    if (!fine || dragRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = null;
+  };
+
   return (
     <label className="block">
       <span className="mb-1 flex items-center justify-between gap-2 text-[11px] text-[#d8cdbb]">
@@ -5485,13 +6098,67 @@ function RangeControl({
         <span className="font-mono text-[#fff7e8]">{formatNumber(value)}</span>
       </span>
       <input
-        className="w-full accent-sky-300"
+        className={`w-full accent-sky-300 ${fine ? "cursor-ew-resize touch-none" : ""}`}
         type="range"
         min={min}
         max={max}
         step={step}
         value={value}
-        onInput={(event) => onChange(Number(event.currentTarget.value))}
+        onChange={(event) => onChange(Number(event.currentTarget.value))}
+        onKeyDown={(event) => {
+          if (!fine) {
+            return;
+          }
+
+          const direction =
+            event.key === "ArrowRight" || event.key === "ArrowUp"
+              ? 1
+              : event.key === "ArrowLeft" || event.key === "ArrowDown"
+                ? -1
+                : 0;
+          if (direction === 0) {
+            return;
+          }
+
+          event.preventDefault();
+          onChange(formatNumber(THREE.MathUtils.clamp(value + direction * step, min, max)));
+        }}
+        onPointerDown={(event) => {
+          if (!fine || (event.pointerType === "mouse" && event.button !== 0)) {
+            return;
+          }
+
+          event.preventDefault();
+          event.currentTarget.focus({ preventScroll: true });
+          const width = Math.max(event.currentTarget.getBoundingClientRect().width, 1);
+          dragRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startValue: value,
+            width,
+          };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const drag = dragRef.current;
+          if (!fine || !drag || drag.pointerId !== event.pointerId) {
+            return;
+          }
+
+          event.preventDefault();
+          const delta =
+            ((event.clientX - drag.startX) / drag.width) *
+            (max - min) *
+            ENVIRONMENT_FINE_DRAG_SENSITIVITY;
+          const rawValue = THREE.MathUtils.clamp(drag.startValue + delta, min, max);
+          const snappedValue = min + Math.round((rawValue - min) / step) * step;
+          onChange(formatNumber(THREE.MathUtils.clamp(snappedValue, min, max)));
+        }}
+        onPointerUp={endFineDrag}
+        onPointerCancel={endFineDrag}
+        onLostPointerCapture={() => {
+          dragRef.current = null;
+        }}
       />
     </label>
   );

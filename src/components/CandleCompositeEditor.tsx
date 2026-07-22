@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import Link from "next/link";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {
   candleFlameAtlas,
   defaultCandleComposite,
@@ -11,6 +12,7 @@ import {
   type CandleCompositeConfig,
   type VectorTuple,
 } from "@/lib/candleComposite";
+import { resolveModelAssetUrl } from "@/lib/modelAssetUrl";
 
 const STORAGE_KEY = "yaz-candle-composite-v1";
 
@@ -244,10 +246,10 @@ function CandleCanvas({
 
     sceneHandlesRef.current = { syncConfig, resetView };
 
-    const loader = new GLTFLoader();
+    const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
     Promise.all([
-      loader.loadAsync(configRef.current.holderModel),
-      loader.loadAsync(configRef.current.candleModel),
+      loader.loadAsync(resolveModelAssetUrl(configRef.current.holderModel)),
+      loader.loadAsync(resolveModelAssetUrl(configRef.current.candleModel)),
     ])
       .then(([holder, candle]) => {
         if (disposed) {
@@ -259,7 +261,10 @@ function CandleCanvas({
         candleModel = createNormalizedModel(candle.scene);
         candleRoot.add(candleModel);
 
-        const flameTexture = createAnimatedImageTexture(configRef.current.flameTexture, textures);
+        const flameTexture = createAnimatedImageTexture(
+          resolveModelAssetUrl(configRef.current.flameTexture),
+          textures,
+        );
         const flameMaterial = makeMaterial(
           new THREE.MeshBasicMaterial({
             map: flameTexture,

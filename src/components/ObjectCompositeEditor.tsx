@@ -5,12 +5,14 @@ import Link from "next/link";
 import Image from "next/image";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {
   bioFramePicture,
   familyFramePicture,
   framePictures,
 } from "@/content/framePictures";
 import { works } from "@/content/works";
+import { resolveModelAssetUrl } from "@/lib/modelAssetUrl";
 
 type MaskShape = "rectangle" | "oval";
 type DragMode = "move" | "nw" | "ne" | "se" | "sw";
@@ -48,6 +50,7 @@ const LEGACY_FRAME_STORAGE_KEY = "yaz-frame-editor-v2";
 const FRAME_ROTATION_LIMIT = Math.PI;
 const PREVIEW_YAW_LIMIT = Math.PI;
 const PREVIEW_PITCH_LIMIT = Math.PI / 2;
+const COMPOSITE_FINE_DRAG_SENSITIVITY = 0.2;
 const BIO_FRAME_IMAGE_PATH = bioFramePicture.src;
 const BIO_IMAGE_ASPECT = bioFramePicture.aspect;
 const FAMILY_FRAME_IMAGE_PATH = familyFramePicture.src;
@@ -176,7 +179,7 @@ const defaultComposites = [
     ...defaultComposite,
     id: "frame-02",
     model: "/3d-models/frames/vintage_frame_06.glb",
-    workSlug: "dani-offline-angel",
+    workSlug: "yaslynn-director-reel",
     frameWidth: 2.3,
     frameHeight: 2.34,
     frameRotationX: -0.001592653589793,
@@ -710,7 +713,7 @@ function CompositeCanvas({
     let loadedFrameSize = new THREE.Vector3(1, 1, 1);
     let loadedFrameCenter = new THREE.Vector3();
 
-    const loader = new GLTFLoader();
+    const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
     const imageLoader = new THREE.TextureLoader();
     const video = document.createElement("video");
     const videoTexture = new THREE.VideoTexture(video);
@@ -908,7 +911,7 @@ function CompositeCanvas({
     const updateFrame = async () => {
       const current = configRef.current;
       disposeGroup(frameRoot);
-      const gltf = await loader.loadAsync(current.model);
+      const gltf = await loader.loadAsync(resolveModelAssetUrl(current.model));
       if (disposed) {
         return;
       }
@@ -1177,6 +1180,15 @@ export function ObjectCompositeEditor() {
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const config = composites[selectedComposite] ?? composites[0] ?? defaultComposite;
   const isImageComposite = config.kind === "bio-frame" || config.kind === "image-frame";
+  const frameModelsUsedElsewhere = useMemo(
+    () =>
+      new Set(
+        composites
+          .filter((_, index) => index !== selectedComposite)
+          .map((composite) => normalizeFrameModelPath(composite.model)),
+      ),
+    [composites, selectedComposite],
+  );
   const exportedConfig = useMemo(() => JSON.stringify(config, null, 2), [config]);
 
   useEffect(() => {
@@ -1331,18 +1343,32 @@ export function ObjectCompositeEditor() {
     setError(null);
     setSaveStatus(null);
     setComposites((current) =>
-      current.map((composite, index) =>
-        index === selectedComposite
-          ? normalizeComposite({
-              ...(composite.kind === "bio-frame"
-                ? defaultBioComposite
-                : composite.kind === "image-frame"
-                  ? defaultFamilyComposite
-                  : defaultComposite),
-              id: composite.id,
-            })
-          : composite,
-      ),
+      current.map((composite, index) => {
+        if (index !== selectedComposite) {
+          return composite;
+        }
+
+        const resetDefaults =
+          composite.kind === "bio-frame"
+            ? defaultBioComposite
+            : composite.kind === "image-frame"
+              ? defaultFamilyComposite
+              : defaultComposite;
+
+        return normalizeComposite({
+          ...resetDefaults,
+          id: composite.id,
+          kind: composite.kind,
+          model: composite.model,
+          workSlug: composite.workSlug,
+          imageSrc: composite.imageSrc,
+          bioSlug: composite.bioSlug,
+          captionText: composite.captionText,
+          maskShape: composite.maskShape,
+          videoAspect: composite.videoAspect,
+          videoHeight: formatNumber(resetDefaults.videoWidth / composite.videoAspect),
+        });
+      }),
     );
   };
 
@@ -1387,6 +1413,9 @@ export function ObjectCompositeEditor() {
           <div className="flex gap-2 overflow-x-auto pb-1">
             {composites.map((composite, index) => {
               const work = workForComposite(composite);
+              const picture = framePictures.find(
+                (candidate) => candidate.src === composite.imageSrc,
+              );
               const selected = index === selectedComposite;
               const isStillImage = composite.kind === "bio-frame" || composite.kind === "image-frame";
               return (
@@ -1426,7 +1455,9 @@ export function ObjectCompositeEditor() {
                   )}
                   <span className="min-w-0">
                     <span className="block truncate text-xs font-medium">
-                      {isStillImage ? composite.captionText ?? "Still image" : `Object ${index + 1}`}
+                      {isStillImage
+                        ? composite.captionText?.trim() || picture?.label || "Still image"
+                        : `Object ${index + 1}`}
                     </span>
                     <span className="block truncate text-[11px] text-[#d8cdbb]">
                       {isStillImage
@@ -1485,6 +1516,7 @@ export function ObjectCompositeEditor() {
             >
               {frameModels.map((model) => (
                 <option key={model} value={model}>
+                  {frameModelsUsedElsewhere.has(model) ? "☑" : "☐"}{" "}
                   {model.replace("/3d-models/frames/", "")}
                 </option>
               ))}
@@ -1548,71 +1580,79 @@ export function ObjectCompositeEditor() {
               label="Frame W"
               min={0.6}
               max={2.8}
-              step={0.02}
+              step={0.001}
               value={config.frameWidth}
               onChange={(value) => updateConfig({ frameWidth: value })}
+              fine
             />
             <RangeControl
               label="Frame H"
               min={0.6}
               max={3.2}
-              step={0.02}
+              step={0.001}
               value={config.frameHeight}
               onChange={(value) => updateConfig({ frameHeight: value })}
+              fine
             />
             <RangeControl
               label="Frame Pitch"
               min={-FRAME_ROTATION_LIMIT}
               max={FRAME_ROTATION_LIMIT}
-              step={0.01}
+              step={0.001}
               value={config.frameRotationX}
               onChange={(value) => updateConfig({ frameRotationX: value })}
+              fine
             />
             <RangeControl
               label="Frame Yaw"
               min={-FRAME_ROTATION_LIMIT}
               max={FRAME_ROTATION_LIMIT}
-              step={0.01}
+              step={0.001}
               value={config.frameRotationY}
               onChange={(value) => updateConfig({ frameRotationY: value })}
+              fine
             />
             <RangeControl
               label="Frame Roll"
               min={-FRAME_ROTATION_LIMIT}
               max={FRAME_ROTATION_LIMIT}
-              step={0.01}
+              step={0.001}
               value={config.frameRotationZ}
               onChange={(value) => updateConfig({ frameRotationZ: value })}
+              fine
             />
             <RangeControl
               label={isImageComposite ? "Image X" : "Video X"}
               min={-1.2}
               max={1.2}
-              step={0.01}
+              step={0.001}
               value={config.videoX}
               onChange={(value) => updateConfig({ videoX: value })}
+              fine
             />
             <RangeControl
               label={isImageComposite ? "Image Y" : "Video Y"}
               min={-1.2}
               max={1.2}
-              step={0.01}
+              step={0.001}
               value={config.videoY}
               onChange={(value) => updateConfig({ videoY: value })}
+              fine
             />
             <RangeControl
               label={isImageComposite ? "Image Z" : "Video Z"}
               min={-0.12}
               max={0.24}
-              step={0.005}
+              step={0.001}
               value={config.videoZ}
               onChange={(value) => updateConfig({ videoZ: value })}
+              fine
             />
             <RangeControl
               label={isImageComposite ? "Image Zoom" : "Video Zoom"}
               min={1}
               max={3}
-              step={0.02}
+              step={0.001}
               value={config.videoZoom}
               onChange={(value) =>
                 updateConfig({
@@ -1621,12 +1661,13 @@ export function ObjectCompositeEditor() {
                   cropY: clampCropAmount(config.cropY),
                 })
               }
+              fine
             />
             <RangeControl
               label={isImageComposite ? "Image Size" : "Video Size"}
               min={0.12}
-              max={2.4}
-              step={0.01}
+              max={3}
+              step={0.001}
               value={config.videoWidth}
               onChange={(value) =>
                 updateConfig({
@@ -1634,22 +1675,25 @@ export function ObjectCompositeEditor() {
                   videoHeight: formatNumber(value / config.videoAspect),
                 })
               }
+              fine
             />
             <RangeControl
               label="Crop X"
               min={0}
               max={0.48}
-              step={0.01}
+              step={0.001}
               value={config.cropX}
               onChange={(value) => updateConfig({ cropX: clampCropAmount(value) })}
+              fine
             />
             <RangeControl
               label="Crop Y"
               min={0}
               max={0.48}
-              step={0.01}
+              step={0.001}
               value={config.cropY}
               onChange={(value) => updateConfig({ cropY: clampCropAmount(value) })}
+              fine
             />
           </div>
 
@@ -1708,6 +1752,7 @@ function RangeControl({
   step,
   value,
   onChange,
+  fine = false,
 }: {
   label: string;
   min: number;
@@ -1715,7 +1760,26 @@ function RangeControl({
   step: number;
   value: number;
   onChange: (value: number) => void;
+  fine?: boolean;
 }) {
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startValue: number;
+    width: number;
+  } | null>(null);
+
+  const endFineDrag = (event: React.PointerEvent<HTMLInputElement>) => {
+    if (!fine || dragRef.current?.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = null;
+  };
+
   return (
     <label className="grid min-w-0 gap-1 text-xs text-[#d8cdbb]">
       <span className="flex min-w-0 items-center justify-between gap-2">
@@ -1723,13 +1787,67 @@ function RangeControl({
         <span className="shrink-0 font-mono text-[#fff7e8]">{formatNumber(value)}</span>
       </span>
       <input
-        className="w-full min-w-0 accent-sky-300"
+        className={`w-full min-w-0 accent-sky-300 ${fine ? "cursor-ew-resize touch-none" : ""}`}
         type="range"
         min={min}
         max={max}
         step={step}
         value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onChange={(event) => onChange(Number(event.currentTarget.value))}
+        onKeyDown={(event) => {
+          if (!fine) {
+            return;
+          }
+
+          const direction =
+            event.key === "ArrowRight" || event.key === "ArrowUp"
+              ? 1
+              : event.key === "ArrowLeft" || event.key === "ArrowDown"
+                ? -1
+                : 0;
+          if (direction === 0) {
+            return;
+          }
+
+          event.preventDefault();
+          onChange(formatNumber(THREE.MathUtils.clamp(value + direction * step, min, max)));
+        }}
+        onPointerDown={(event) => {
+          if (!fine || (event.pointerType === "mouse" && event.button !== 0)) {
+            return;
+          }
+
+          event.preventDefault();
+          event.currentTarget.focus({ preventScroll: true });
+          const width = Math.max(event.currentTarget.getBoundingClientRect().width, 1);
+          dragRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startValue: value,
+            width,
+          };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const drag = dragRef.current;
+          if (!fine || !drag || drag.pointerId !== event.pointerId) {
+            return;
+          }
+
+          event.preventDefault();
+          const delta =
+            ((event.clientX - drag.startX) / drag.width) *
+            (max - min) *
+            COMPOSITE_FINE_DRAG_SENSITIVITY;
+          const rawValue = THREE.MathUtils.clamp(drag.startValue + delta, min, max);
+          const snappedValue = min + Math.round((rawValue - min) / step) * step;
+          onChange(formatNumber(THREE.MathUtils.clamp(snappedValue, min, max)));
+        }}
+        onPointerUp={endFineDrag}
+        onPointerCancel={endFineDrag}
+        onLostPointerCapture={() => {
+          dragRef.current = null;
+        }}
       />
     </label>
   );

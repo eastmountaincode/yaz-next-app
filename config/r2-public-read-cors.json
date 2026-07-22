@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {
+      "id": "public-model-read",
+      "allowed": {
+        "origins": ["*"],
+        "methods": ["GET", "HEAD"]
+      },
+      "exposeHeaders": ["ETag"],
+      "maxAgeSeconds": 86400
+    }
+  ]
+}

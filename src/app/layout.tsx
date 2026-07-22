@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Yaz Environment",
+  title: "Yaslynn Rivera",
   description: "A 3D environment scene editor for Yaz.",
 };
 

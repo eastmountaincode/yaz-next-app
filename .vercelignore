@@ -1,0 +1,12 @@
+# Runtime models, dependent textures, and source archives live in R2.
+public/3d-models
+.r2-assets
+docs
+.reference_inbox
+tsconfig.tsbuildinfo
+**/._*
+
+# Local and generated development files.
+.git
+.next
+coverage

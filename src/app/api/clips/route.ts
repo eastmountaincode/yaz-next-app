@@ -3,6 +3,7 @@ import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 import { NextResponse } from "next/server";
+import savedComposites from "@/content/composites.json";
 import { works } from "@/content/works";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,8 @@ export const runtime = "nodejs";
 
 const publicClipDir = path.join(process.cwd(), "public/work-clips");
 const worksPath = path.join(process.cwd(), "src/content/works.ts");
+const localUvxPath = path.join(os.homedir(), ".local", "bin", "uvx");
+const ytDlpWithImpersonation = "yt-dlp[default,curl-cffi]";
 const maxLogLength = 12000;
 
 type ClipRequest = {
@@ -22,6 +25,14 @@ type ClipRequest = {
   crf?: number | string;
   updateWorkMetadata?: boolean;
 };
+
+type SavedComposite = {
+  kind?: string;
+  workSlug?: string;
+  videoAspect?: number;
+};
+
+const savedCompositeEntries = savedComposites as SavedComposite[];
 
 function parseSeconds(value: number | string | undefined, fallback: number) {
   if (typeof value === "number") {
@@ -62,6 +73,64 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
+}
+
+function outputAspectForWork(workSlug: string | undefined) {
+  if (!workSlug) {
+    return null;
+  }
+
+  const aspect = savedCompositeEntries.find(
+    (composite) => composite.kind === "video-frame" && composite.workSlug === workSlug,
+  )?.videoAspect;
+
+  return typeof aspect === "number" && Number.isFinite(aspect) && aspect > 0 ? aspect : null;
+}
+
+function vimeoPlayerUrl(sourceUrl: string) {
+  try {
+    const url = new URL(sourceUrl);
+    const hostname = url.hostname.replace(/^www\./, "");
+    if (hostname !== "vimeo.com" && hostname !== "player.vimeo.com") {
+      return null;
+    }
+
+    const videoId = url.pathname.split("/").find((part) => /^\d+$/.test(part));
+    return videoId ? `https://player.vimeo.com/video/${videoId}` : null;
+  } catch {
+    return null;
+  }
+}
+
+async function ytDlpInvocation(sourceUrl: string, downloadArgs: string[]) {
+  const playerUrl = vimeoPlayerUrl(sourceUrl);
+  if (!playerUrl) {
+    return {
+      command: "yt-dlp",
+      args: [...downloadArgs, sourceUrl],
+    };
+  }
+
+  try {
+    await fs.access(localUvxPath);
+  } catch {
+    throw new Error(
+      "Vimeo clip generation requires uvx so yt-dlp can use browser impersonation. Install uv and try again.",
+    );
+  }
+
+  return {
+    command: localUvxPath,
+    args: [
+      "--from",
+      ytDlpWithImpersonation,
+      "yt-dlp",
+      "--impersonate",
+      "chrome",
+      ...downloadArgs,
+      playerUrl,
+    ],
+  };
 }
 
 function escapeRegExp(value: string) {
@@ -222,26 +291,30 @@ export async function POST(request: Request) {
     await fs.mkdir(publicClipDir, { recursive: true });
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "yaz-clip-"));
 
-    await runCommand(
-      "yt-dlp",
-      [
-        "--no-playlist",
-        "--download-sections",
-        `*${formatClipSecond(startSeconds)}-${formatClipSecond(startSeconds + durationSeconds)}`,
-        "--force-keyframes-at-cuts",
-        "-f",
-        "bv*[height<=1080]+ba/b[height<=1080]/best",
-        "--merge-output-format",
-        "mp4",
-        "-o",
-        path.join(tempDir, "source.%(ext)s"),
-        sourceUrl,
-      ],
-      8 * 60 * 1000,
-    );
+    const downloadInvocation = await ytDlpInvocation(sourceUrl, [
+      "--no-playlist",
+      "--download-sections",
+      `*${formatClipSecond(startSeconds)}-${formatClipSecond(startSeconds + durationSeconds)}`,
+      "--force-keyframes-at-cuts",
+      "-f",
+      "bv*[height<=1080]+ba/b[height<=1080]/best",
+      "--merge-output-format",
+      "mp4",
+      "-o",
+      path.join(tempDir, "source.%(ext)s"),
+    ]);
+
+    await runCommand(downloadInvocation.command, downloadInvocation.args, 8 * 60 * 1000);
 
     const sourcePath = await findDownloadedSource(tempDir);
     const outputPath = path.join(publicClipDir, `${outputSlug}.mp4`);
+    const outputAspect = outputAspectForWork(selectedWork?.slug);
+    const outputHeight = outputAspect
+      ? Math.max(2, Math.round(width / outputAspect / 2) * 2)
+      : null;
+    const videoFilter = outputHeight
+      ? `scale=${width}:${outputHeight}:force_original_aspect_ratio=increase,crop=${width}:${outputHeight},setsar=1`
+      : `scale=${width}:-2,setsar=1`;
 
     await runCommand(
       "ffmpeg",
@@ -252,7 +325,7 @@ export async function POST(request: Request) {
         "-i",
         sourcePath,
         "-vf",
-        `scale=${width}:-2`,
+        videoFilter,
         "-an",
         "-movflags",
         "+faststart",
@@ -282,6 +355,9 @@ export async function POST(request: Request) {
       outputPath,
       startSeconds,
       durationSeconds,
+      width,
+      height: outputHeight,
+      outputAspect,
       updatedWorkMetadata: Boolean(body.updateWorkMetadata && selectedWork),
     });
   } catch (error) {
