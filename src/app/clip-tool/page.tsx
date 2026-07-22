@@ -165,13 +165,13 @@ export default function ClipToolPage() {
 
               <label className="block sm:col-span-2">
                 <span className="mb-1 block text-xs uppercase tracking-[0.08em] text-[#a99d8a]">
-                  YouTube URL
+                  Video URL
                 </span>
                 <input
                   className="h-11 w-full rounded border border-white/10 bg-black/25 px-3 font-mono text-sm text-[#fff7e8] outline-none focus:border-sky-300"
                   value={sourceUrl}
                   onChange={(event) => setSourceUrl(event.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=..."
+                  placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
                 />
               </label>
 

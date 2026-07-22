@@ -9,6 +9,7 @@ export type WorkItem = {
   modalDescription: string;
   sourceUrl: string;
   clipSrc: string;
+  modalPosterSrc?: string;
   clipStartSeconds: number;
   clipDurationSeconds: number;
   // Timestamp (seconds) of the canonical "still" frame for the clip. The
@@ -32,6 +33,23 @@ export const works: WorkItem[] = [
     clipSrc: "/work-clips/snoop-ten-til-midnight.mp4",
     clipStartSeconds: 5,
     clipDurationSeconds: 10,
+  },
+  {
+    slug: "yaslynn-director-reel",
+    title: "Director's Reel",
+    artist: "Yaslynn Rivera",
+    credit: "Director",
+    roles: ["Director"],
+    sourceTitle: "YASLYNN RIVERA REEL",
+    projectType: "Director's reel",
+    modalDescription:
+      "A selection of Yaslynn Rivera's directing work, assembled as her current director's reel.",
+    sourceUrl: "https://vimeo.com/1211833348",
+    clipSrc: "/work-clips/yaslynn-director-reel.mp4",
+    modalPosterSrc: "/image/yaslynn-director-reel-poster.jpg",
+    clipStartSeconds: 19.5,
+    clipDurationSeconds: 6.542,
+    posterTime: 3.5,
   },
   {
     slug: "dani-offline-angel",

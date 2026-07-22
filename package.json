@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev -p 3001",
     "dev:phone": "next dev -H 0.0.0.0 -p 3001",
+    "assets:r2:prepare": "node scripts/prepare-r2-models.mjs",
+    "assets:r2:upload": "node scripts/upload-r2-models.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -19,6 +21,7 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.4.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -29,6 +32,7 @@
     "eslint-config-next": "16.2.6",
     "potrace": "^2.1.8",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.113.0"
   }
 }

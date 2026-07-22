@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Yaslynn Rivera portfolio
+
+The gallery scene is stored in `src/content/environment.json`. Production 3D models are served from Cloudflare R2; `NEXT_PUBLIC_R2_ASSET_BASE_URL` selects the immutable release at build time.
 
 ## Getting Started
 
@@ -6,31 +8,35 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3001](http://localhost:3001).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production 3D assets
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Only models referenced by the saved scene and their two dependent textures are included. The prepare step writes a content-addressed, Meshopt-compressed release under the gitignored `.r2-assets` directory.
 
-## Learn More
+```bash
+npm run assets:r2:prepare
 
-To learn more about Next.js, take a look at the following resources:
+YASLYNN_CLOUDFLARE_ACCOUNT_ID=... \
+YASLYNN_R2_BUCKET=... \
+npm run assets:r2:upload
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+CLOUDFLARE_ACCOUNT_ID=... \
+npx wrangler r2 bucket cors set yaslynn-rivera-portfolio-assets \
+  --file config/r2-public-read-cors.json --force
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The uploader verifies that Wrangler can see the required Cloudflare account before it writes. Point Vercel at the release URL, including its `/releases/yaz-...` suffix:
 
-## Deploy on Vercel
+```bash
+NEXT_PUBLIC_R2_ASSET_BASE_URL=https://assets.example.com/releases/yaz-...
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Checks
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+```

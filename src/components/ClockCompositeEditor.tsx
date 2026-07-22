@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {
   ClockCompositeConfig,
   clockHandAngles,
@@ -14,6 +15,7 @@ import {
   extractClockPendulum,
   setClockPendulumSwing,
 } from "@/lib/clockPendulum";
+import { resolveModelAssetUrl } from "@/lib/modelAssetUrl";
 
 const STORAGE_KEY = "yaz-clock-composite-v1";
 
@@ -205,7 +207,9 @@ function ClockCanvas({
     const handsRoot = new THREE.Group();
     root.add(modelRoot, faceRoot, handsRoot);
 
-    const faceTexture = new THREE.TextureLoader().load(configRef.current.faceTexture);
+    const faceTexture = new THREE.TextureLoader().load(
+      resolveModelAssetUrl(configRef.current.faceTexture),
+    );
     faceTexture.colorSpace = THREE.SRGBColorSpace;
     textures.push(faceTexture);
 
@@ -313,12 +317,12 @@ function ClockCanvas({
 
     sceneHandlesRef.current = { syncConfig, resetView };
 
-    const loader = new GLTFLoader();
+    const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
     Promise.all([
-      loader.loadAsync(configRef.current.model),
-      loader.loadAsync(configRef.current.hourHandModel),
-      loader.loadAsync(configRef.current.minuteHandModel),
-      loader.loadAsync(configRef.current.secondHandModel),
+      loader.loadAsync(resolveModelAssetUrl(configRef.current.model)),
+      loader.loadAsync(resolveModelAssetUrl(configRef.current.hourHandModel)),
+      loader.loadAsync(resolveModelAssetUrl(configRef.current.minuteHandModel)),
+      loader.loadAsync(resolveModelAssetUrl(configRef.current.secondHandModel)),
     ])
       .then(([clock, hour, minute, second]) => {
         if (disposed) {

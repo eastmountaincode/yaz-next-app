@@ -31,6 +31,10 @@ export async function POST(request: Request) {
     );
   }
 
+  if (process.env.VERCEL) {
+    return NextResponse.json({ ok: true, persisted: false, storage: "browser" });
+  }
+
   await fs.mkdir(path.dirname(environmentPath), { recursive: true });
   await fs.writeFile(environmentPath, `${JSON.stringify(environment, null, 2)}\n`);
   return NextResponse.json({ ok: true });
