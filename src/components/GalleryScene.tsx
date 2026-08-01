@@ -240,9 +240,9 @@ const STORAGE_KEY = "yaz-environment-editor-v5";
 const LIGHTING_STORAGE_KEY = "yaz-environment-lighting-v1";
 const FRAME_STORAGE_KEY = "yaz-frame-editor-v3";
 const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
-const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v3";
+const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v4";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
-const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v1";
+const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v2";
 const MODEL_FLOOR_Y = -2.88;
 const ENVIRONMENT_FINE_DRAG_SENSITIVITY = 0.2;
 const OBJECT_ROTATION_LIMIT = Number((Math.PI * 1.875).toFixed(3));
@@ -315,14 +315,15 @@ const CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(29.4);
 const MOBILE_LAYOUT_BREAKPOINT = 720;
 
 type CaptionFontId =
+  | "winky-show"
   | "sobria"
   | "sato"
   | "helvetica"
   | "brik"
   | "zoom-pro"
   | "modestia-ultra"
-    | "zafrada"
-    | "puyita";
+  | "zafrada"
+  | "puyita";
 type CaptionPlacementId = "corner" | "frame";
 type CaptionDisplayMode = "always" | "hover";
 type FrameHoverInfo = {
@@ -336,6 +337,12 @@ type CaptionFontOption = {
 };
 
 const captionFontOptions: CaptionFontOption[] = [
+  {
+    id: "winky-show",
+    label: "Winky Show Dotted",
+    fontFamily: '"Yaz Winky Show", "Winky Show Script", cursive',
+    fontWeight: 400,
+  },
   {
     id: "sobria",
     label: "Sobria",
@@ -387,7 +394,8 @@ const captionFontOptions: CaptionFontOption[] = [
 ];
 
 function normalizeCaptionFontId(value: string | null | undefined): CaptionFontId {
-  return value === "sobria" ||
+  return value === "winky-show" ||
+    value === "sobria" ||
     value === "sato" ||
     value === "helvetica" ||
     value === "brik" ||
@@ -396,7 +404,7 @@ function normalizeCaptionFontId(value: string | null | undefined): CaptionFontId
     value === "zafrada" ||
     value === "puyita"
     ? value
-    : "sobria";
+    : "winky-show";
 }
 
 function normalizeCaptionPlacementId(value: string | null | undefined): CaptionPlacementId {
@@ -1182,19 +1190,22 @@ function createFrameCaptionTexture(
   if (lines.length > 1) {
     const title = lines[0];
     const subtitle = lines.slice(1).join(" ");
-    const titleSize = fitText(title, font.id === "sobria" ? 78 : 84, 44);
+    const titleStartSize = font.id === "winky-show" ? 135 : font.id === "sobria" ? 78 : 84;
+    const titleSize = fitText(title, titleStartSize, 44);
     ctx.font = `${font.fontWeight} ${titleSize}px ${font.fontFamily}`;
     ctx.fillText(title, canvas.width / 2, 78);
 
     ctx.globalAlpha = 0.86;
     ctx.shadowBlur = 4;
-    const subtitleSize = fitText(subtitle, font.id === "sobria" ? 42 : 46, 28);
+    const subtitleStartSize = font.id === "winky-show" ? 75 : font.id === "sobria" ? 42 : 46;
+    const subtitleSize = fitText(subtitle, subtitleStartSize, 28);
     ctx.font = `${font.fontWeight} ${subtitleSize}px ${font.fontFamily}`;
     ctx.fillText(subtitle, canvas.width / 2, 142);
     ctx.globalAlpha = 1;
   } else {
     const line = lines[0] ?? text;
-    const fontSize = fitText(line, font.id === "sobria" ? 96 : 104, 46);
+    const lineStartSize = font.id === "winky-show" ? 180 : font.id === "sobria" ? 96 : 104;
+    const fontSize = fitText(line, lineStartSize, 46);
     ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
     ctx.fillText(line, canvas.width / 2, canvas.height / 2 + 2);
   }
@@ -1227,7 +1238,7 @@ function createFrameCaptionMesh(
       new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
-        opacity: 1,
+        opacity: 0.78,
         depthWrite: false,
         toneMapped: false,
         side: THREE.DoubleSide,
@@ -3392,7 +3403,7 @@ function ThreeWallCanvas({
             shouldShowFrameCaption(clip) &&
             (captionDisplayModeRef.current === "always" || isHovered || isEditorActive);
           if (caption.material instanceof THREE.MeshBasicMaterial) {
-            caption.material.opacity = isHovered ? 0.58 : 1;
+            caption.material.opacity = isHovered ? 0.58 : 0.78;
             caption.material.needsUpdate = true;
           }
         }
@@ -4497,13 +4508,13 @@ export function GalleryScene() {
   const [hoveredFrameInfo, setHoveredFrameInfo] = useState<FrameHoverInfo | null>(null);
   const [captionFontId, setCaptionFontId] = useState<CaptionFontId>(() => {
     if (typeof window === "undefined") {
-      return "sobria";
+      return "winky-show";
     }
 
     try {
       return normalizeCaptionFontId(window.localStorage.getItem(CAPTION_FONT_STORAGE_KEY));
     } catch {
-      return "sobria";
+      return "winky-show";
     }
   });
   const [captionPlacementId] = useState<CaptionPlacementId>(() => {
