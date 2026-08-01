@@ -44,7 +44,7 @@ type CompositeConfig = {
 };
 
 const STORAGE_KEY = "yaz-object-composites-v1";
-const SCENE_STORAGE_KEY = "yaz-environment-editor-v4";
+const SCENE_STORAGE_KEY = "yaz-environment-editor-v5";
 const FRAME_STORAGE_KEY = "yaz-frame-editor-v3";
 const LEGACY_FRAME_STORAGE_KEY = "yaz-frame-editor-v2";
 const FRAME_ROTATION_LIMIT = Math.PI;

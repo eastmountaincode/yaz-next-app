@@ -53,12 +53,21 @@ type ObjectKind =
   | "bio-frame"
   | "image-frame"
   | "model"
+  | "alcove"
   | "light"
   | "clock"
   | "hitbox"
   | "candle-composite"
   | "speaker-composite";
 type VectorTuple = [number, number, number];
+type SceneLayoutMode = "desktop" | "mobile";
+type SceneLayoutOverride = {
+  visible?: boolean;
+  position?: VectorTuple;
+  rotation?: VectorTuple;
+  wallScale?: number;
+};
+type SceneLayoutOverrides = Partial<Record<SceneLayoutMode, SceneLayoutOverride>>;
 type ClickZoneAction = "toggle-nearest-light" | "speaker-click" | "candle-toggle";
 type ImageFrameModalId = "stills" | "clients";
 
@@ -92,6 +101,7 @@ type BaseObjectSetting = {
   position: VectorTuple;
   rotation: VectorTuple;
   wallScale: number;
+  layouts?: SceneLayoutOverrides;
 };
 
 type FrameSetting = BaseObjectSetting & {
@@ -147,6 +157,14 @@ type ClockSetting = BaseObjectSetting & {
   kind: "clock";
 };
 
+type AlcoveSetting = BaseObjectSetting & {
+  kind: "alcove";
+  nicheWidth: number;
+  nicheStraightHeight: number;
+  nicheArchHeight: number;
+  nicheDepth: number;
+};
+
 type LightSetting = BaseObjectSetting & {
   kind: "light";
   color: string;
@@ -190,6 +208,7 @@ type SceneObjectSetting =
   | ImageFrameSetting
   | ModelSetting
   | ClockSetting
+  | AlcoveSetting
   | LightSetting
   | HitboxSetting
   | CandleCompositeSetting
@@ -217,7 +236,7 @@ type SpeakerAudioChain = {
   element: HTMLAudioElement;
 };
 
-const STORAGE_KEY = "yaz-environment-editor-v4";
+const STORAGE_KEY = "yaz-environment-editor-v5";
 const LIGHTING_STORAGE_KEY = "yaz-environment-lighting-v1";
 const FRAME_STORAGE_KEY = "yaz-frame-editor-v3";
 const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
@@ -293,6 +312,7 @@ const MOBILE_CAMERA_DEFAULTS = {
   fov: 54,
 };
 const CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(29.4);
+const MOBILE_LAYOUT_BREAKPOINT = 720;
 
 type CaptionFontId =
   | "sobria"
@@ -560,6 +580,49 @@ function safeAssetPath(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim().length > 0 ? value : fallback;
 }
 
+function normalizeLayoutOverride(seed: SceneLayoutOverride | undefined) {
+  if (!seed) {
+    return undefined;
+  }
+
+  const normalized: SceneLayoutOverride = {};
+  if (typeof seed.visible === "boolean") {
+    normalized.visible = seed.visible;
+  }
+  if (Array.isArray(seed.position) && seed.position.length === 3) {
+    normalized.position = seed.position.map((value) => formatNumber(Number(value))) as VectorTuple;
+  }
+  if (Array.isArray(seed.rotation) && seed.rotation.length === 3) {
+    normalized.rotation = seed.rotation.map((value) => formatNumber(Number(value))) as VectorTuple;
+  }
+  if (Number.isFinite(seed.wallScale)) {
+    normalized.wallScale = formatNumber(Number(seed.wallScale));
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function normalizeLayoutOverrides(seed: SceneLayoutOverrides | undefined) {
+  const desktop = normalizeLayoutOverride(seed?.desktop);
+  const mobile = normalizeLayoutOverride(seed?.mobile);
+  if (!desktop && !mobile) {
+    return undefined;
+  }
+  return { desktop, mobile } satisfies SceneLayoutOverrides;
+}
+
+function resolveSceneObjectLayout<T extends SceneObjectSetting>(
+  setting: T,
+  mode: SceneLayoutMode,
+): T {
+  const override = setting.layouts?.[mode];
+  if (!override) {
+    return setting;
+  }
+
+  return { ...setting, ...override } as T;
+}
+
 function isSceneObjectVisible(setting: Partial<BaseObjectSetting>) {
   return setting.visible !== false;
 }
@@ -597,6 +660,7 @@ function createFrameSetting(index: number, seed?: Partial<FrameSetting>): FrameS
     frameRotationZ: seed?.frameRotationZ ?? firstSavedComposite?.frameRotationZ ?? 0,
     rotation: seed?.rotation ?? [0, index % 2 === 0 ? 0.035 : -0.025, index % 2 === 0 ? 0.015 : -0.02],
     wallScale: seed?.wallScale ?? (index === 0 ? 1 : 0.86),
+    layouts: normalizeLayoutOverrides(seed?.layouts),
     clipX: seed?.clipX ?? firstSavedComposite?.videoX ?? 0,
     clipY: seed?.clipY ?? firstSavedComposite?.videoY ?? 0,
     clipZ: seed?.clipZ ?? firstSavedComposite?.videoZ ?? 0.09,
@@ -652,6 +716,7 @@ function createBioFrameSetting(index: number, seed?: Partial<BioFrameSetting>): 
     position: seed?.position ?? [2.55, 0.92, 0],
     rotation: seed?.rotation ?? [0, -0.03, -0.012],
     wallScale: seed?.wallScale ?? 0.78,
+    layouts: normalizeLayoutOverrides(seed?.layouts),
   };
 }
 
@@ -702,6 +767,7 @@ function createImageFrameSetting(index: number, seed?: Partial<ImageFrameSetting
     position: seed?.position ?? [-0.05, 1.1, -0.03],
     rotation: seed?.rotation ?? [0, 0.02, -0.01],
     wallScale: seed?.wallScale ?? 0.82,
+    layouts: normalizeLayoutOverrides(seed?.layouts),
   };
 }
 
@@ -718,6 +784,7 @@ function createModelSetting(catalogId: string, seed?: Partial<ModelSetting>): Mo
     position: seed?.position ?? catalogItem.position,
     rotation: seed?.rotation ?? catalogItem.rotation,
     wallScale: seed?.wallScale ?? catalogItem.height,
+    layouts: normalizeLayoutOverrides(seed?.layouts),
   };
 }
 
@@ -730,6 +797,24 @@ function createClockSetting(seed?: Partial<ClockSetting>): ClockSetting {
     position: seed?.position ?? [-2.82, 0.78, 0.03],
     rotation: seed?.rotation ?? [0, 0.03, -0.015],
     wallScale: seed?.wallScale ?? 0.82,
+    layouts: normalizeLayoutOverrides(seed?.layouts),
+  };
+}
+
+function createAlcoveSetting(seed?: Partial<AlcoveSetting>): AlcoveSetting {
+  return {
+    id: seed?.id ?? `alcove-${Date.now().toString(36)}`,
+    kind: "alcove",
+    label: seed?.label ?? "Prayer niche",
+    visible: seed?.visible ?? true,
+    position: seed?.position ?? [0, 0.35, WALL_FRONT_Z + 0.012],
+    rotation: seed?.rotation ?? [0, 0, 0],
+    wallScale: seed?.wallScale ?? 1,
+    layouts: normalizeLayoutOverrides(seed?.layouts),
+    nicheWidth: seed?.nicheWidth ?? 1.35,
+    nicheStraightHeight: seed?.nicheStraightHeight ?? 1.35,
+    nicheArchHeight: seed?.nicheArchHeight ?? 0.68,
+    nicheDepth: seed?.nicheDepth ?? 0.18,
   };
 }
 
@@ -742,6 +827,7 @@ function createLightSetting(seed?: Partial<LightSetting>): LightSetting {
     position: seed?.position ?? [1.78, -1.55, 1.18],
     rotation: seed?.rotation ?? [0, 0, 0],
     wallScale: seed?.wallScale ?? 0.12,
+    layouts: normalizeLayoutOverrides(seed?.layouts),
     color: seed?.color ?? "#ffd08a",
     intensity: seed?.intensity ?? 5.5,
     distance: seed?.distance ?? 3.2,
@@ -780,6 +866,7 @@ function createHitboxSetting(seed?: Partial<HitboxSetting>): HitboxSetting {
     position: seed?.position ?? fallbackPlacement.position,
     rotation: seed?.rotation ?? fallbackPlacement.rotation,
     wallScale: seed?.wallScale ?? fallbackPlacement.wallScale,
+    layouts: normalizeLayoutOverrides(seed?.layouts),
     action: seed?.action ?? "toggle-nearest-light",
   };
 }
@@ -795,6 +882,7 @@ function createCandleCompositeSetting(
     position: seed?.position ?? [-3.08, -1.1, 0.18],
     rotation: seed?.rotation ?? [0, 0.08, 0],
     wallScale: seed?.wallScale ?? 0.92,
+    layouts: normalizeLayoutOverrides(seed?.layouts),
     holderModel: seed?.holderModel ?? CANDLE_HOLDER_MODEL_PATH,
     candleModel: seed?.candleModel ?? CANDLE_MODEL_PATH,
     flameTexture: seed?.flameTexture ?? CANDLE_FLAME_TEXTURE_PATH,
@@ -820,6 +908,7 @@ function createSpeakerCompositeSetting(
     position: seed?.position ?? [-1.2, MODEL_FLOOR_Y, 0.72],
     rotation: seed?.rotation ?? [0, 0.16, 0],
     wallScale: seed?.wallScale ?? 0.42,
+    layouts: normalizeLayoutOverrides(seed?.layouts),
     speakerModel: seed?.speakerModel ?? SPEAKER_MODEL_PATH,
     hitboxOffset: seed?.hitboxOffset ?? [0, 0.48, 0],
     hitboxSize: seed?.hitboxSize ?? [0.72, 0.52, 0.5],
@@ -854,6 +943,7 @@ const defaultSceneSettings = [
     captionOffsetY: -0.13,
     captionOffsetZ: 0.146,
     captionScale: 2.03,
+    layouts: { desktop: { visible: false } },
   }),
   createCandleCompositeSetting({
     id: "candle-holder-composite",
@@ -871,6 +961,7 @@ const defaultSceneSettings = [
     flameLightColor: "#ffb86b",
     flameLightIntensity: 0.1,
     flameLightDistance: 4,
+    layouts: { desktop: { visible: false } },
   }),
   createClockSetting({
     id: "clock-vintage-wall",
@@ -878,6 +969,21 @@ const defaultSceneSettings = [
     position: [-2.78, 0.78, -0.105],
     rotation: [0, 0.038407346410207, -0.001592653589793],
     wallScale: 0.82,
+    layouts: { desktop: { visible: false } },
+  }),
+  createAlcoveSetting({
+    id: "desktop-prayer-niche",
+    label: "Prayer niche",
+    position: [0, 0.15, WALL_FRONT_Z + 0.012],
+    wallScale: 1,
+    nicheWidth: 1.35,
+    nicheStraightHeight: 1.35,
+    nicheArchHeight: 0.68,
+    nicheDepth: 0.18,
+    layouts: {
+      desktop: { visible: true },
+      mobile: { visible: false },
+    },
   }),
 ] satisfies SceneObjectSetting[];
 
@@ -2216,6 +2322,158 @@ function createClockObject(
   return group;
 }
 
+function syncAlcoveObject(group: THREE.Group, setting: AlcoveSetting) {
+  const width = Math.max(0.2, setting.nicheWidth);
+  const straightHeight = Math.max(0.2, setting.nicheStraightHeight);
+  const archHeight = Math.max(0.08, setting.nicheArchHeight);
+  const depth = Math.max(0.01, setting.nicheDepth);
+  const totalHeight = straightHeight + archHeight;
+  const bottom = -totalHeight / 2;
+  const shoulder = bottom + straightHeight;
+  const liningWidth = THREE.MathUtils.clamp(0.045 + depth * 0.18, 0.045, 0.24);
+  const visualDepth = Math.max(0.012, depth * 0.24);
+
+  const backRect = group.getObjectByName("alcove-back-rectangle");
+  if (backRect) {
+    backRect.position.set(0, bottom + straightHeight / 2, -0.004);
+    backRect.scale.set(width, straightHeight, 1);
+  }
+
+  const backArch = group.getObjectByName("alcove-back-arch");
+  if (backArch) {
+    backArch.position.set(0, shoulder, -0.004);
+    backArch.scale.set(width, archHeight * 2, 1);
+  }
+
+  const leftLining = group.getObjectByName("alcove-left-lining");
+  if (leftLining) {
+    leftLining.position.set(-(width + liningWidth) / 2, bottom + straightHeight / 2, visualDepth / 2);
+    leftLining.scale.set(liningWidth, straightHeight, visualDepth);
+  }
+
+  const rightLining = group.getObjectByName("alcove-right-lining");
+  if (rightLining) {
+    rightLining.position.set((width + liningWidth) / 2, bottom + straightHeight / 2, visualDepth / 2);
+    rightLining.scale.set(liningWidth, straightHeight, visualDepth);
+  }
+
+  const archLining = group.getObjectByName("alcove-arch-lining");
+  if (archLining) {
+    archLining.position.set(0, shoulder, visualDepth * 0.52);
+    archLining.scale.set(width + liningWidth * 2, (archHeight + liningWidth) * 2, 1);
+  }
+
+  const sill = group.getObjectByName("alcove-sill");
+  if (sill) {
+    sill.position.set(0, bottom - liningWidth * 0.42, visualDepth / 2);
+    sill.scale.set(width + liningWidth * 2.4, liningWidth * 0.84, visualDepth);
+  }
+
+  const innerShadow = group.getObjectByName("alcove-inner-shadow");
+  if (innerShadow) {
+    innerShadow.position.set(-liningWidth * 0.18, shoulder - archHeight * 0.08, 0.003);
+    innerShadow.scale.set(width * 0.98, archHeight * 1.96, 1);
+    if (innerShadow instanceof THREE.Mesh && innerShadow.material instanceof THREE.MeshBasicMaterial) {
+      innerShadow.material.opacity = THREE.MathUtils.clamp(0.12 + depth * 0.45, 0.12, 0.5);
+      innerShadow.material.needsUpdate = true;
+    }
+  }
+}
+
+function createAlcoveObject(
+  setting: AlcoveSetting,
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
+) {
+  const group = new THREE.Group();
+  group.name = "editable-alcove";
+  applyObjectPlacement(group, setting);
+
+  const backMaterial = makeMaterial(
+    new THREE.MeshStandardMaterial({
+      color: "#8e785d",
+      roughness: 1,
+      metalness: 0,
+      side: THREE.DoubleSide,
+    }),
+    materials,
+  );
+  const liningMaterial = makeMaterial(
+    new THREE.MeshStandardMaterial({
+      color: "#b9a382",
+      roughness: 0.96,
+      metalness: 0,
+      side: THREE.DoubleSide,
+    }),
+    materials,
+  );
+  const shadowMaterial = makeMaterial(
+    new THREE.MeshBasicMaterial({
+      color: "#2f2419",
+      transparent: true,
+      opacity: 0.2,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+    materials,
+  );
+
+  const backRect = new THREE.Mesh(
+    makeGeometry(new THREE.PlaneGeometry(1, 1), geometries),
+    backMaterial,
+  );
+  backRect.name = "alcove-back-rectangle";
+  backRect.receiveShadow = true;
+  group.add(backRect);
+
+  const backArch = new THREE.Mesh(
+    makeGeometry(new THREE.CircleGeometry(0.5, 64, 0, Math.PI), geometries),
+    backMaterial,
+  );
+  backArch.name = "alcove-back-arch";
+  backArch.receiveShadow = true;
+  group.add(backArch);
+
+  const innerShadow = new THREE.Mesh(
+    makeGeometry(new THREE.RingGeometry(0.45, 0.5, 64, 2, 0, Math.PI), geometries),
+    shadowMaterial,
+  );
+  innerShadow.name = "alcove-inner-shadow";
+  innerShadow.renderOrder = 1;
+  group.add(innerShadow);
+
+  const sideGeometry = makeGeometry(new THREE.BoxGeometry(1, 1, 1), geometries);
+  const leftLining = new THREE.Mesh(sideGeometry, liningMaterial);
+  leftLining.name = "alcove-left-lining";
+  leftLining.castShadow = true;
+  leftLining.receiveShadow = true;
+  group.add(leftLining);
+
+  const rightLining = new THREE.Mesh(sideGeometry, liningMaterial);
+  rightLining.name = "alcove-right-lining";
+  rightLining.castShadow = true;
+  rightLining.receiveShadow = true;
+  group.add(rightLining);
+
+  const archLining = new THREE.Mesh(
+    makeGeometry(new THREE.RingGeometry(0.45, 0.5, 64, 2, 0, Math.PI), geometries),
+    liningMaterial,
+  );
+  archLining.name = "alcove-arch-lining";
+  archLining.castShadow = true;
+  archLining.receiveShadow = true;
+  group.add(archLining);
+
+  const sill = new THREE.Mesh(sideGeometry, liningMaterial);
+  sill.name = "alcove-sill";
+  sill.castShadow = true;
+  sill.receiveShadow = true;
+  group.add(sill);
+
+  syncAlcoveObject(group, setting);
+  return group;
+}
+
 function applyObjectPlacement(group: THREE.Group, setting: SceneObjectSetting) {
   group.visible = isSceneObjectVisible(setting);
   group.position.set(...setting.position);
@@ -2327,6 +2585,10 @@ function syncSceneObject(group: THREE.Group, setting: SceneObjectSetting) {
 
   if (setting.kind === "speaker-composite") {
     syncSpeakerCompositeObject(group, setting);
+  }
+
+  if (setting.kind === "alcove") {
+    syncAlcoveObject(group, setting);
   }
 }
 
@@ -2989,7 +3251,7 @@ function ThreeWallCanvas({
     const resize = () => {
       const width = Math.max(1, host.clientWidth);
       const height = Math.max(1, host.clientHeight);
-      const isPhone = width < 720;
+      const isPhone = width < MOBILE_LAYOUT_BREAKPOINT;
       const nextViewportMode = isPhone ? "mobile" : "desktop";
       const nextCameraDefaults = isPhone ? MOBILE_CAMERA_DEFAULTS : DESKTOP_CAMERA_DEFAULTS;
       const viewportModeChanged = viewportMode !== nextViewportMode;
@@ -3564,6 +3826,10 @@ function ThreeWallCanvas({
             return createSpeakerCompositeObject(setting, speakerSource, geometries, materials);
           }
 
+          if (setting.kind === "alcove") {
+            return createAlcoveObject(setting, geometries, materials);
+          }
+
           const sourceModel = models.get(setting.model);
           if (!sourceModel) {
             throw new Error(`Object model did not load: ${setting.model}`);
@@ -3665,6 +3931,10 @@ function normalizeSceneSettings(parsed: Partial<SceneObjectSetting>[] | undefine
 
     if (setting.kind === "clock") {
       return createClockSetting(setting as Partial<ClockSetting>);
+    }
+
+    if (setting.kind === "alcove") {
+      return createAlcoveSetting(setting as Partial<AlcoveSetting>);
     }
 
     if (setting.kind === "hitbox") {
@@ -3781,6 +4051,13 @@ function labelForSetting(setting: SceneObjectSetting) {
     return {
       title: setting.label,
       detail: `${statusPrefix}3D model`,
+    };
+  }
+
+  if (setting.kind === "alcove") {
+    return {
+      title: setting.label,
+      detail: `${statusPrefix}architectural niche`,
     };
   }
 
@@ -4172,6 +4449,7 @@ export function GalleryScene() {
       return "always";
     }
   });
+  const [layoutMode, setLayoutMode] = useState<SceneLayoutMode>("desktop");
   const openWork = useMemo(
     () => (openWorkSlug ? works.find((w) => w.slug === openWorkSlug) ?? null : null),
     [openWorkSlug],
@@ -4189,11 +4467,27 @@ export function GalleryScene() {
   );
   const [settings, setSettings] = useState<SceneObjectSetting[]>(defaultSceneSettings);
   const [lighting, setLighting] = useState<SceneLighting>(defaultSceneLighting);
-  const selected = settings[selectedObject] ?? settings[0];
+  const activeSettings = useMemo(
+    () => settings.map((setting) => resolveSceneObjectLayout(setting, layoutMode)),
+    [layoutMode, settings],
+  );
+  const selectedBase = settings[selectedObject] ?? settings[0];
+  const selected = selectedBase
+    ? resolveSceneObjectLayout(selectedBase, layoutMode)
+    : undefined;
   const exportedSettings = useMemo(
     () => JSON.stringify({ lighting, objects: settings }, null, 2),
     [lighting, settings],
   );
+
+  useEffect(() => {
+    const syncLayoutMode = () => {
+      setLayoutMode(window.innerWidth < MOBILE_LAYOUT_BREAKPOINT ? "mobile" : "desktop");
+    };
+    syncLayoutMode();
+    window.addEventListener("resize", syncLayoutMode);
+    return () => window.removeEventListener("resize", syncLayoutMode);
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -4432,6 +4726,30 @@ export function GalleryScene() {
     [selectedObject],
   );
 
+  const updateSelectedLayout = useCallback(
+    (partial: SceneLayoutOverride) => {
+      setSceneError(null);
+      setSettings((current) =>
+        current.map((setting, index) => {
+          if (index !== selectedObject) {
+            return setting;
+          }
+          return {
+            ...setting,
+            layouts: {
+              ...setting.layouts,
+              [layoutMode]: {
+                ...setting.layouts?.[layoutMode],
+                ...partial,
+              },
+            },
+          } as SceneObjectSetting;
+        }),
+      );
+    },
+    [layoutMode, selectedObject],
+  );
+
   const updateLighting = useCallback((partial: Partial<SceneLighting>) => {
     setLighting((current) => normalizeSceneLighting({ ...current, ...partial }));
   }, []);
@@ -4447,13 +4765,13 @@ export function GalleryScene() {
 
   const toggleNearestLight = useCallback((position: VectorTuple) => {
     setSceneError(null);
-    const hasVisibleLight = settings.some(
+    const hasVisibleLight = activeSettings.some(
       (setting) => setting.kind === "light" && isSceneObjectVisible(setting),
     );
     let nearestIndex = -1;
     let nearestDistance = Number.POSITIVE_INFINITY;
 
-    settings.forEach((setting, index) => {
+    activeSettings.forEach((setting, index) => {
       if (setting.kind !== "light") {
         return;
       }
@@ -4490,7 +4808,7 @@ export function GalleryScene() {
           : setting,
       ),
     );
-  }, [playLampSwitchSound, settings]);
+  }, [activeSettings, playLampSwitchSound, settings]);
 
   const updateSelectedPosition = (axis: 0 | 1 | 2, value: number) => {
     if (!selected) {
@@ -4499,7 +4817,7 @@ export function GalleryScene() {
 
     const position = [...selected.position] as VectorTuple;
     position[axis] = value;
-    updateSelectedObject({ position });
+    updateSelectedLayout({ position });
   };
 
   const updateSelectedRotation = (axis: 0 | 1 | 2, value: number) => {
@@ -4509,11 +4827,11 @@ export function GalleryScene() {
 
     const rotation = [...selected.rotation] as VectorTuple;
     rotation[axis] = value;
-    updateSelectedObject({ rotation });
+    updateSelectedLayout({ rotation });
   };
 
   const updateSelectedSize = (value: number) => {
-    updateSelectedObject({ wallScale: value });
+    updateSelectedLayout({ wallScale: value });
   };
 
   const addObject = (kind: ObjectKind, modelCatalogId = "small-end-table") => {
@@ -4547,6 +4865,11 @@ export function GalleryScene() {
         : kind === "clock"
           ? createClockSetting({
               id: `clock-${Date.now().toString(36)}`,
+              position: nextPosition,
+            })
+        : kind === "alcove"
+          ? createAlcoveSetting({
+              id: `alcove-${Date.now().toString(36)}`,
               position: nextPosition,
             })
         : kind === "model"
@@ -4602,8 +4925,16 @@ export function GalleryScene() {
               workSlug: works[nextIndex % Math.max(works.length, 1)]?.slug ?? firstSavedComposite?.workSlug ?? "",
             });
 
+    const nextObjectForLayout = {
+      ...nextObject,
+      layouts: {
+        desktop: { visible: layoutMode === "desktop" },
+        mobile: { visible: layoutMode === "mobile" },
+      },
+    } as SceneObjectSetting;
+
     setSceneError(null);
-    setSettings([...settings, nextObject]);
+    setSettings([...settings, nextObjectForLayout]);
     setSelectedObject(nextIndex);
     setResetSignal((current) => current + 1);
   };
@@ -4646,7 +4977,7 @@ export function GalleryScene() {
 
     const position = [...selected.position] as VectorTuple;
     position[1] = MODEL_FLOOR_Y;
-    updateSelectedObject({ position });
+    updateSelectedLayout({ position });
   };
 
   const updateSelectedLight = (partial: Partial<LightSetting>) => {
@@ -4662,7 +4993,7 @@ export function GalleryScene() {
       {initialAssetsReady ? (
         <ThreeWallCanvas
         key={resetSignal}
-        settings={settings}
+        settings={activeSettings}
         lighting={lighting}
         showSceneLightMarkers={lightingOpen}
         showHitboxHelpers={editorOpen}
@@ -4945,6 +5276,9 @@ export function GalleryScene() {
               <div className="font-mono text-[11px] text-[#fff7e8]">
                 {selectedObject + 1} / {settings.length}
               </div>
+              <div className="mt-1 text-[10px] uppercase tracking-[0.08em] text-sky-100">
+                Editing {layoutMode}
+              </div>
             </div>
             <div className="flex gap-1">
               <button
@@ -5044,10 +5378,17 @@ export function GalleryScene() {
             >
               Add clock
             </button>
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addObject("alcove")}
+            >
+              Add alcove
+            </button>
           </div>
 
           <div className="mb-3 grid grid-cols-2 gap-2">
-            {settings.map((setting, index) => (
+            {activeSettings.map((setting, index) => (
               <ObjectPreviewButton
                 key={setting.id}
                 index={index}
@@ -5071,13 +5412,13 @@ export function GalleryScene() {
           <label className="mb-3 flex items-center justify-between gap-3 rounded border border-white/10 bg-white/5 px-3 py-2 text-xs text-[#d8cdbb]">
             <span className="flex items-center gap-2">
               {isSceneObjectVisible(selected) ? <Eye size={14} /> : <EyeOff size={14} />}
-              Visible in scene
+              Visible on {layoutMode}
             </span>
             <input
               className="accent-sky-300"
               type="checkbox"
               checked={isSceneObjectVisible(selected)}
-              onChange={(event) => updateSelectedObject({ visible: event.target.checked })}
+              onChange={(event) => updateSelectedLayout({ visible: event.target.checked })}
             />
           </label>
 
@@ -5176,6 +5517,66 @@ export function GalleryScene() {
             >
               Floor
             </button>
+          ) : null}
+
+          {selected.kind === "alcove" ? (
+            <div className="mt-4 grid gap-3">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+                Alcove shape
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <RangeControl
+                  label="Opening width"
+                  tooltip="The horizontal length of the niche opening."
+                  min={0.2}
+                  max={6}
+                  step={0.001}
+                  value={selected.nicheWidth}
+                  onChange={(value) =>
+                    updateSelectedObject({ nicheWidth: value } as Partial<SceneObjectSetting>)
+                  }
+                  fine
+                />
+                <RangeControl
+                  label="Side height"
+                  tooltip="The height of the straight sides before the arch begins."
+                  min={0.2}
+                  max={6}
+                  step={0.001}
+                  value={selected.nicheStraightHeight}
+                  onChange={(value) =>
+                    updateSelectedObject({
+                      nicheStraightHeight: value,
+                    } as Partial<SceneObjectSetting>)
+                  }
+                  fine
+                />
+                <RangeControl
+                  label="Arch height"
+                  tooltip="How high the curved top rises above the straight sides."
+                  min={0.08}
+                  max={4}
+                  step={0.001}
+                  value={selected.nicheArchHeight}
+                  onChange={(value) =>
+                    updateSelectedObject({ nicheArchHeight: value } as Partial<SceneObjectSetting>)
+                  }
+                  fine
+                />
+                <RangeControl
+                  label="Depth"
+                  tooltip="The apparent depth of the recessed opening and its sill."
+                  min={0.01}
+                  max={1.5}
+                  step={0.001}
+                  value={selected.nicheDepth}
+                  onChange={(value) =>
+                    updateSelectedObject({ nicheDepth: value } as Partial<SceneObjectSetting>)
+                  }
+                  fine
+                />
+              </div>
+            </div>
           ) : null}
 
           {selected.kind === "frame" ||
