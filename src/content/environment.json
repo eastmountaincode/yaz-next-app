@@ -499,16 +499,21 @@
       "wallScale": 1,
       "layouts": {
         "desktop": {
-          "visible": true
+          "visible": true,
+          "position": [
+            -0.19,
+            1.05,
+            0.567
+          ]
         },
         "mobile": {
           "visible": false
         }
       },
-      "nicheWidth": 1.35,
+      "nicheWidth": 1.306,
       "nicheStraightHeight": 1.35,
       "nicheArchHeight": 0.68,
-      "nicheDepth": 0.18
+      "nicheDepth": 0.328
     }
   ]
 }
