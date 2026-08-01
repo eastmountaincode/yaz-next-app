@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 @font-face {
+  font-family: "Yaz Winky Show";
+  src: url("/fonts/WinkyShowScript.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
   font-family: "Yaz Sobria";
   src:
     url("/fonts/Sobria-Regular.ttf") format("truetype"),

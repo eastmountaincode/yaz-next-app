@@ -11,8 +11,8 @@
 *.otf filter=lfs diff=lfs merge=lfs -text
 *.woff filter=lfs diff=lfs merge=lfs -text
 *.woff2 filter=lfs diff=lfs merge=lfs -text
-
 # These small runtime fonts ship with the code-only deployment. Large 3D assets
 # remain in R2 and are excluded from this branch.
 public/fonts/Sato-Regular.ttf -filter -diff -merge -text
 public/fonts/Sobria-Regular.ttf -filter -diff -merge -text
+public/fonts/WinkyShowScript.woff2 -filter -diff -merge -text
