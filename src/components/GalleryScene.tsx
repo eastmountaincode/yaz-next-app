@@ -2322,156 +2322,224 @@ function createClockObject(
   return group;
 }
 
-function syncAlcoveObject(group: THREE.Group, setting: AlcoveSetting) {
-  const width = Math.max(0.2, setting.nicheWidth);
-  const straightHeight = Math.max(0.2, setting.nicheStraightHeight);
-  const archHeight = Math.max(0.08, setting.nicheArchHeight);
-  const depth = Math.max(0.01, setting.nicheDepth);
-  const totalHeight = straightHeight + archHeight;
-  const bottom = -totalHeight / 2;
-  const shoulder = bottom + straightHeight;
-  const liningWidth = THREE.MathUtils.clamp(0.045 + depth * 0.18, 0.045, 0.24);
-  const visualDepth = Math.max(0.012, depth * 0.24);
-
-  const backRect = group.getObjectByName("alcove-back-rectangle");
-  if (backRect) {
-    backRect.position.set(0, bottom + straightHeight / 2, -0.004);
-    backRect.scale.set(width, straightHeight, 1);
-  }
-
-  const backArch = group.getObjectByName("alcove-back-arch");
-  if (backArch) {
-    backArch.position.set(0, shoulder, -0.004);
-    backArch.scale.set(width, archHeight * 2, 1);
-  }
-
-  const leftLining = group.getObjectByName("alcove-left-lining");
-  if (leftLining) {
-    leftLining.position.set(-(width + liningWidth) / 2, bottom + straightHeight / 2, visualDepth / 2);
-    leftLining.scale.set(liningWidth, straightHeight, visualDepth);
-  }
-
-  const rightLining = group.getObjectByName("alcove-right-lining");
-  if (rightLining) {
-    rightLining.position.set((width + liningWidth) / 2, bottom + straightHeight / 2, visualDepth / 2);
-    rightLining.scale.set(liningWidth, straightHeight, visualDepth);
-  }
-
-  const archLining = group.getObjectByName("alcove-arch-lining");
-  if (archLining) {
-    archLining.position.set(0, shoulder, visualDepth * 0.52);
-    archLining.scale.set(width + liningWidth * 2, (archHeight + liningWidth) * 2, 1);
-  }
-
-  const sill = group.getObjectByName("alcove-sill");
-  if (sill) {
-    sill.position.set(0, bottom - liningWidth * 0.42, visualDepth / 2);
-    sill.scale.set(width + liningWidth * 2.4, liningWidth * 0.84, visualDepth);
-  }
-
-  const innerShadow = group.getObjectByName("alcove-inner-shadow");
-  if (innerShadow) {
-    innerShadow.position.set(-liningWidth * 0.18, shoulder - archHeight * 0.08, 0.003);
-    innerShadow.scale.set(width * 0.98, archHeight * 1.96, 1);
-    if (innerShadow instanceof THREE.Mesh && innerShadow.material instanceof THREE.MeshBasicMaterial) {
-      innerShadow.material.opacity = THREE.MathUtils.clamp(0.12 + depth * 0.45, 0.12, 0.5);
-      innerShadow.material.needsUpdate = true;
-    }
-  }
-}
-
-function createAlcoveObject(
-  setting: AlcoveSetting,
-  geometries: THREE.BufferGeometry[],
-  materials: THREE.Material[],
-) {
+function createAlcoveObject(setting: AlcoveSetting) {
   const group = new THREE.Group();
   group.name = "editable-alcove";
   applyObjectPlacement(group, setting);
-
-  const backMaterial = makeMaterial(
-    new THREE.MeshStandardMaterial({
-      color: "#8e785d",
-      roughness: 1,
-      metalness: 0,
-      side: THREE.DoubleSide,
-    }),
-    materials,
-  );
-  const liningMaterial = makeMaterial(
-    new THREE.MeshStandardMaterial({
-      color: "#b9a382",
-      roughness: 0.96,
-      metalness: 0,
-      side: THREE.DoubleSide,
-    }),
-    materials,
-  );
-  const shadowMaterial = makeMaterial(
-    new THREE.MeshBasicMaterial({
-      color: "#2f2419",
-      transparent: true,
-      opacity: 0.2,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    }),
-    materials,
-  );
-
-  const backRect = new THREE.Mesh(
-    makeGeometry(new THREE.PlaneGeometry(1, 1), geometries),
-    backMaterial,
-  );
-  backRect.name = "alcove-back-rectangle";
-  backRect.receiveShadow = true;
-  group.add(backRect);
-
-  const backArch = new THREE.Mesh(
-    makeGeometry(new THREE.CircleGeometry(0.5, 64, 0, Math.PI), geometries),
-    backMaterial,
-  );
-  backArch.name = "alcove-back-arch";
-  backArch.receiveShadow = true;
-  group.add(backArch);
-
-  const innerShadow = new THREE.Mesh(
-    makeGeometry(new THREE.RingGeometry(0.45, 0.5, 64, 2, 0, Math.PI), geometries),
-    shadowMaterial,
-  );
-  innerShadow.name = "alcove-inner-shadow";
-  innerShadow.renderOrder = 1;
-  group.add(innerShadow);
-
-  const sideGeometry = makeGeometry(new THREE.BoxGeometry(1, 1, 1), geometries);
-  const leftLining = new THREE.Mesh(sideGeometry, liningMaterial);
-  leftLining.name = "alcove-left-lining";
-  leftLining.castShadow = true;
-  leftLining.receiveShadow = true;
-  group.add(leftLining);
-
-  const rightLining = new THREE.Mesh(sideGeometry, liningMaterial);
-  rightLining.name = "alcove-right-lining";
-  rightLining.castShadow = true;
-  rightLining.receiveShadow = true;
-  group.add(rightLining);
-
-  const archLining = new THREE.Mesh(
-    makeGeometry(new THREE.RingGeometry(0.45, 0.5, 64, 2, 0, Math.PI), geometries),
-    liningMaterial,
-  );
-  archLining.name = "alcove-arch-lining";
-  archLining.castShadow = true;
-  archLining.receiveShadow = true;
-  group.add(archLining);
-
-  const sill = new THREE.Mesh(sideGeometry, liningMaterial);
-  sill.name = "alcove-sill";
-  sill.castShadow = true;
-  sill.receiveShadow = true;
-  group.add(sill);
-
-  syncAlcoveObject(group, setting);
   return group;
+}
+
+type AlcoveCutDimensions = {
+  centerX: number;
+  bottom: number;
+  shoulder: number;
+  halfWidth: number;
+  archHeight: number;
+  depth: number;
+};
+
+function alcoveCutDimensions(setting: AlcoveSetting): AlcoveCutDimensions {
+  const scale = Math.max(0.01, setting.wallScale);
+  const width = Math.max(0.2, setting.nicheWidth * scale);
+  const straightHeight = Math.max(0.2, setting.nicheStraightHeight * scale);
+  const archHeight = Math.max(0.08, setting.nicheArchHeight * scale);
+  const totalHeight = straightHeight + archHeight;
+  const bottom = setting.position[1] - totalHeight / 2;
+
+  return {
+    centerX: setting.position[0],
+    bottom,
+    shoulder: bottom + straightHeight,
+    halfWidth: width / 2,
+    archHeight,
+    depth: Math.max(0.01, setting.nicheDepth),
+  };
+}
+
+function createArchedOpeningPath(dimensions: AlcoveCutDimensions) {
+  const { centerX, bottom, shoulder, halfWidth, archHeight } = dimensions;
+  const path = new THREE.Path();
+  path.moveTo(centerX - halfWidth, bottom);
+  path.lineTo(centerX - halfWidth, shoulder);
+  path.absellipse(centerX, shoulder, halfWidth, archHeight, Math.PI, 0, true);
+  path.lineTo(centerX + halfWidth, bottom);
+  path.closePath();
+  return path;
+}
+
+function createArchedBackShape(dimensions: AlcoveCutDimensions) {
+  const { centerX, bottom, shoulder, halfWidth, archHeight } = dimensions;
+  const shape = new THREE.Shape();
+  shape.moveTo(centerX - halfWidth, bottom);
+  shape.lineTo(centerX + halfWidth, bottom);
+  shape.lineTo(centerX + halfWidth, shoulder);
+  shape.absellipse(centerX, shoulder, halfWidth, archHeight, 0, Math.PI, false);
+  shape.lineTo(centerX - halfWidth, bottom);
+  shape.closePath();
+  return shape;
+}
+
+function setWallSurfaceUvs(geometry: THREE.BufferGeometry) {
+  const position = geometry.getAttribute("position");
+  const uvs = new Float32Array(position.count * 2);
+  for (let index = 0; index < position.count; index += 1) {
+    uvs[index * 2] = (position.getX(index) + ENVIRONMENT_WIDTH / 2) / ENVIRONMENT_WIDTH;
+    uvs[index * 2 + 1] = (position.getY(index) - WALL_BOTTOM_Y) / WALL_HEIGHT;
+  }
+  geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+}
+
+function createTunnelQuad(points: [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3]) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(points.flatMap((point) => point.toArray()), 3),
+  );
+  geometry.setAttribute(
+    "uv",
+    new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1], 2),
+  );
+  geometry.setIndex([0, 1, 2, 0, 2, 3]);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function createArchedTunnelGeometry(
+  dimensions: AlcoveCutDimensions,
+  frontZ: number,
+  backZ: number,
+) {
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  const segments = 64;
+
+  for (let index = 0; index <= segments; index += 1) {
+    const progress = index / segments;
+    const angle = progress * Math.PI;
+    const x = dimensions.centerX + Math.cos(angle) * dimensions.halfWidth;
+    const y = dimensions.shoulder + Math.sin(angle) * dimensions.archHeight;
+    positions.push(x, y, frontZ, x, y, backZ);
+    uvs.push(progress, 0, progress, 1);
+    if (index < segments) {
+      const vertex = index * 2;
+      indices.push(vertex, vertex + 1, vertex + 3, vertex, vertex + 3, vertex + 2);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function createWallArchitecture(
+  setting: AlcoveSetting | undefined,
+  wallMaterial: THREE.MeshStandardMaterial,
+) {
+  const group = new THREE.Group();
+  group.name = "room-wall-architecture";
+
+  const wallShape = new THREE.Shape();
+  wallShape.moveTo(-ENVIRONMENT_WIDTH / 2, WALL_BOTTOM_Y);
+  wallShape.lineTo(ENVIRONMENT_WIDTH / 2, WALL_BOTTOM_Y);
+  wallShape.lineTo(ENVIRONMENT_WIDTH / 2, WALL_TOP_Y);
+  wallShape.lineTo(-ENVIRONMENT_WIDTH / 2, WALL_TOP_Y);
+  wallShape.closePath();
+
+  const dimensions = setting ? alcoveCutDimensions(setting) : null;
+  if (dimensions) {
+    wallShape.holes.push(createArchedOpeningPath(dimensions));
+  }
+
+  const wallGeometry = new THREE.ShapeGeometry(wallShape, 64);
+  setWallSurfaceUvs(wallGeometry);
+  const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+  wall.name = "room-wall-front";
+  wall.position.z = WALL_FRONT_Z;
+  wall.castShadow = true;
+  wall.receiveShadow = true;
+  group.add(wall);
+
+  if (!dimensions) {
+    return group;
+  }
+
+  const frontZ = WALL_FRONT_Z - 0.002;
+  const backZ = WALL_FRONT_Z - dimensions.depth;
+  const leftX = dimensions.centerX - dimensions.halfWidth;
+  const rightX = dimensions.centerX + dimensions.halfWidth;
+
+  const backGeometry = new THREE.ShapeGeometry(createArchedBackShape(dimensions), 64);
+  setWallSurfaceUvs(backGeometry);
+  const back = new THREE.Mesh(backGeometry, wallMaterial);
+  back.name = "alcove-cut-back";
+  back.position.z = backZ;
+  back.receiveShadow = true;
+  group.add(back);
+
+  const left = new THREE.Mesh(
+    createTunnelQuad([
+      new THREE.Vector3(leftX, dimensions.bottom, frontZ),
+      new THREE.Vector3(leftX, dimensions.bottom, backZ),
+      new THREE.Vector3(leftX, dimensions.shoulder, backZ),
+      new THREE.Vector3(leftX, dimensions.shoulder, frontZ),
+    ]),
+    wallMaterial,
+  );
+  left.name = "alcove-cut-left";
+  left.castShadow = true;
+  left.receiveShadow = true;
+  group.add(left);
+
+  const right = new THREE.Mesh(
+    createTunnelQuad([
+      new THREE.Vector3(rightX, dimensions.bottom, frontZ),
+      new THREE.Vector3(rightX, dimensions.shoulder, frontZ),
+      new THREE.Vector3(rightX, dimensions.shoulder, backZ),
+      new THREE.Vector3(rightX, dimensions.bottom, backZ),
+    ]),
+    wallMaterial,
+  );
+  right.name = "alcove-cut-right";
+  right.castShadow = true;
+  right.receiveShadow = true;
+  group.add(right);
+
+  const bottom = new THREE.Mesh(
+    createTunnelQuad([
+      new THREE.Vector3(leftX, dimensions.bottom, frontZ),
+      new THREE.Vector3(rightX, dimensions.bottom, frontZ),
+      new THREE.Vector3(rightX, dimensions.bottom, backZ),
+      new THREE.Vector3(leftX, dimensions.bottom, backZ),
+    ]),
+    wallMaterial,
+  );
+  bottom.name = "alcove-cut-bottom";
+  bottom.castShadow = true;
+  bottom.receiveShadow = true;
+  group.add(bottom);
+
+  const arch = new THREE.Mesh(
+    createArchedTunnelGeometry(dimensions, frontZ, backZ),
+    wallMaterial,
+  );
+  arch.name = "alcove-cut-arch";
+  arch.castShadow = true;
+  arch.receiveShadow = true;
+  group.add(arch);
+
+  return group;
+}
+
+function disposeObjectGeometries(object: THREE.Object3D) {
+  object.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.geometry.dispose();
+    }
+  });
 }
 
 function applyObjectPlacement(group: THREE.Group, setting: SceneObjectSetting) {
@@ -2587,9 +2655,6 @@ function syncSceneObject(group: THREE.Group, setting: SceneObjectSetting) {
     syncSpeakerCompositeObject(group, setting);
   }
 
-  if (setting.kind === "alcove") {
-    syncAlcoveObject(group, setting);
-  }
 }
 
 function syncClockHands(group: THREE.Object3D) {
@@ -2799,6 +2864,7 @@ function ThreeWallCanvas({
   const syncHitboxHelpersRef = useRef<(() => void) | null>(null);
   const syncFrameCaptionVisibilityRef = useRef<(() => void) | null>(null);
   const syncOrbitModeRef = useRef<((enabled: boolean) => void) | null>(null);
+  const syncWallArchitectureRef = useRef<(() => void) | null>(null);
   const freeOrbitRef = useRef(freeOrbit);
   const sceneObjectsRef = useRef<THREE.Group[]>([]);
   const cameraInfoCallbackRef = useRef(onCameraInfoChange);
@@ -2859,6 +2925,7 @@ function ThreeWallCanvas({
         syncSceneObject(group, setting);
       }
     });
+    syncWallArchitectureRef.current?.();
     syncHitboxHelpersRef.current?.();
     syncFrameCaptionVisibilityRef.current?.();
   }, [settings]);
@@ -3010,17 +3077,24 @@ function ThreeWallCanvas({
         color: "#ffffff",
         roughness: 0.92,
         metalness: 0.01,
+        side: THREE.DoubleSide,
       }),
       materials,
     );
-    const wall = new THREE.Mesh(
-      makeGeometry(new THREE.BoxGeometry(ENVIRONMENT_WIDTH, WALL_HEIGHT, WALL_DEPTH), geometries),
-      wallMaterial,
-    );
-    wall.position.set(0, WALL_CENTER_Y, WALL_Z);
-    wall.castShadow = true;
-    wall.receiveShadow = true;
-    root.add(wall);
+    const wallHost = new THREE.Group();
+    wallHost.name = "room-wall-host";
+    root.add(wallHost);
+
+    const syncWallArchitecture = () => {
+      wallHost.children.forEach((child) => disposeObjectGeometries(child));
+      wallHost.clear();
+      const alcoveSetting = settingsRef.current.find(
+        (setting) => setting.kind === "alcove" && isSceneObjectVisible(setting),
+      ) as AlcoveSetting | undefined;
+      wallHost.add(createWallArchitecture(alcoveSetting, wallMaterial));
+    };
+    syncWallArchitectureRef.current = syncWallArchitecture;
+    syncWallArchitecture();
 
     new THREE.TextureLoader().load(
       WALL_TEXTURE_PATH,
@@ -3827,7 +3901,7 @@ function ThreeWallCanvas({
           }
 
           if (setting.kind === "alcove") {
-            return createAlcoveObject(setting, geometries, materials);
+            return createAlcoveObject(setting);
           }
 
           const sourceModel = models.get(setting.model);
@@ -3902,12 +3976,15 @@ function ThreeWallCanvas({
       syncHitboxHelpersRef.current = null;
       syncFrameCaptionVisibilityRef.current = null;
       syncOrbitModeRef.current = null;
+      syncWallArchitectureRef.current = null;
       videos.forEach((video) => {
         video.pause();
         video.removeAttribute("src");
         video.load();
       });
       sceneObjectsRef.current = [];
+      wallHost.children.forEach((child) => disposeObjectGeometries(child));
+      wallHost.clear();
       renderer.dispose();
       geometries.forEach((geometry) => geometry.dispose());
       materials.forEach((material) => material.dispose());
@@ -5473,15 +5550,17 @@ export function GalleryScene() {
               onChange={(value) => updateSelectedPosition(1, value)}
               fine
             />
-            <RangeControl
-              label="Depth Z"
-              min={-0.657}
-              max={5.25}
-              step={0.001}
-              value={selected.position[2]}
-              onChange={(value) => updateSelectedPosition(2, value)}
-              fine
-            />
+            {selected.kind !== "alcove" ? (
+              <RangeControl
+                label="Depth Z"
+                min={-0.657}
+                max={5.25}
+                step={0.001}
+                value={selected.position[2]}
+                onChange={(value) => updateSelectedPosition(2, value)}
+                fine
+              />
+            ) : null}
             <RangeControl
               label={
                 selected.kind === "model"
@@ -5522,7 +5601,7 @@ export function GalleryScene() {
           {selected.kind === "alcove" ? (
             <div className="mt-4 grid gap-3">
               <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
-                Alcove shape
+                Wall cut
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <RangeControl
@@ -5565,7 +5644,7 @@ export function GalleryScene() {
                 />
                 <RangeControl
                   label="Depth"
-                  tooltip="The apparent depth of the recessed opening and its sill."
+                  tooltip="The actual distance from the wall face to the recessed back."
                   min={0.01}
                   max={1.5}
                   step={0.001}
@@ -5872,7 +5951,7 @@ export function GalleryScene() {
             </div>
           ) : null}
 
-          {selected.kind !== "light" ? (
+          {selected.kind !== "light" && selected.kind !== "alcove" ? (
             <>
               <div className="mb-3 mt-4 text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
                 Rotation
