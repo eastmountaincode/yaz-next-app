@@ -43,6 +43,11 @@
         0.005
       ],
       "wallScale": 1.24,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      },
       "clipX": 0.011,
       "clipY": -0.026,
       "clipZ": -0.01,
@@ -72,6 +77,11 @@
         -0.001592653589793
       ],
       "wallScale": 0.92,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      },
       "holderModel": "/3d-models/candle-and-holder/holder.glb",
       "candleModel": "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
       "flameTexture": "/3d-models/candle-and-holder/candleflame_atlas.png",
@@ -107,7 +117,12 @@
         0.038407346410207,
         0.028407346410207
       ],
-      "wallScale": 0.82
+      "wallScale": 0.82,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      }
     },
     {
       "id": "prop-mrv83kao",
@@ -126,7 +141,12 @@
         0,
         0
       ],
-      "wallScale": 1.1
+      "wallScale": 1.1,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      }
     },
     {
       "id": "bio-yaslynn-frame",
@@ -152,6 +172,11 @@
         0.008407346410207
       ],
       "wallScale": 0.78,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      },
       "clipX": 0,
       "clipY": 0,
       "clipZ": -0.01,
@@ -192,6 +217,11 @@
         0.005
       ],
       "wallScale": 0.78,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      },
       "clipX": 0.005,
       "clipY": -0.012,
       "clipZ": -0.01,
@@ -235,6 +265,11 @@
         0.018
       ],
       "wallScale": 0.82,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      },
       "clipX": 0.016,
       "clipY": 0.002,
       "clipZ": 0.057,
@@ -278,6 +313,11 @@
         -0.02
       ],
       "wallScale": 0.82,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      },
       "clipX": 0,
       "clipY": 0,
       "clipZ": -0.01,
@@ -321,6 +361,11 @@
         -0.009
       ],
       "wallScale": 0.573,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      },
       "clipX": 0,
       "clipY": 0,
       "clipZ": 0.008,
@@ -364,6 +409,11 @@
         0.007
       ],
       "wallScale": 0.82,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      },
       "clipX": 0,
       "clipY": 0,
       "clipZ": 0.09,
@@ -407,6 +457,11 @@
         0.004
       ],
       "wallScale": 0.82,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        }
+      },
       "clipX": 0.058,
       "clipY": -0.006,
       "clipZ": -0.002,
@@ -425,6 +480,35 @@
       "imageTintStrength": 0.05,
       "imageHazeColor": "#ead8bf",
       "imageHazeOpacity": 0.08
+    },
+    {
+      "id": "desktop-prayer-niche",
+      "kind": "alcove",
+      "label": "Prayer niche",
+      "visible": true,
+      "position": [
+        0,
+        0.15,
+        -0.048
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "wallScale": 1,
+      "layouts": {
+        "desktop": {
+          "visible": true
+        },
+        "mobile": {
+          "visible": false
+        }
+      },
+      "nicheWidth": 1.35,
+      "nicheStraightHeight": 1.35,
+      "nicheArchHeight": 0.68,
+      "nicheDepth": 0.18
     }
   ]
 }
