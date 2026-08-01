@@ -2797,6 +2797,7 @@ function waitForVideoFrame(video: HTMLVideoElement) {
 
 export type CameraInfo = {
   viewportWidth: number;
+  viewportHeight: number;
   distance: number;
   panX: number;
   panY: number;
@@ -3829,6 +3830,7 @@ function ThreeWallCanvas({
           lastCameraInfoReport = now;
           callback({
             viewportWidth: host.clientWidth,
+            viewportHeight: host.clientHeight,
             distance: camera.position.z,
             panX: currentPanX,
             panY: currentPanY,
@@ -5252,6 +5254,7 @@ export function GalleryScene() {
           {showChrome && cameraInfo ? (
             <div className="pointer-events-none rounded border border-white/10 bg-[#16120d]/58 px-3 py-2 font-mono text-[11px] leading-snug text-[#f6f0e5] shadow-2xl backdrop-blur-[2px]">
               <div>width&nbsp;{cameraInfo.viewportWidth}px</div>
+              <div>height {cameraInfo.viewportHeight}px</div>
               <div>dist&nbsp;&nbsp;{cameraInfo.distance.toFixed(2)}</div>
               <div>pan&nbsp;&nbsp;&nbsp;{cameraInfo.panX.toFixed(2)},&nbsp;{cameraInfo.panY.toFixed(2)}</div>
               <div>yaw&nbsp;&nbsp;&nbsp;{((cameraInfo.yaw * 180) / Math.PI).toFixed(1)}°</div>
