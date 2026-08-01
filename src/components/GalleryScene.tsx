@@ -304,9 +304,9 @@ const DESKTOP_CAMERA_DEFAULTS = {
   fov: 43,
 };
 const MOBILE_CAMERA_DEFAULTS = {
-  distance: 8.51,
-  panX: -0.17,
-  panY: 0.85,
+  distance: 6.02,
+  panX: -0.21,
+  panY: 1.13,
   yaw: 0,
   pitch: 0,
   fov: 54,
