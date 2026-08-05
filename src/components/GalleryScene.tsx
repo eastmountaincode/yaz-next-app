@@ -3346,8 +3346,7 @@ function ThreeWallCanvas({
     let pointerMode: "orbit" | "pan" = "orbit";
     let viewportMode: "desktop" | "mobile" | null = null;
     const hoverMediaQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const canUseFrameHoverEffects = () =>
-      viewportMode === "desktop" && hoverMediaQuery.matches;
+    const canUseFrameHoverEffects = () => hoverMediaQuery.matches;
     let syncFrameCaptionVisibility = () => {};
     let activeCameraDefaults = DESKTOP_CAMERA_DEFAULTS;
     let targetRotationX = DESKTOP_CAMERA_DEFAULTS.pitch;
