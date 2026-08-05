@@ -248,6 +248,7 @@ const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
 const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v4";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
 const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v2";
+const HELPER_CONTROLS_ENABLED = process.env.NEXT_PUBLIC_PRODUCTION !== "false";
 const MODEL_FLOOR_Y = -2.88;
 const ENVIRONMENT_FINE_DRAG_SENSITIVITY = 0.2;
 const OBJECT_ROTATION_LIMIT = Number((Math.PI * 1.875).toFixed(3));
@@ -5121,9 +5122,10 @@ export function GalleryScene() {
         key={resetSignal}
         settings={activeSettings}
         lighting={lighting}
-        showSceneLightMarkers={lightingOpen}
-        showHitboxHelpers={editorOpen}
+        showSceneLightMarkers={HELPER_CONTROLS_ENABLED && lightingOpen}
+        showHitboxHelpers={HELPER_CONTROLS_ENABLED && editorOpen}
         activeCaptionFrameId={
+          HELPER_CONTROLS_ENABLED &&
           editorOpen &&
           (selected?.kind === "frame" ||
             selected?.kind === "bio-frame" ||
@@ -5173,6 +5175,7 @@ export function GalleryScene() {
         </div>
       ) : null}
 
+      {HELPER_CONTROLS_ENABLED ? (
       <div className="pointer-events-none absolute right-4 top-4 flex items-start justify-end p-0 sm:right-6 sm:top-6">
         <div className="flex flex-col items-end gap-2">
           <div className="pointer-events-auto flex items-center gap-2 rounded border border-white/10 bg-[#16120d]/58 p-1 shadow-2xl backdrop-blur-[2px]">
@@ -5309,8 +5312,9 @@ export function GalleryScene() {
           ) : null}
         </div>
       </div>
+      ) : null}
 
-      {lightingOpen ? (
+      {HELPER_CONTROLS_ENABLED && lightingOpen ? (
         <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
           <SceneLightingControls
             lighting={lighting}
@@ -5320,7 +5324,7 @@ export function GalleryScene() {
         </div>
       ) : null}
 
-      {showChrome && captionOpen ? (
+      {HELPER_CONTROLS_ENABLED && showChrome && captionOpen ? (
         <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
           <div className="mb-3">
             <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
@@ -5394,7 +5398,7 @@ export function GalleryScene() {
         </div>
       ) : null}
 
-      {editorOpen && selected ? (
+      {HELPER_CONTROLS_ENABLED && editorOpen && selected ? (
         <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/38 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
