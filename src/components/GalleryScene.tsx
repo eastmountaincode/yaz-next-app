@@ -1201,17 +1201,17 @@ function createFrameCaptionTexture(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#f3e6d3";
-  ctx.strokeStyle = "rgba(42, 28, 17, 0.88)";
+  ctx.strokeStyle = "rgba(42, 28, 17, 0.62)";
   ctx.lineJoin = "round";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   const drawCaptionText = (line: string, x: number, y: number, fontSize: number) => {
-    ctx.lineWidth = THREE.MathUtils.clamp(fontSize * 0.025, 2, 4.5);
-    ctx.shadowColor = "rgba(37, 24, 14, 0.58)";
-    ctx.shadowBlur = THREE.MathUtils.clamp(fontSize * 0.055, 5, 10);
+    ctx.lineWidth = THREE.MathUtils.clamp(fontSize * 0.018, 1.5, 3.25);
+    ctx.shadowColor = "rgba(37, 24, 14, 0.34)";
+    ctx.shadowBlur = THREE.MathUtils.clamp(fontSize * 0.033, 3, 6);
     ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 2;
+    ctx.shadowOffsetY = 1;
     ctx.strokeText(line, x, y);
 
     ctx.shadowColor = "transparent";
