@@ -32,6 +32,9 @@
 public/3d-models/**/*.zip
 public/3d-models/*.zip
 
+# optional furniture is deployed through R2; keep local working copies out of Git LFS
+public/3d-models/furniture/*.glb
+
 # debug
 npm-debug.log*
 yarn-debug.log*

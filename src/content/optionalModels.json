@@ -1,0 +1,18 @@
+[
+  {
+    "id": "wooden-table",
+    "label": "Wooden table",
+    "model": "/3d-models/furniture/wooden_table_optimized.glb",
+    "position": [0, -2.88, 1],
+    "rotation": [0, 0, 0],
+    "height": 1.05
+  },
+  {
+    "id": "old-wooden-table",
+    "label": "Old wooden table",
+    "model": "/3d-models/furniture/old_wooden_table_optimized.glb",
+    "position": [0, -2.88, 1],
+    "rotation": [0, 0, 0],
+    "height": 1
+  }
+]
