@@ -1273,7 +1273,7 @@ function createFrameCaptionMesh(
       new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
-        opacity: 0.78,
+        opacity: 1,
         depthWrite: false,
         toneMapped: false,
         side: THREE.DoubleSide,
@@ -3345,6 +3345,10 @@ function ThreeWallCanvas({
     let startPanY = 0;
     let pointerMode: "orbit" | "pan" = "orbit";
     let viewportMode: "desktop" | "mobile" | null = null;
+    const hoverMediaQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const canUseFrameHoverEffects = () =>
+      viewportMode === "desktop" && hoverMediaQuery.matches;
+    let syncFrameCaptionVisibility = () => {};
     let activeCameraDefaults = DESKTOP_CAMERA_DEFAULTS;
     let targetRotationX = DESKTOP_CAMERA_DEFAULTS.pitch;
     let targetRotationY = DESKTOP_CAMERA_DEFAULTS.yaw;
@@ -3401,6 +3405,7 @@ function ThreeWallCanvas({
       camera.position.set(currentPanX, cameraBaseY + currentPanY, targetCameraDistance);
       camera.lookAt(currentPanX, 0.05 + currentPanY, -0.05);
       camera.updateProjectionMatrix();
+      syncFrameCaptionVisibility();
     };
 
     const hoverRaycaster = new THREE.Raycaster();
@@ -3427,18 +3432,18 @@ function ThreeWallCanvas({
       return Boolean(clip.userData?.captionMesh);
     };
 
-    const syncFrameCaptionVisibility = () => {
+    syncFrameCaptionVisibility = () => {
       collectFrameClipMeshes().forEach((clip) => {
         const caption = clip.userData.captionMesh as THREE.Mesh | undefined;
         if (caption) {
           const sceneObjectId = clip.userData?.sceneObjectId as string | undefined;
-          const isHovered = clip === hoveredFrameClip;
+          const isHovered = canUseFrameHoverEffects() && clip === hoveredFrameClip;
           const isEditorActive = sceneObjectId === activeCaptionFrameIdRef.current;
           caption.visible =
             shouldShowFrameCaption(clip) &&
             (captionDisplayModeRef.current === "always" || isHovered || isEditorActive);
           if (caption.material instanceof THREE.MeshBasicMaterial) {
-            caption.material.opacity = isHovered ? 0.58 : 0.78;
+            caption.material.opacity = isHovered ? 0.58 : 1;
             caption.material.needsUpdate = true;
           }
         }
@@ -3658,8 +3663,10 @@ function ThreeWallCanvas({
         }
       }
 
-      if (event.pointerType === "mouse") {
+      if (event.pointerType === "mouse" && canUseFrameHoverEffects()) {
         updateFrameHover(event.clientX, event.clientY);
+      } else if (!canUseFrameHoverEffects() && hoveredFrameClip) {
+        clearHoveredFrame();
       }
 
       if (!pointerIsDown) {

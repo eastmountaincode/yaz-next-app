@@ -203,6 +203,7 @@
         "mobile": {
           "wallScale": 0.781,
           "captionOffsetY": 0.288,
+          "captionOffsetZ": 0.053,
           "captionScale": 2.215
         }
       },
@@ -253,6 +254,7 @@
         "mobile": {
           "captionOffsetX": 0.005,
           "captionOffsetY": 0.101,
+          "captionOffsetZ": 0.034,
           "captionScale": 2.921
         }
       },
@@ -454,7 +456,7 @@
           "position": [
             0.456,
             -0.844,
-            0.031
+            -0.117
           ],
           "wallScale": 0.905,
           "captionOffsetX": -0.006,
