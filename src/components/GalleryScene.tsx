@@ -1201,22 +1201,10 @@ function createFrameCaptionTexture(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#f3e6d3";
-  ctx.strokeStyle = "rgba(42, 28, 17, 0.62)";
-  ctx.lineJoin = "round";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  const drawCaptionText = (line: string, x: number, y: number, fontSize: number) => {
-    ctx.lineWidth = THREE.MathUtils.clamp(fontSize * 0.018, 1.5, 3.25);
-    ctx.shadowColor = "rgba(37, 24, 14, 0.34)";
-    ctx.shadowBlur = THREE.MathUtils.clamp(fontSize * 0.033, 3, 6);
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 1;
-    ctx.strokeText(line, x, y);
-
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
+  const drawCaptionText = (line: string, x: number, y: number) => {
     ctx.fillText(line, x, y);
   };
 
@@ -1240,21 +1228,20 @@ function createFrameCaptionTexture(
     const titleStartSize = font.id === "winky-show" ? 135 : font.id === "sobria" ? 78 : 84;
     const titleSize = fitText(title, titleStartSize, 44);
     ctx.font = `${font.fontWeight} ${titleSize}px ${font.fontFamily}`;
-    drawCaptionText(title, canvas.width / 2, 78, titleSize);
+    drawCaptionText(title, canvas.width / 2, 78);
 
     ctx.globalAlpha = 0.86;
-    ctx.shadowBlur = 4;
     const subtitleStartSize = font.id === "winky-show" ? 75 : font.id === "sobria" ? 42 : 46;
     const subtitleSize = fitText(subtitle, subtitleStartSize, 28);
     ctx.font = `${font.fontWeight} ${subtitleSize}px ${font.fontFamily}`;
-    drawCaptionText(subtitle, canvas.width / 2, 142, subtitleSize);
+    drawCaptionText(subtitle, canvas.width / 2, 142);
     ctx.globalAlpha = 1;
   } else {
     const line = lines[0] ?? text;
     const lineStartSize = font.id === "winky-show" ? 180 : font.id === "sobria" ? 96 : 104;
     const fontSize = fitText(line, lineStartSize, 46);
     ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
-    drawCaptionText(line, canvas.width / 2, canvas.height / 2 + 2, fontSize);
+    drawCaptionText(line, canvas.width / 2, canvas.height / 2 + 2);
   }
 
   const texture = new THREE.CanvasTexture(canvas);

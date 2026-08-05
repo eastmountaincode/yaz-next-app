@@ -54,6 +54,7 @@
           "wallScale": 0.855
         },
         "mobile": {
+          "captionOffsetY": 0.188,
           "captionScale": 1.46
         }
       },
@@ -201,8 +202,8 @@
         },
         "mobile": {
           "wallScale": 0.781,
-          "captionScale": 2.215,
-          "captionOffsetY": 0.312
+          "captionOffsetY": 0.288,
+          "captionScale": 2.215
         }
       },
       "clipX": 0,
@@ -250,9 +251,9 @@
           "visible": false
         },
         "mobile": {
-          "captionScale": 2.921,
           "captionOffsetX": 0.005,
-          "captionOffsetY": 0.123
+          "captionOffsetY": 0.101,
+          "captionScale": 2.921
         }
       },
       "clipX": 0.005,
@@ -456,9 +457,9 @@
             0.031
           ],
           "wallScale": 0.905,
-          "captionScale": 1.685,
           "captionOffsetX": -0.006,
-          "captionOffsetY": 0.211
+          "captionOffsetY": 0.211,
+          "captionScale": 1.685
         }
       },
       "clipX": 0,
