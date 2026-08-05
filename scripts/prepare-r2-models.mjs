@@ -19,11 +19,51 @@ const outputRoot = path.join(projectRoot, ".r2-assets");
 const cliPath = path.join(projectRoot, "node_modules", ".bin", "gltf-transform");
 const environmentPath = path.join(projectRoot, "src", "content", "environment.json");
 const clockPath = path.join(projectRoot, "src", "content", "clock.json");
+const optionalModelsPath = path.join(projectRoot, "src", "content", "optionalModels.json");
 const baseboardPath = "/3d-models/beaded_baseboard_4_plaster_texture.glb";
 
 const environment = JSON.parse(await readFile(environmentPath, "utf8"));
 const clock = JSON.parse(await readFile(clockPath, "utf8"));
+const optionalModels = JSON.parse(await readFile(optionalModelsPath, "utf8"));
 const assetPaths = new Set([baseboardPath]);
+
+async function isProductionReadyGlb(sourcePath) {
+  const bytes = await readFile(sourcePath);
+  if (bytes.length < 20 || bytes.toString("utf8", 0, 4) !== "glTF") {
+    return false;
+  }
+
+  const jsonChunkLength = bytes.readUInt32LE(12);
+  const jsonChunkType = bytes.readUInt32LE(16);
+  if (jsonChunkType !== 0x4e4f534a || 20 + jsonChunkLength > bytes.length) {
+    return false;
+  }
+
+  const document = JSON.parse(
+    bytes
+      .toString("utf8", 20, 20 + jsonChunkLength)
+      .replace(/\0+$/g, "")
+      .trim(),
+  );
+  const extensions = new Set([
+    ...(document.extensionsUsed ?? []),
+    ...(document.extensionsRequired ?? []),
+  ]);
+  const images = document.images ?? [];
+  const texturesAreWebReady = images.every(
+    (image) =>
+      image.mimeType === "image/webp" ||
+      (typeof image.uri === "string" && image.uri.toLowerCase().endsWith(".webp")),
+  );
+
+  return extensions.has("EXT_meshopt_compression") && texturesAreWebReady;
+}
+
+for (const model of optionalModels) {
+  if (typeof model.model === "string" && model.model.endsWith(".glb")) {
+    assetPaths.add(model.model);
+  }
+}
 
 for (const object of environment.objects ?? []) {
   for (const key of ["model", "holderModel", "candleModel", "speakerModel"]) {
@@ -68,7 +108,7 @@ try {
     const outputPath = path.join(temporaryRelease, relativePath);
     await mkdir(path.dirname(outputPath), { recursive: true });
 
-    if (publicPath.endsWith(".glb")) {
+    if (publicPath.endsWith(".glb") && !(await isProductionReadyGlb(sourcePath))) {
       execFileSync(
         cliPath,
         [

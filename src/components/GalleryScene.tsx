@@ -31,6 +31,7 @@ import { SceneLoadingScreen } from "@/components/SceneLoadingScreen";
 import savedClockComposite from "@/content/clock.json";
 import savedComposites from "@/content/composites.json";
 import { framePictures } from "@/content/framePictures";
+import optionalModels from "@/content/optionalModels.json";
 import { yaslynnStills } from "@/content/stills";
 import { works, yaslynnBio, type WorkItem } from "@/content/works";
 import { candleFlameAtlas } from "@/lib/candleComposite";
@@ -66,6 +67,10 @@ type SceneLayoutOverride = {
   position?: VectorTuple;
   rotation?: VectorTuple;
   wallScale?: number;
+  captionOffsetX?: number;
+  captionOffsetY?: number;
+  captionOffsetZ?: number;
+  captionScale?: number;
 };
 type SceneLayoutOverrides = Partial<Record<SceneLayoutMode, SceneLayoutOverride>>;
 type ClickZoneAction = "toggle-nearest-light" | "speaker-click" | "candle-toggle";
@@ -306,7 +311,7 @@ const DESKTOP_CAMERA_DEFAULTS = {
 const MOBILE_CAMERA_DEFAULTS = {
   distance: 6.02,
   panX: -0.21,
-  panY: 1.13,
+  panY: 1.04,
   yaw: 0,
   pitch: 0,
   fov: 54,
@@ -438,7 +443,16 @@ const frameModels = [
   "/3d-models/frames/old_soviet_paints_second.glb",
 ];
 
-const propModels = [
+type PropModelCatalogItem = {
+  id: string;
+  label: string;
+  model: string;
+  position: VectorTuple;
+  rotation: VectorTuple;
+  height: number;
+};
+
+const builtInPropModels: PropModelCatalogItem[] = [
   {
     id: "victorian-bed",
     label: "Victorian bed",
@@ -512,6 +526,14 @@ const propModels = [
     height: 1.15,
   },
 ];
+
+const optionalPropModels: PropModelCatalogItem[] = optionalModels.map((model) => ({
+  ...model,
+  position: model.position as VectorTuple,
+  rotation: model.rotation as VectorTuple,
+}));
+
+const propModels = [...builtInPropModels, ...optionalPropModels];
 
 const deprecatedPropModelIds = new Set(["table-lamp"]);
 
@@ -605,6 +627,18 @@ function normalizeLayoutOverride(seed: SceneLayoutOverride | undefined) {
   }
   if (Number.isFinite(seed.wallScale)) {
     normalized.wallScale = formatNumber(Number(seed.wallScale));
+  }
+  if (Number.isFinite(seed.captionOffsetX)) {
+    normalized.captionOffsetX = formatNumber(Number(seed.captionOffsetX));
+  }
+  if (Number.isFinite(seed.captionOffsetY)) {
+    normalized.captionOffsetY = formatNumber(Number(seed.captionOffsetY));
+  }
+  if (Number.isFinite(seed.captionOffsetZ)) {
+    normalized.captionOffsetZ = formatNumber(Number(seed.captionOffsetZ));
+  }
+  if (Number.isFinite(seed.captionScale)) {
+    normalized.captionScale = formatNumber(Number(seed.captionScale));
   }
 
   return Object.keys(normalized).length > 0 ? normalized : undefined;
@@ -1167,11 +1201,24 @@ function createFrameCaptionTexture(
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#f3e6d3";
-  ctx.shadowColor = "rgba(46, 31, 16, 0.5)";
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetY = 2;
+  ctx.strokeStyle = "rgba(42, 28, 17, 0.88)";
+  ctx.lineJoin = "round";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+
+  const drawCaptionText = (line: string, x: number, y: number, fontSize: number) => {
+    ctx.lineWidth = THREE.MathUtils.clamp(fontSize * 0.025, 2, 4.5);
+    ctx.shadowColor = "rgba(37, 24, 14, 0.58)";
+    ctx.shadowBlur = THREE.MathUtils.clamp(fontSize * 0.055, 5, 10);
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+    ctx.strokeText(line, x, y);
+
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.fillText(line, x, y);
+  };
 
   const maxWidth = canvas.width - 96;
   const fitText = (line: string, startSize: number, minSize: number) => {
@@ -1193,21 +1240,21 @@ function createFrameCaptionTexture(
     const titleStartSize = font.id === "winky-show" ? 135 : font.id === "sobria" ? 78 : 84;
     const titleSize = fitText(title, titleStartSize, 44);
     ctx.font = `${font.fontWeight} ${titleSize}px ${font.fontFamily}`;
-    ctx.fillText(title, canvas.width / 2, 78);
+    drawCaptionText(title, canvas.width / 2, 78, titleSize);
 
     ctx.globalAlpha = 0.86;
     ctx.shadowBlur = 4;
     const subtitleStartSize = font.id === "winky-show" ? 75 : font.id === "sobria" ? 42 : 46;
     const subtitleSize = fitText(subtitle, subtitleStartSize, 28);
     ctx.font = `${font.fontWeight} ${subtitleSize}px ${font.fontFamily}`;
-    ctx.fillText(subtitle, canvas.width / 2, 142);
+    drawCaptionText(subtitle, canvas.width / 2, 142, subtitleSize);
     ctx.globalAlpha = 1;
   } else {
     const line = lines[0] ?? text;
     const lineStartSize = font.id === "winky-show" ? 180 : font.id === "sobria" ? 96 : 104;
     const fontSize = fitText(line, lineStartSize, 46);
     ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
-    ctx.fillText(line, canvas.width / 2, canvas.height / 2 + 2);
+    drawCaptionText(line, canvas.width / 2, canvas.height / 2 + 2, fontSize);
   }
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -5689,9 +5736,7 @@ export function GalleryScene() {
                   max={2.813}
                   step={0.001}
                   value={selected.captionOffsetX}
-                  onChange={(value) =>
-                    updateSelectedObject({ captionOffsetX: value } as Partial<SceneObjectSetting>)
-                  }
+                  onChange={(value) => updateSelectedLayout({ captionOffsetX: value })}
                   fine
                 />
                 <RangeControl
@@ -5700,9 +5745,7 @@ export function GalleryScene() {
                   max={1.125}
                   step={0.001}
                   value={selected.captionOffsetY}
-                  onChange={(value) =>
-                    updateSelectedObject({ captionOffsetY: value } as Partial<SceneObjectSetting>)
-                  }
+                  onChange={(value) => updateSelectedLayout({ captionOffsetY: value })}
                   fine
                 />
                 <RangeControl
@@ -5711,9 +5754,7 @@ export function GalleryScene() {
                   max={0.375}
                   step={0.001}
                   value={selected.captionOffsetZ}
-                  onChange={(value) =>
-                    updateSelectedObject({ captionOffsetZ: value } as Partial<SceneObjectSetting>)
-                  }
+                  onChange={(value) => updateSelectedLayout({ captionOffsetZ: value })}
                   fine
                 />
                 <RangeControl
@@ -5722,9 +5763,7 @@ export function GalleryScene() {
                   max={4.688}
                   step={0.001}
                   value={selected.captionScale}
-                  onChange={(value) =>
-                    updateSelectedObject({ captionScale: value } as Partial<SceneObjectSetting>)
-                  }
+                  onChange={(value) => updateSelectedLayout({ captionScale: value })}
                   fine
                 />
               </div>
