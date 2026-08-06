@@ -51,12 +51,14 @@
             0.841,
             -0.03
           ],
-          "wallScale": 0.855
+          "wallScale": 0.855,
+          "captionOffsetX": -0.034
         },
         "mobile": {
           "captionOffsetX": -0.028,
-          "captionOffsetY": 0.188,
-          "captionScale": 1.145
+          "captionOffsetY": 0.198,
+          "captionScale": 1.413,
+          "wallScale": 1.237
         }
       },
       "clipX": 0.011,
@@ -264,9 +266,14 @@
         },
         "mobile": {
           "captionOffsetX": 0,
-          "captionOffsetY": 0.101,
+          "captionOffsetY": 0.132,
           "captionOffsetZ": 0.034,
-          "captionScale": 2.618
+          "captionScale": 2.618,
+          "position": [
+            -0.738,
+            -0.763,
+            -0.05
+          ]
         }
       },
       "clipX": 0.005,
