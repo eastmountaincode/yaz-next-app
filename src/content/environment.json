@@ -201,7 +201,14 @@
       "wallScale": 0.78,
       "layouts": {
         "desktop": {
-          "visible": false
+          "visible": true,
+          "captionScale": 1.732,
+          "captionOffsetY": 0.277,
+          "position": [
+            -2.097,
+            2.504,
+            0.025
+          ]
         },
         "mobile": {
           "position": [
@@ -468,7 +475,12 @@
       "wallScale": 0.82,
       "layouts": {
         "desktop": {
-          "visible": false
+          "visible": true,
+          "position": [
+            0.842,
+            2.559,
+            0.031
+          ]
         },
         "mobile": {
           "position": [
@@ -527,7 +539,13 @@
       "wallScale": 0.82,
       "layouts": {
         "desktop": {
-          "visible": false
+          "visible": true,
+          "position": [
+            -0.966,
+            2.494,
+            -0.03
+          ],
+          "wallScale": 0.586
         },
         "mobile": {
           "visible": false
