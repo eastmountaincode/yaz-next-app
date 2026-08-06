@@ -239,7 +239,7 @@
       "kind": "image-frame",
       "label": "Stills",
       "visible": true,
-      "model": "/3d-models/frames/photo_frame_with_mat_2026_05_31.glb",
+      "model": "/3d-models/frames/adobe_stock_265717933_wood_square_frame_optimized.glb",
       "workSlug": "blk-odyssy-nativity-of-chaos",
       "maskShape": "rectangle",
       "position": [
@@ -270,10 +270,10 @@
         }
       },
       "clipX": 0.005,
-      "clipY": -0.012,
-      "clipZ": -0.01,
-      "clipWidth": 1.025,
-      "clipHeight": 1.025,
+      "clipY": -0.006,
+      "clipZ": 0.017,
+      "clipWidth": 0.918,
+      "clipHeight": 0.918,
       "videoScale": 1,
       "videoOffsetX": 0,
       "videoOffsetY": 0,
