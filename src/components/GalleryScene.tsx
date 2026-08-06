@@ -1097,16 +1097,25 @@ function makeMaterial<T extends THREE.Material>(material: T, disposables: THREE.
   return material;
 }
 
-function addFrameMediaGrayscale(material: THREE.MeshBasicMaterial) {
+type FrameMediaGrayscaleStrength = { value: number };
+
+function addFrameMediaGrayscale(
+  material: THREE.MeshBasicMaterial,
+  initialStrength = 1,
+): FrameMediaGrayscaleStrength {
+  const grayscaleStrength = { value: initialStrength };
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.frameMediaGrayscale = grayscaleStrength;
+    shader.fragmentShader = `uniform float frameMediaGrayscale;\n${shader.fragmentShader}`;
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <map_fragment>",
       `#include <map_fragment>
        float frameMediaLuma = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-       diffuseColor.rgb = vec3(frameMediaLuma);`,
+       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(frameMediaLuma), frameMediaGrayscale);`,
     );
   };
-  material.customProgramCacheKey = () => "frame-media-grayscale-v2";
+  material.customProgramCacheKey = () => "frame-media-grayscale-v3";
+  return grayscaleStrength;
 }
 
 function makeGeometry<T extends THREE.BufferGeometry>(
@@ -1458,7 +1467,6 @@ function createFrame(
     }),
     materials,
   );
-  addFrameMediaGrayscale(posterMaterial);
   const posterMesh = new THREE.Mesh(clipShape.geometry, posterMaterial);
   posterMesh.scale.copy(clipShape.scale);
   posterMesh.position.set(setting.clipX, setting.clipY, setting.clipZ);
@@ -1593,14 +1601,16 @@ function createImageFrame(
     setting.kind === "bio-frame" ||
     setting.captionText.trim().toLowerCase() === "stills" ||
     setting.captionText.trim().toLowerCase() === "clients";
+  let imageMeshGrayscaleStrength: FrameMediaGrayscaleStrength | undefined;
   if (isNavigationImage) {
-    addFrameMediaGrayscale(imageMaterial);
+    imageMeshGrayscaleStrength = addFrameMediaGrayscale(imageMaterial, 0);
   }
   const imageMesh = new THREE.Mesh(clipShape.geometry, imageMaterial);
   imageMesh.scale.copy(clipShape.scale);
   imageMesh.position.set(setting.clipX, setting.clipY, setting.clipZ);
   imageMesh.renderOrder = 0;
   imageMesh.userData.isFrameClip = true;
+  imageMesh.userData.grayscaleStrength = imageMeshGrayscaleStrength;
   if (setting.kind === "bio-frame") {
     imageMesh.userData.bioSlug = setting.bioSlug;
   } else {
@@ -3891,6 +3901,19 @@ function ThreeWallCanvas({
         group.traverse((child) => {
           if (!(child instanceof THREE.Mesh) || !child.userData?.isFrameClip) {
             return;
+          }
+          const grayscaleStrength = child.userData
+            .grayscaleStrength as FrameMediaGrayscaleStrength | undefined;
+          if (grayscaleStrength) {
+            const grayscaleTarget =
+              canUseFrameHoverEffects() && child === hoveredFrameClip ? 1 : 0;
+            const nextGrayscale =
+              grayscaleStrength.value +
+              (grayscaleTarget - grayscaleStrength.value) * 0.18;
+            grayscaleStrength.value =
+              Math.abs(grayscaleTarget - nextGrayscale) < 0.001
+                ? grayscaleTarget
+                : nextGrayscale;
           }
           const mat = child.userData.videoMaterial as THREE.MeshBasicMaterial | undefined;
           if (!mat) {
