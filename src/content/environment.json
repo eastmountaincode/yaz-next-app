@@ -92,7 +92,13 @@
       "wallScale": 0.92,
       "layouts": {
         "desktop": {
-          "visible": true
+          "visible": true,
+          "position": [
+            -0.11,
+            2.281,
+            0.036
+          ],
+          "wallScale": 0.688
         },
         "mobile": {
           "visible": false
@@ -502,7 +508,8 @@
             0.03,
             0.007
           ],
-          "wallScale": 0.868
+          "wallScale": 0.868,
+          "captionOffsetY": 0.184
         },
         "mobile": {
           "position": [
