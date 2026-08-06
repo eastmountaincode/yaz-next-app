@@ -248,6 +248,7 @@ const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
 const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v4";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
 const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v2";
+const FRAME_CAPTION_COLOR = "#d71920";
 const HELPER_CONTROLS_ENABLED = process.env.NEXT_PUBLIC_PRODUCTION !== "false";
 const MODEL_FLOOR_Y = -2.88;
 const ENVIRONMENT_FINE_DRAG_SENSITIVITY = 0.2;
@@ -1201,7 +1202,7 @@ function createFrameCaptionTexture(
   }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#f3e6d3";
+  ctx.fillStyle = FRAME_CAPTION_COLOR;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
