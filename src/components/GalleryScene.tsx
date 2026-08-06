@@ -319,7 +319,7 @@ const MOBILE_CAMERA_DEFAULTS = {
   fov: 54,
 };
 const DESKTOP_CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(16);
-const MOBILE_CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(29.4);
+const MOBILE_CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(16);
 const MOBILE_LAYOUT_BREAKPOINT = 720;
 
 type CaptionFontId =
