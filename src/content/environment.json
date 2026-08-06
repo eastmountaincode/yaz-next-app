@@ -55,10 +55,10 @@
           "captionOffsetX": -0.034
         },
         "mobile": {
+          "wallScale": 1.237,
           "captionOffsetX": -0.028,
           "captionOffsetY": 0.198,
-          "captionScale": 1.413,
-          "wallScale": 1.237
+          "captionScale": 1.413
         }
       },
       "clipX": 0.011,
@@ -92,7 +92,7 @@
       "wallScale": 0.92,
       "layouts": {
         "desktop": {
-          "visible": false
+          "visible": true
         },
         "mobile": {
           "visible": false
@@ -136,7 +136,12 @@
       "wallScale": 0.82,
       "layouts": {
         "desktop": {
-          "visible": false
+          "visible": true,
+          "position": [
+            1.98,
+            2.653,
+            -0.105
+          ]
         },
         "mobile": {
           "visible": false
@@ -202,13 +207,13 @@
       "layouts": {
         "desktop": {
           "visible": true,
-          "captionScale": 1.732,
-          "captionOffsetY": 0.277,
           "position": [
             -2.097,
             2.504,
             0.025
-          ]
+          ],
+          "captionOffsetY": 0.277,
+          "captionScale": 1.732
         },
         "mobile": {
           "position": [
@@ -271,21 +276,22 @@
         "desktop": {
           "visible": true,
           "position": [
-            1.259,
-            -0.84,
+            1.485,
+            0.911,
             -0.05
-          ]
+          ],
+          "wallScale": 0.979
         },
         "mobile": {
-          "captionOffsetX": 0,
-          "captionOffsetY": 0.132,
-          "captionOffsetZ": 0.034,
-          "captionScale": 2.618,
           "position": [
             -0.738,
             -0.763,
             -0.05
-          ]
+          ],
+          "captionOffsetX": 0,
+          "captionOffsetY": 0.132,
+          "captionOffsetZ": 0.034,
+          "captionScale": 2.618
         }
       },
       "clipX": 0.005,
@@ -495,7 +501,8 @@
             0,
             0.03,
             0.007
-          ]
+          ],
+          "wallScale": 0.868
         },
         "mobile": {
           "position": [
@@ -560,12 +567,12 @@
             2.494,
             -0.03
           ],
-          "wallScale": 0.586,
           "rotation": [
             0,
             0.004,
             0.004
-          ]
+          ],
+          "wallScale": 0.586
         },
         "mobile": {
           "visible": false
