@@ -1146,7 +1146,7 @@ function visibleSize(setting: FrameLikeSetting) {
 
 function createVideoTexture(
   clipSrc: string,
-  options: { loop?: boolean },
+  options: { loop?: boolean; posterTime?: number },
   textures: THREE.Texture[],
   videos: HTMLVideoElement[],
   onSceneError: (error: Error) => void,
@@ -1158,6 +1158,7 @@ function createVideoTexture(
   video.playsInline = true;
   video.preload = "auto";
   video.crossOrigin = "anonymous";
+  video.dataset.posterTime = String(Math.max(0, options.posterTime ?? 0));
   video.addEventListener("error", () => {
     const message = video.error?.message || `Video failed to load: ${clipSrc}`;
     onSceneError(new Error(message));
@@ -1170,11 +1171,10 @@ function createVideoTexture(
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
 
-  // We deliberately do NOT call play() here. `preload="auto"` causes the
-  // browser to load + decode the first frame on its own, and VideoTexture
-  // uploads that frame to the GPU as soon as it's available — even with
-  // autoplay blocked. createFrame() decides whether a given video should
-  // ever play (motion clip) or stay frozen (still poster clip).
+  // Scene initialization seeks this video to its canonical poster time and
+  // briefly primes a decoded frame while the loading screen is still visible.
+  // createFrame() still decides whether it later plays (motion clip) or stays
+  // frozen (poster clip).
   videos.push(video);
   textures.push(texture);
   return { texture, video };
@@ -1419,43 +1419,22 @@ function createFrame(
   // the still and motion textures are always independent and always valid,
   // so the crossfade is guaranteed to work regardless of autoplay policy.
   // The browser's HTTP cache means the underlying file is downloaded once.
-  const { texture: stillTexture, video: stillVideo } = createVideoTexture(
+  const { texture: stillTexture } = createVideoTexture(
     work.clipSrc,
-    { loop: false },
+    { loop: false, posterTime },
     textures,
     videos,
     onSceneError,
   );
   const { texture: motionTexture, video: motionVideo } = createVideoTexture(
     work.clipSrc,
-    { loop: true },
+    { loop: true, posterTime },
     textures,
     videos,
     onSceneError,
   );
 
   applyVideoCrop([stillTexture, motionTexture], setting);
-
-  // Seek the still video to its canonical poster moment. The VideoTexture
-  // will reflect the seeked frame as soon as the browser decodes it. For
-  // posterTime === 0 the browser's preload already lands on frame 0 so no
-  // seek is needed.
-  if (posterTime > 0) {
-    const seekToPoster = () => {
-      try {
-        stillVideo.currentTime = posterTime;
-      } catch {
-        // If metadata isn't quite ready, loadedmetadata will fire again
-        // after the next state transition; the user-visible still is the
-        // first frame in the meantime which is acceptable.
-      }
-    };
-    if (stillVideo.readyState >= 1) {
-      seekToPoster();
-    } else {
-      stillVideo.addEventListener("loadedmetadata", seekToPoster, { once: true });
-    }
-  }
 
   const clipShape = createClipGeometry(setting, geometries);
 
@@ -2861,11 +2840,10 @@ function scenePreloadAssets(settings: SceneObjectSetting[]) {
   return [...assets];
 }
 
-function waitForVideoFrame(video: HTMLVideoElement) {
-  if (video.readyState >= 2) {
-    return Promise.resolve();
-  }
-
+function waitForVideoEvent(
+  video: HTMLVideoElement,
+  eventName: "loadedmetadata" | "loadeddata" | "seeked",
+) {
   return new Promise<void>((resolve, reject) => {
     const onLoaded = () => {
       cleanup();
@@ -2876,14 +2854,72 @@ function waitForVideoFrame(video: HTMLVideoElement) {
       reject(new Error(video.error?.message || `Video failed to load: ${video.currentSrc}`));
     };
     const cleanup = () => {
-      video.removeEventListener("loadeddata", onLoaded);
+      video.removeEventListener(eventName, onLoaded);
       video.removeEventListener("error", onError);
     };
 
-    video.addEventListener("loadeddata", onLoaded, { once: true });
+    video.addEventListener(eventName, onLoaded, { once: true });
     video.addEventListener("error", onError, { once: true });
-    video.load();
   });
+}
+
+function waitForDecodedVideoFrame(video: HTMLVideoElement) {
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const finish = (presented: boolean) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      window.clearTimeout(fallbackTimeout);
+      resolve(presented);
+    };
+    const fallbackTimeout = window.setTimeout(() => finish(false), 1000);
+
+    if (typeof video.requestVideoFrameCallback === "function") {
+      video.requestVideoFrameCallback(() => finish(true));
+    } else {
+      window.requestAnimationFrame(() => finish(video.readyState >= 2));
+    }
+  });
+}
+
+async function waitForVideoFrame(video: HTMLVideoElement) {
+  if (video.readyState < 1) {
+    const metadataReady = waitForVideoEvent(video, "loadedmetadata");
+    video.load();
+    await metadataReady;
+  }
+
+  const requestedPosterTime = Number(video.dataset.posterTime ?? 0);
+  const durationLimit = Number.isFinite(video.duration)
+    ? Math.max(0, video.duration - 0.001)
+    : requestedPosterTime;
+  const posterTime = THREE.MathUtils.clamp(requestedPosterTime, 0, durationLimit);
+  if (Math.abs(video.currentTime - posterTime) > 0.01) {
+    const seekReady = waitForVideoEvent(video, "seeked");
+    video.currentTime = posterTime;
+    await seekReady;
+  }
+
+  if (video.readyState < 2) {
+    await waitForVideoEvent(video, "loadeddata");
+  }
+
+  // A loaded frame is not necessarily uploaded into VideoTexture until the
+  // video presents once. Prime that first presentation behind the loading
+  // screen so the initial hover never fades toward an empty texture.
+  const decodedFrameReady = waitForDecodedVideoFrame(video);
+  try {
+    await video.play();
+  } catch {
+    // Muted inline playback is normally permitted. The decoded-frame fallback
+    // still prevents initialization from hanging if a browser refuses it.
+  }
+  if (await decodedFrameReady) {
+    video.dataset.frameReady = "true";
+  }
+  video.pause();
 }
 
 export type CameraInfo = {
@@ -3567,21 +3603,42 @@ function ThreeWallCanvas({
       if (!video) {
         return;
       }
-      clip.userData.fadeTarget = 1;
       const posterTime = (clip.userData.posterTime as number) ?? 0;
       // Seek back to the still moment first so playback always starts at the
       // canonical pose. Errors here are non-fatal; some browsers throw if
       // metadata is not yet loaded.
       try {
         if (Math.abs(video.currentTime - posterTime) > 0.05) {
+          video.dataset.frameReady = "false";
           video.currentTime = posterTime;
         }
       } catch {
         // Ignore; the video will play from wherever it currently is.
       }
+
+      const revealMotionLayer = () => {
+        video.dataset.frameReady = "true";
+        video.dataset.frameReadyPending = "false";
+        if (clip === hoveredFrameClip) {
+          clip.userData.fadeTarget = 1;
+        }
+      };
+      if (video.dataset.frameReady === "true") {
+        clip.userData.fadeTarget = 1;
+      } else if (video.dataset.frameReadyPending !== "true") {
+        video.dataset.frameReadyPending = "true";
+        if (typeof video.requestVideoFrameCallback === "function") {
+          video.requestVideoFrameCallback(revealMotionLayer);
+        } else if (video.readyState >= 2) {
+          window.requestAnimationFrame(revealMotionLayer);
+        } else {
+          video.addEventListener("loadeddata", revealMotionLayer, { once: true });
+        }
+      }
       const playPromise = video.play();
       if (playPromise) {
         playPromise.catch(() => {
+          video.dataset.frameReadyPending = "false";
           // Hover is a user gesture so play() is almost always allowed; ignore
           // the edge case where the browser still rejects (e.g. background tab).
         });
@@ -3928,6 +3985,7 @@ function ThreeWallCanvas({
               v.pause();
               const posterTime = (child.userData.posterTime as number) ?? 0;
               try {
+                v.dataset.frameReady = "false";
                 v.currentTime = posterTime;
               } catch {
                 // Ignore; the next hover will re-seek.
