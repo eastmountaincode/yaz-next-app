@@ -670,6 +670,38 @@
           "visible": false
         }
       }
+    },
+    {
+      "id": "prop-msi3gfad",
+      "kind": "model",
+      "catalogId": "flor-de-maga-potted",
+      "label": "Flor de Maga potted plant",
+      "visible": true,
+      "model": "/3d-models/plants/flor_de_maga_potted_optimized.glb",
+      "position": [
+        1.492,
+        2.379,
+        -0.133
+      ],
+      "rotation": [
+        0,
+        -0.36,
+        0
+      ],
+      "wallScale": 1.28,
+      "layouts": {
+        "desktop": {
+          "visible": true,
+          "position": [
+            -0.925,
+            -1.672,
+            0.672
+          ]
+        },
+        "mobile": {
+          "visible": false
+        }
+      }
     }
   ]
 }
