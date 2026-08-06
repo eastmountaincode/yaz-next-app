@@ -21,11 +21,15 @@ const environmentPath = path.join(projectRoot, "src", "content", "environment.js
 const clockPath = path.join(projectRoot, "src", "content", "clock.json");
 const optionalModelsPath = path.join(projectRoot, "src", "content", "optionalModels.json");
 const baseboardPath = "/3d-models/beaded_baseboard_4_plaster_texture.glb";
+const publishedFrameModelPaths = [
+  "/3d-models/frames/adobe_stock_265717933_wood_square_frame_optimized.glb",
+  "/3d-models/frames/adobe_stock_259198522_art_frame_blank_04_optimized.glb",
+];
 
 const environment = JSON.parse(await readFile(environmentPath, "utf8"));
 const clock = JSON.parse(await readFile(clockPath, "utf8"));
 const optionalModels = JSON.parse(await readFile(optionalModelsPath, "utf8"));
-const assetPaths = new Set([baseboardPath]);
+const assetPaths = new Set([baseboardPath, ...publishedFrameModelPaths]);
 
 async function isProductionReadyGlb(sourcePath) {
   const bytes = await readFile(sourcePath);
