@@ -219,7 +219,8 @@
             0.025
           ],
           "captionOffsetY": 0.277,
-          "captionScale": 1.732
+          "captionScale": 1.732,
+          "captionOffsetZ": 0.047
         },
         "mobile": {
           "position": [
