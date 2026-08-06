@@ -1094,6 +1094,24 @@ function makeMaterial<T extends THREE.Material>(material: T, disposables: THREE.
   return material;
 }
 
+type FrameMediaGrayscaleUniform = { value: number };
+
+function addFrameMediaGrayscale(material: THREE.MeshBasicMaterial) {
+  const grayscaleUniform: FrameMediaGrayscaleUniform = { value: 1 };
+  material.userData.frameMediaGrayscaleUniform = grayscaleUniform;
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.frameMediaGrayscale = grayscaleUniform;
+    shader.fragmentShader = `uniform float frameMediaGrayscale;\n${shader.fragmentShader.replace(
+      "#include <map_fragment>",
+      `#include <map_fragment>
+       float frameMediaLuma = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(frameMediaLuma), frameMediaGrayscale);`,
+    )}`;
+  };
+  material.customProgramCacheKey = () => "frame-media-grayscale-v1";
+  return grayscaleUniform;
+}
+
 function makeGeometry<T extends THREE.BufferGeometry>(
   geometry: T,
   disposables: THREE.BufferGeometry[],
@@ -1436,6 +1454,7 @@ function createFrame(
     }),
     materials,
   );
+  const posterGrayscale = addFrameMediaGrayscale(posterMaterial);
   const posterMesh = new THREE.Mesh(clipShape.geometry, posterMaterial);
   posterMesh.scale.copy(clipShape.scale);
   posterMesh.position.set(setting.clipX, setting.clipY, setting.clipZ);
@@ -1453,6 +1472,7 @@ function createFrame(
     }),
     materials,
   );
+  const videoGrayscale = addFrameMediaGrayscale(videoMaterial);
   const videoMesh = new THREE.Mesh(clipShape.geometry, videoMaterial);
   videoMesh.scale.copy(clipShape.scale);
   videoMesh.position.set(setting.clipX, setting.clipY, setting.clipZ + 0.0008);
@@ -1462,6 +1482,8 @@ function createFrame(
   videoMesh.userData.posterTime = posterTime;
   videoMesh.userData.videoMaterial = videoMaterial;
   videoMesh.userData.fadeTarget = 0;
+  videoMesh.userData.frameMediaGrayscaleTarget = 1;
+  videoMesh.userData.frameMediaGrayscaleUniforms = [posterGrayscale, videoGrayscale];
   videoMesh.userData.workSlug = work.slug;
   videoMesh.userData.sceneObjectId = setting.id;
   group.add(videoMesh);
@@ -1565,6 +1587,14 @@ function createImageFrame(
     }),
     materials,
   );
+  const isNavigationImage =
+    setting.kind === "bio-frame" ||
+    setting.captionText.trim().toLowerCase() === "stills" ||
+    setting.captionText.trim().toLowerCase() === "clients";
+  const imageGrayscaleUniforms: FrameMediaGrayscaleUniform[] = [];
+  if (isNavigationImage) {
+    imageGrayscaleUniforms.push(addFrameMediaGrayscale(imageMaterial));
+  }
   const imageMesh = new THREE.Mesh(clipShape.geometry, imageMaterial);
   imageMesh.scale.copy(clipShape.scale);
   imageMesh.position.set(setting.clipX, setting.clipY, setting.clipZ);
@@ -1579,6 +1609,10 @@ function createImageFrame(
     }
   }
   imageMesh.userData.sceneObjectId = setting.id;
+  if (imageGrayscaleUniforms.length > 0) {
+    imageMesh.userData.frameMediaGrayscaleTarget = 1;
+    imageMesh.userData.frameMediaGrayscaleUniforms = imageGrayscaleUniforms;
+  }
   group.add(imageMesh);
   group.add(createFrameInteractionMesh(setting, imageMesh, geometries, materials));
 
@@ -1594,6 +1628,9 @@ function createImageFrame(
       }),
       materials,
     );
+    if (isNavigationImage) {
+      imageGrayscaleUniforms.push(addFrameMediaGrayscale(hazeMaterial));
+    }
     const hazeMesh = new THREE.Mesh(clipShape.geometry, hazeMaterial);
     hazeMesh.scale.copy(clipShape.scale);
     hazeMesh.position.set(setting.clipX, setting.clipY, setting.clipZ + 0.002);
@@ -3446,6 +3483,9 @@ function ThreeWallCanvas({
             caption.material.opacity = isHovered ? 0.58 : 1;
             caption.material.needsUpdate = true;
           }
+          if (clip.userData.frameMediaGrayscaleUniforms) {
+            clip.userData.frameMediaGrayscaleTarget = isHovered ? 0 : 1;
+          }
         }
       });
     };
@@ -3853,6 +3893,15 @@ function ThreeWallCanvas({
         group.traverse((child) => {
           if (!(child instanceof THREE.Mesh) || !child.userData?.isFrameClip) {
             return;
+          }
+          const grayscaleUniforms = child.userData
+            .frameMediaGrayscaleUniforms as FrameMediaGrayscaleUniform[] | undefined;
+          if (grayscaleUniforms) {
+            const target = (child.userData.frameMediaGrayscaleTarget as number) ?? 1;
+            grayscaleUniforms.forEach((uniform) => {
+              const next = uniform.value + (target - uniform.value) * 0.14;
+              uniform.value = Math.abs(target - next) < 0.001 ? target : next;
+            });
           }
           const mat = child.userData.videoMaterial as THREE.MeshBasicMaterial | undefined;
           if (!mat) {
