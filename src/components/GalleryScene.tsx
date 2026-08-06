@@ -424,6 +424,8 @@ function normalizeCaptionDisplayMode(value: string | null | undefined): CaptionD
 }
 
 const frameModels = [
+  "/3d-models/frames/adobe_stock_265717933_wood_square_frame_optimized.glb",
+  "/3d-models/frames/adobe_stock_259198522_art_frame_blank_04_optimized.glb",
   "/3d-models/frames/picture_frame_1520_dimensions.glb",
   "/3d-models/frames/standing_picture_frame_01.glb",
   "/3d-models/frames/picture_frame_2.glb",
