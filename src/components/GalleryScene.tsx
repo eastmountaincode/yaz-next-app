@@ -318,7 +318,8 @@ const MOBILE_CAMERA_DEFAULTS = {
   pitch: 0,
   fov: 54,
 };
-const CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(29.4);
+const DESKTOP_CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(16);
+const MOBILE_CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(29.4);
 const MOBILE_LAYOUT_BREAKPOINT = 720;
 
 type CaptionFontId =
@@ -3726,10 +3727,14 @@ function ThreeWallCanvas({
         return;
       }
 
+      const constrainedYawLimit =
+        viewportMode === "mobile"
+          ? MOBILE_CONSTRAINED_YAW_LIMIT
+          : DESKTOP_CONSTRAINED_YAW_LIMIT;
       targetRotationY = THREE.MathUtils.clamp(
         startRotationY + deltaX * 0.0026,
-        -CONSTRAINED_YAW_LIMIT,
-        CONSTRAINED_YAW_LIMIT,
+        -constrainedYawLimit,
+        constrainedYawLimit,
       );
       targetRotationX = 0;
     };
