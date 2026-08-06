@@ -3603,6 +3603,7 @@ function ThreeWallCanvas({
       if (!video) {
         return;
       }
+      clip.userData.playStarting = true;
       const posterTime = (clip.userData.posterTime as number) ?? 0;
       // Seek back to the still moment first so playback always starts at the
       // canonical pose. Errors here are non-fatal; some browsers throw if
@@ -3617,6 +3618,7 @@ function ThreeWallCanvas({
       }
 
       const revealMotionLayer = () => {
+        clip.userData.playStarting = false;
         video.dataset.frameReady = "true";
         if (clip === hoveredFrameClip) {
           clip.userData.fadeTarget = 1;
@@ -3653,6 +3655,7 @@ function ThreeWallCanvas({
             }
           })
           .catch(() => {
+            clip.userData.playStarting = false;
             // Hover is a user gesture so play() is almost always allowed; ignore
             // the edge case where the browser still rejects (e.g. background tab).
           });
@@ -3666,6 +3669,7 @@ function ThreeWallCanvas({
     const pauseFrame = (clip: THREE.Mesh) => {
       // Pause is driven by the fade tween: once opacity hits zero the animate
       // loop pauses the video and seeks back to the poster moment.
+      clip.userData.playStarting = false;
       clip.userData.fadeTarget = 0;
       syncFrameCaptionVisibility();
     };
@@ -3684,6 +3688,7 @@ function ThreeWallCanvas({
 
     const clearHoveredFrame = () => {
       if (hoveredFrameClip) {
+        hoveredFrameClip.userData.playStarting = false;
         hoveredFrameClip.userData.fadeTarget = 0;
         hoveredFrameClip = null;
       }
@@ -3997,7 +4002,7 @@ function ThreeWallCanvas({
           const target = (child.userData.fadeTarget as number) ?? 0;
           const next = mat.opacity + (target - mat.opacity) * 0.18;
           mat.opacity = Math.abs(target - next) < 0.001 ? target : next;
-          if (target === 0 && mat.opacity < 0.01) {
+          if (target === 0 && mat.opacity < 0.01 && !child.userData.playStarting) {
             const v = child.userData.video as HTMLVideoElement | undefined;
             if (v && !v.paused) {
               v.pause();
