@@ -54,7 +54,7 @@
           "wallScale": 0.855
         },
         "mobile": {
-          "captionOffsetY": 0.188,
+          "captionOffsetY": 0.849,
           "captionScale": 1.46
         }
       },
@@ -66,8 +66,8 @@
       "videoScale": 1.25,
       "videoOffsetX": 0.12,
       "videoOffsetY": 0.06,
-      "captionOffsetX": -0.042,
-      "captionOffsetY": 0.21,
+      "captionOffsetX": 0,
+      "captionOffsetY": 0.849,
       "captionOffsetZ": 0.074,
       "captionScale": 1.46
     },
@@ -202,7 +202,7 @@
         },
         "mobile": {
           "wallScale": 0.781,
-          "captionOffsetY": 0.288,
+          "captionOffsetY": 0.85,
           "captionOffsetZ": 0.053,
           "captionScale": 2.215
         }
@@ -215,8 +215,8 @@
       "videoScale": 1,
       "videoOffsetX": 0,
       "videoOffsetY": 0.07,
-      "captionOffsetX": 0.025,
-      "captionOffsetY": 0.343,
+      "captionOffsetX": 0,
+      "captionOffsetY": 0.85,
       "captionOffsetZ": 0.108,
       "captionScale": 2.733,
       "imageSrc": "/image/yaz_headshot.jpeg",
@@ -252,8 +252,8 @@
           "visible": false
         },
         "mobile": {
-          "captionOffsetX": 0.005,
-          "captionOffsetY": 0.101,
+          "captionOffsetX": 0,
+          "captionOffsetY": 0.513,
           "captionOffsetZ": 0.034,
           "captionScale": 2.921
         }
@@ -266,8 +266,8 @@
       "videoScale": 1,
       "videoOffsetX": 0,
       "videoOffsetY": 0,
-      "captionOffsetX": 0.32,
-      "captionOffsetY": 0.1,
+      "captionOffsetX": 0,
+      "captionOffsetY": 0.513,
       "captionOffsetZ": 0.021,
       "captionScale": 2.25,
       "imageSrc": "/image/stills_something_dreadful.jpg",
@@ -459,8 +459,8 @@
             -0.117
           ],
           "wallScale": 0.905,
-          "captionOffsetX": -0.006,
-          "captionOffsetY": 0.211,
+          "captionOffsetX": 0,
+          "captionOffsetY": 0.615,
           "captionScale": 1.685
         }
       },
@@ -472,8 +472,8 @@
       "videoScale": 1,
       "videoOffsetX": 0.19,
       "videoOffsetY": 0,
-      "captionOffsetX": 0.101,
-      "captionOffsetY": 0.168,
+      "captionOffsetX": 0,
+      "captionOffsetY": 0.615,
       "captionOffsetZ": 0.021,
       "captionScale": 1.504,
       "imageSrc": "/image/snoop_dogg_clients.png",
