@@ -54,7 +54,7 @@
           "wallScale": 0.855
         },
         "mobile": {
-          "captionOffsetY": 0.849,
+          "captionOffsetY": 0.188,
           "captionScale": 1.46
         }
       },
@@ -67,7 +67,7 @@
       "videoOffsetX": 0.12,
       "videoOffsetY": 0.06,
       "captionOffsetX": 0,
-      "captionOffsetY": 0.849,
+      "captionOffsetY": 0.21,
       "captionOffsetZ": 0.074,
       "captionScale": 1.46
     },
@@ -202,7 +202,7 @@
         },
         "mobile": {
           "wallScale": 0.781,
-          "captionOffsetY": 0.85,
+          "captionOffsetY": 0.288,
           "captionOffsetZ": 0.053,
           "captionScale": 2.215
         }
@@ -216,7 +216,7 @@
       "videoOffsetX": 0,
       "videoOffsetY": 0.07,
       "captionOffsetX": 0,
-      "captionOffsetY": 0.85,
+      "captionOffsetY": 0.343,
       "captionOffsetZ": 0.108,
       "captionScale": 2.733,
       "imageSrc": "/image/yaz_headshot.jpeg",
@@ -253,7 +253,7 @@
         },
         "mobile": {
           "captionOffsetX": 0,
-          "captionOffsetY": 0.513,
+          "captionOffsetY": 0.101,
           "captionOffsetZ": 0.034,
           "captionScale": 2.921
         }
@@ -267,7 +267,7 @@
       "videoOffsetX": 0,
       "videoOffsetY": 0,
       "captionOffsetX": 0,
-      "captionOffsetY": 0.513,
+      "captionOffsetY": 0.1,
       "captionOffsetZ": 0.021,
       "captionScale": 2.25,
       "imageSrc": "/image/stills_something_dreadful.jpg",
@@ -460,7 +460,7 @@
           ],
           "wallScale": 0.905,
           "captionOffsetX": 0,
-          "captionOffsetY": 0.615,
+          "captionOffsetY": 0.211,
           "captionScale": 1.685
         }
       },
@@ -473,7 +473,7 @@
       "videoOffsetX": 0.19,
       "videoOffsetY": 0,
       "captionOffsetX": 0,
-      "captionOffsetY": 0.615,
+      "captionOffsetY": 0.168,
       "captionOffsetZ": 0.021,
       "captionScale": 1.504,
       "imageSrc": "/image/snoop_dogg_clients.png",
