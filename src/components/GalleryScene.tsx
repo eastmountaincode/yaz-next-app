@@ -3618,30 +3618,48 @@ function ThreeWallCanvas({
 
       const revealMotionLayer = () => {
         video.dataset.frameReady = "true";
-        video.dataset.frameReadyPending = "false";
         if (clip === hoveredFrameClip) {
           clip.userData.fadeTarget = 1;
         }
       };
-      if (video.dataset.frameReady === "true") {
-        clip.userData.fadeTarget = 1;
-      } else if (video.dataset.frameReadyPending !== "true") {
-        video.dataset.frameReadyPending = "true";
+
+      const revealAfterNextFrame = () => {
+        let settled = false;
+        const finish = () => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          window.clearTimeout(fallbackTimeout);
+          revealMotionLayer();
+        };
+        const fallbackTimeout = window.setTimeout(finish, 160);
+
         if (typeof video.requestVideoFrameCallback === "function") {
-          video.requestVideoFrameCallback(revealMotionLayer);
-        } else if (video.readyState >= 2) {
-          window.requestAnimationFrame(revealMotionLayer);
+          video.requestVideoFrameCallback(finish);
         } else {
-          video.addEventListener("loadeddata", revealMotionLayer, { once: true });
+          window.requestAnimationFrame(finish);
         }
-      }
+      };
+
       const playPromise = video.play();
       if (playPromise) {
-        playPromise.catch(() => {
-          video.dataset.frameReadyPending = "false";
-          // Hover is a user gesture so play() is almost always allowed; ignore
-          // the edge case where the browser still rejects (e.g. background tab).
-        });
+        playPromise
+          .then(() => {
+            if (video.dataset.frameReady === "true") {
+              revealMotionLayer();
+            } else {
+              revealAfterNextFrame();
+            }
+          })
+          .catch(() => {
+            // Hover is a user gesture so play() is almost always allowed; ignore
+            // the edge case where the browser still rejects (e.g. background tab).
+          });
+      } else if (video.dataset.frameReady === "true") {
+        revealMotionLayer();
+      } else {
+        revealAfterNextFrame();
       }
     };
 
