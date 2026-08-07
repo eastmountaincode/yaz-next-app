@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PortableText, type PortableTextComponents } from "@portabletext/react";
 import Link from "next/link";
 import {
   Box,
@@ -50,6 +51,32 @@ import {
   extractClockPendulum,
   setClockPendulumSwing,
 } from "@/lib/clockPendulum";
+
+const BIO_PORTABLE_TEXT_COMPONENTS = {
+  block: {
+    normal: ({ children }) => <p>{children}</p>,
+  },
+  marks: {
+    link: ({ children, value }) => {
+      const href = typeof value?.href === "string" ? value.href : "";
+
+      if (!href) {
+        return <>{children}</>;
+      }
+
+      return (
+        <a
+          className="text-white underline decoration-white/40 underline-offset-[3px] transition-opacity hover:opacity-60"
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {children}
+        </a>
+      );
+    },
+  },
+} satisfies PortableTextComponents;
 
 type MaskShape = "rectangle" | "oval";
 type ObjectKind =
@@ -6553,9 +6580,7 @@ function BioModal({
             {bio.heading || "Bio"}
           </h2>
           <div className="space-y-5 text-[15px] leading-7 text-white/80 md:text-base md:leading-8">
-            {bio.paragraphs.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
+            <PortableText value={bio.body} components={BIO_PORTABLE_TEXT_COMPONENTS} />
           </div>
         </div>
       </div>

@@ -1,3 +1,5 @@
+import type { PortableTextBlock } from "@portabletext/react";
+
 export type SanityImageContent = {
   key: string;
   url: string;
@@ -29,7 +31,7 @@ export type PortfolioContent = {
   directorReelUrl: string;
   bio: {
     heading: string;
-    paragraphs: string[];
+    body: PortableTextBlock[];
     image: SanityImageContent | null;
   };
   clients: PortfolioClient[];
@@ -40,7 +42,7 @@ export const EMPTY_PORTFOLIO_CONTENT: PortfolioContent = {
   directorReelUrl: "",
   bio: {
     heading: "",
-    paragraphs: [],
+    body: [],
     image: null,
   },
   clients: [],
