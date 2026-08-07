@@ -6487,7 +6487,8 @@ function DirectorReelModal({
     <ModalShell
       onClose={onClose}
       ariaLabel="Director's Reel"
-      className="p-11"
+      closeButtonTone="light"
+      className="bg-white p-11 text-black"
       style={{
         width:
           "min(72rem, calc(100vw - 2rem), calc((100dvh - 8.5rem) * 16 / 9 + 5.5rem))",
@@ -6503,7 +6504,7 @@ function DirectorReelModal({
             allowFullScreen
           />
         ) : (
-          <div className="absolute inset-0 grid place-items-center px-8 text-center font-sans text-sm text-white/65">
+          <div className="absolute inset-0 grid place-items-center bg-black px-8 text-center font-sans text-sm text-white/65">
             Director&rsquo;s Reel is not available.
           </div>
         )}
@@ -6522,8 +6523,13 @@ function ProjectModal({
   const embed = videoEmbed(project.videoUrl);
 
   return (
-    <ModalShell onClose={onClose} ariaLabel={project.title} className="w-full max-w-6xl">
-      <div className="flex h-[min(calc(100dvh-3rem),52rem)] flex-col overflow-hidden bg-black font-sans">
+    <ModalShell
+      onClose={onClose}
+      ariaLabel={project.title}
+      closeButtonTone="light"
+      className="w-full max-w-6xl bg-white text-black"
+    >
+      <div className="flex h-[min(calc(100dvh-3rem),52rem)] flex-col overflow-hidden bg-white font-sans">
         <header className="shrink-0 px-6 py-7 pr-16 sm:px-9 sm:py-9 sm:pr-20">
           <h2 className="text-4xl leading-none sm:text-5xl" style={MODAL_HEADING_STYLE}>
             {project.title}
@@ -6609,8 +6615,13 @@ function StillsModal({
   onClose: () => void;
 }) {
   return (
-    <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera stills" className="w-full max-w-7xl">
-      <div className="h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-black px-5 py-8 pr-14 font-sans text-white sm:px-9 sm:py-10 sm:pr-16">
+    <ModalShell
+      onClose={onClose}
+      ariaLabel="Yaslynn Rivera stills"
+      closeButtonTone="light"
+      className="w-full max-w-7xl bg-white text-black"
+    >
+      <div className="h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-white px-5 py-8 pr-14 font-sans text-black sm:px-9 sm:py-10 sm:pr-16">
         <h2 className="text-5xl leading-none sm:text-6xl" style={MODAL_HEADING_STYLE}>
           Stills
         </h2>
@@ -6664,7 +6675,7 @@ function ClientSection({
             const embed = videoEmbed(project.videoUrl);
             return (
               <article key={project.key}>
-                <h3 className="mb-3 text-base leading-tight text-white/80 sm:text-lg">
+                <h3 className="mb-3 text-base leading-tight text-black/70 sm:text-lg">
                   {project.title}
                 </h3>
                 <div className="relative aspect-video w-full bg-black">
@@ -6708,9 +6719,10 @@ function ClientsModal({
     <ModalShell
       onClose={onClose}
       ariaLabelledBy="clients-modal-title"
-      className="w-full max-w-6xl"
+      closeButtonTone="light"
+      className="w-full max-w-6xl bg-white text-black"
     >
-      <div className="flex h-[min(calc(100dvh-3rem),54rem)] flex-col overflow-hidden bg-black font-sans text-white">
+      <div className="flex h-[min(calc(100dvh-3rem),54rem)] flex-col overflow-hidden bg-white font-sans text-black">
         <header className="shrink-0 px-6 pb-7 pt-8 pr-16 sm:px-9 sm:pb-9 sm:pt-10 sm:pr-20">
           <h2
             id="clients-modal-title"
