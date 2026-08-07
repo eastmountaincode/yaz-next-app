@@ -9,10 +9,8 @@ import {
   CircleHelp,
   Eye,
   EyeOff,
-  ExternalLink,
   Flame,
   Lightbulb,
-  Play,
   Lock,
   Plus,
   RotateCcw,
@@ -32,10 +30,15 @@ import savedClockComposite from "@/content/clock.json";
 import savedComposites from "@/content/composites.json";
 import { framePictures } from "@/content/framePictures";
 import optionalModels from "@/content/optionalModels.json";
-import { yaslynnStills } from "@/content/stills";
-import { works, yaslynnBio, type WorkItem } from "@/content/works";
+import { works } from "@/content/works";
 import { candleFlameAtlas } from "@/lib/candleComposite";
 import { resolveModelAssetUrl } from "@/lib/modelAssetUrl";
+import type {
+  PortfolioClient,
+  PortfolioContent,
+  PortfolioProject,
+  SanityImageContent,
+} from "@/sanity/types";
 import {
   ClockCompositeConfig,
   clockHandAngles,
@@ -93,6 +96,28 @@ function PreloadedImage({
       className={`absolute inset-0 size-full ${className}`}
       src={src}
       alt={alt}
+      decoding="async"
+    />
+  );
+}
+
+function ContentImage({
+  image,
+  className = "",
+}: {
+  image: SanityImageContent;
+  className?: string;
+}) {
+  return (
+    // Sanity serves the exact URL preloaded by SceneLoadingScreen. Keeping that
+    // URL intact avoids a second optimized variant request when a modal opens.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className={className}
+      src={image.url}
+      alt={image.alt}
+      width={image.width}
+      height={image.height}
       decoding="async"
     />
   );
@@ -2827,7 +2852,10 @@ async function loadSceneModels(settings: SceneObjectSetting[]) {
   return new Map(loadedModels);
 }
 
-function scenePreloadAssets(settings: SceneObjectSetting[]) {
+function scenePreloadAssets(
+  settings: SceneObjectSetting[],
+  portfolio: PortfolioContent,
+) {
   const assets = new Set<string>([
     WALL_TEXTURE_PATH,
     FLOOR_COLOR_PATH,
@@ -2840,12 +2868,6 @@ function scenePreloadAssets(settings: SceneObjectSetting[]) {
 
   sceneModelPaths(settings).forEach((model) => assets.add(resolveModelAssetUrl(model)));
   framePictures.forEach((picture) => assets.add(picture.src));
-  yaslynnStills.forEach((still) => assets.add(still.imageSrc));
-  works.forEach((work) => {
-    if (work.modalPosterSrc) {
-      assets.add(work.modalPosterSrc);
-    }
-  });
   settings.forEach((setting) => {
     if (setting.kind === "frame") {
       const clip = workForSetting(setting)?.clipSrc;
@@ -2859,6 +2881,12 @@ function scenePreloadAssets(settings: SceneObjectSetting[]) {
     } else if (setting.kind === "candle-composite") {
       assets.add(resolveModelAssetUrl(setting.flameTexture));
     }
+  });
+  if (portfolio.bio.image?.url) {
+    assets.add(portfolio.bio.image.url);
+  }
+  portfolio.stillProjects.forEach((project) => {
+    project.images.forEach((image) => assets.add(image.url));
   });
 
   return [...assets];
@@ -4688,7 +4716,7 @@ function TooltipLabel({ label, tooltip }: { label: string; tooltip?: string }) {
   );
 }
 
-export function GalleryScene() {
+export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   const storageReadyRef = useRef(false);
   const saveTimeoutRef = useRef<number | null>(null);
   const speakerAudioRef = useRef<SpeakerAudioChain | null>(null);
@@ -4751,6 +4779,15 @@ export function GalleryScene() {
   const openWork = useMemo(
     () => (openWorkSlug ? works.find((w) => w.slug === openWorkSlug) ?? null : null),
     [openWorkSlug],
+  );
+  const openPortfolioProject = useMemo(
+    () =>
+      openWorkSlug
+        ? portfolio.clients
+            .flatMap((client) => client.projects)
+            .find((project) => project.slug === openWorkSlug) ?? null
+        : null,
+    [openWorkSlug, portfolio.clients],
   );
   const hoveredWork = useMemo(
     () =>
@@ -4844,13 +4881,13 @@ export function GalleryScene() {
 
           setSettings(loadedSettings);
           setLighting(loadedLighting);
-          setInitialAssetPaths(scenePreloadAssets(loadedSettings));
+          setInitialAssetPaths(scenePreloadAssets(loadedSettings, portfolio));
           setSelectedObject((current) => Math.min(current, loadedSettings.length - 1));
           setResetSignal((current) => current + 1);
         } catch (error) {
           if (!cancelled) {
             setSceneError(error instanceof Error ? error.message : String(error));
-            setInitialAssetPaths(scenePreloadAssets(defaultSceneSettings));
+            setInitialAssetPaths(scenePreloadAssets(defaultSceneSettings, portfolio));
           }
         } finally {
           if (!cancelled) {
@@ -4864,7 +4901,7 @@ export function GalleryScene() {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, []);
+  }, [portfolio]);
 
   useEffect(() => {
     if (!storageReadyRef.current) {
@@ -6264,30 +6301,29 @@ export function GalleryScene() {
       {openWork?.slug === "yaslynn-director-reel" ? (
         <DirectorReelModal
           key={openWork.slug}
-          work={openWork}
+          sourceUrl={portfolio.directorReelUrl}
           onClose={() => setOpenWorkSlug(null)}
         />
-      ) : openWork ? (
-        <WorkModal
-          key={openWork.slug}
-          work={openWork}
+      ) : openPortfolioProject ? (
+        <ProjectModal
+          key={openPortfolioProject.key}
+          project={openPortfolioProject}
           onClose={() => setOpenWorkSlug(null)}
-          onSelectWork={setOpenWorkSlug}
         />
       ) : null}
       {bioOpen ? (
-        <BioModal onClose={() => setBioOpen(false)} />
+        <BioModal bio={portfolio.bio} onClose={() => setBioOpen(false)} />
       ) : null}
       {openImageFrameModal === "stills" ? (
-        <StillsModal onClose={() => setOpenImageFrameModal(null)} />
+        <StillsModal
+          projects={portfolio.stillProjects}
+          onClose={() => setOpenImageFrameModal(null)}
+        />
       ) : null}
       {openImageFrameModal === "clients" ? (
         <ClientsModal
+          clients={portfolio.clients}
           onClose={() => setOpenImageFrameModal(null)}
-          onSelectWork={(slug) => {
-            setOpenImageFrameModal(null);
-            setOpenWorkSlug(slug);
-          }}
         />
       ) : null}
     </section>
@@ -6404,13 +6440,13 @@ function ModalShell({
 }
 
 function DirectorReelModal({
-  work,
+  sourceUrl,
   onClose,
 }: {
-  work: WorkItem;
+  sourceUrl: string;
   onClose: () => void;
 }) {
-  const embed = videoEmbed(work.sourceUrl);
+  const embed = videoEmbed(sourceUrl);
 
   return (
     <ModalShell
@@ -6427,143 +6463,97 @@ function DirectorReelModal({
           <iframe
             className="absolute inset-0 size-full"
             src={embed.src}
-            title={work.sourceTitle}
+            title="Director's Reel"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
           />
         ) : (
-          <video
-            className="absolute inset-0 size-full object-contain"
-            src={work.clipSrc}
-            controls
-            playsInline
-            preload="metadata"
-          />
+          <div className="absolute inset-0 grid place-items-center px-8 text-center font-sans text-sm text-white/65">
+            Director&rsquo;s Reel is not available.
+          </div>
         )}
       </div>
     </ModalShell>
   );
 }
 
-function WorkModal({
-  work,
+function ProjectModal({
+  project,
   onClose,
-  onSelectWork,
 }: {
-  work: WorkItem;
+  project: PortfolioProject;
   onClose: () => void;
-  onSelectWork: (slug: string) => void;
 }) {
-  const embed = videoEmbed(work.sourceUrl);
-  const relatedWorks = works.filter(
-    (candidate) => candidate.artist === work.artist && candidate.slug !== work.slug,
-  );
+  const embed = videoEmbed(project.videoUrl);
 
   return (
-    <ModalShell onClose={onClose} ariaLabel={work.slug} className="w-full max-w-6xl">
-      <div className="grid h-[min(calc(100dvh-3rem),52rem)] overflow-hidden bg-[#16120d] font-sans lg:grid-cols-[1.35fr_0.75fr]">
-        <div className="relative grid min-h-[20rem] overflow-hidden bg-black/35">
+    <ModalShell onClose={onClose} ariaLabel={project.title} className="w-full max-w-6xl">
+      <div className="flex h-[min(calc(100dvh-3rem),52rem)] flex-col overflow-hidden bg-black font-sans">
+        <header className="shrink-0 px-6 py-7 pr-16 sm:px-9 sm:py-9 sm:pr-20">
+          <h2 className="text-4xl leading-none sm:text-5xl" style={MODAL_HEADING_STYLE}>
+            {project.title}
+          </h2>
+        </header>
+        <div className="relative min-h-0 flex-1 bg-black">
           {embed ? (
             <iframe
-              className="relative size-full min-h-[20rem] lg:min-h-[36rem]"
+              className="absolute inset-0 size-full"
               src={embed.src}
-              title={work.sourceTitle}
+              title={project.title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
             />
           ) : (
-            <video
-              className="size-full object-cover"
-              src={work.clipSrc}
-              controls
-              playsInline
-              preload="metadata"
-            />
-          )}
-        </div>
-        <div className="min-h-0 overflow-y-auto px-5 py-6 text-[#f6f0e5] sm:px-7 sm:py-8">
-          <div className="mb-6">
-            <h2
-              className="text-5xl leading-none sm:text-6xl"
-              style={MODAL_HEADING_STYLE}
+            <a
+              className="absolute inset-0 grid place-items-center text-sm text-white transition-opacity hover:opacity-60"
+              href={project.videoUrl}
+              target="_blank"
+              rel="noreferrer"
             >
-              {work.title}
-            </h2>
-            <p className="mt-2 text-base text-[#d8cdbb]">{work.artist}</p>
-          </div>
-
-          <div className="border-t border-white/15 py-4">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-[#a99d8a]">
-              Yaslynn&rsquo;s Role
-            </p>
-            <p className="text-sm text-[#f3e6d3]">{work.roles.join(", ")}</p>
-          </div>
-
-          <p className="border-t border-white/15 pt-5 text-sm leading-6 text-[#d8cdbb]">
-            {work.modalDescription}
-          </p>
-
-          <a
-            className="mt-5 inline-flex items-center gap-2 border-b border-current pb-1 text-sm text-[#f6f0e5] transition-opacity hover:opacity-60"
-            href={work.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Play size={15} />
-            Watch on {embed?.platform ?? "source"}
-            <ExternalLink size={14} />
-          </a>
-
-          {relatedWorks.length > 0 ? (
-            <div className="mt-7">
-              <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-[#a99d8a]">
-                More with {work.artist}
-              </p>
-              <div className="border-t border-white/15">
-                {relatedWorks.map((related) => (
-                  <button
-                    key={related.slug}
-                    type="button"
-                    className="block w-full border-b border-white/15 px-1 py-3 text-left transition-opacity hover:opacity-60"
-                    onClick={() => onSelectWork(related.slug)}
-                  >
-                    <span className="block truncate text-sm text-[#f6f0e5]">
-                      {related.title}
-                    </span>
-                    <span className="mt-1 block truncate text-xs text-[#b9aa92]">
-                      {related.credit}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
+              Open video
+            </a>
+          )}
         </div>
       </div>
     </ModalShell>
   );
 }
 
-function BioModal({ onClose }: { onClose: () => void }) {
+function BioModal({
+  bio,
+  onClose,
+}: {
+  bio: PortfolioContent["bio"];
+  onClose: () => void;
+}) {
+  const hasImage = Boolean(bio.image);
+
   return (
     <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera bio" className="w-full max-w-5xl">
-      <div className="grid h-[min(calc(100dvh-3rem),48rem)] grid-rows-[minmax(12rem,35vh)_minmax(0,1fr)] overflow-hidden bg-[#16120d] font-sans md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1">
-        <div className="relative min-h-0 bg-black/35">
-          <PreloadedImage
-            className="object-contain object-center md:object-cover md:object-center"
-            src={BIO_FRAME_IMAGE_PATH}
-            alt="Yaslynn Rivera"
-          />
-        </div>
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-7 text-[#f6f0e5] md:px-8 md:py-9">
+      <div
+        className={`grid h-[min(calc(100dvh-3rem),48rem)] overflow-hidden bg-black font-sans ${
+          hasImage
+            ? "grid-rows-[minmax(12rem,35vh)_minmax(0,1fr)] md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1"
+            : "grid-cols-1"
+        }`}
+      >
+        {bio.image ? (
+          <div className="relative min-h-0 bg-black">
+            <ContentImage
+              image={bio.image}
+              className="absolute inset-0 size-full object-contain object-center md:object-cover"
+            />
+          </div>
+        ) : null}
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-8 pr-14 text-white sm:px-9 sm:py-10 sm:pr-16">
           <h2
-            className="mb-5 text-5xl leading-none md:text-6xl"
+            className="mb-7 text-5xl leading-none md:text-6xl"
             style={MODAL_HEADING_STYLE}
           >
-            Yaslynn Rivera
+            {bio.heading || "Bio"}
           </h2>
-          <div className="space-y-4 text-sm leading-7 text-[#e8dccb] md:text-[15px]">
-            {yaslynnBio.map((paragraph) => (
+          <div className="space-y-5 text-[15px] leading-7 text-white/80 md:text-base md:leading-8">
+            {bio.paragraphs.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
           </div>
@@ -6573,91 +6563,117 @@ function BioModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function StillsModal({ onClose }: { onClose: () => void }) {
-  const [selectedStillId, setSelectedStillId] = useState(yaslynnStills[0]?.id ?? "");
-  const selectedStill =
-    yaslynnStills.find((still) => still.id === selectedStillId) ?? yaslynnStills[0];
-
-  if (!selectedStill) {
-    return null;
-  }
-
+function StillsModal({
+  projects,
+  onClose,
+}: {
+  projects: PortfolioContent["stillProjects"];
+  onClose: () => void;
+}) {
   return (
-    <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera stills" className="w-full max-w-6xl">
-      <div className="grid h-[min(calc(100dvh-3rem),52rem)] grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-[#16120d] font-sans">
-        <div className="relative min-h-0 bg-black/45">
-          <PreloadedImage
-            className="object-contain object-center"
-            src={selectedStill.imageSrc}
-            alt={selectedStill.alt}
-          />
-        </div>
+    <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera stills" className="w-full max-w-7xl">
+      <div className="h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-black px-5 py-8 pr-14 font-sans text-white sm:px-9 sm:py-10 sm:pr-16">
+        <h2 className="text-5xl leading-none sm:text-6xl" style={MODAL_HEADING_STYLE}>
+          Stills
+        </h2>
 
-        <div className="px-5 py-5 text-[#f6f0e5] sm:px-7">
-          <h2
-            className="text-4xl leading-none sm:text-5xl"
-            style={MODAL_HEADING_STYLE}
-          >
-            {selectedStill.title}
-          </h2>
-
-          {yaslynnStills.length > 1 ? (
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-              {yaslynnStills.map((still) => (
-                <button
-                  key={still.id}
-                  type="button"
-                  className={`relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden border transition ${
-                    still.id === selectedStill.id
-                      ? "border-[#f6f0e5]"
-                      : "border-white/15 opacity-65 hover:opacity-100"
-                  }`}
-                  aria-label={`Show ${still.title}`}
-                  onClick={() => setSelectedStillId(still.id)}
-                >
-                  <PreloadedImage
-                    className="object-cover"
-                    src={still.imageSrc}
-                    alt=""
-                  />
-                </button>
-              ))}
-            </div>
-          ) : null}
+        <div className="mt-12 space-y-16">
+          {projects.map((project) => (
+            <section key={project.key}>
+              <h3 className="mb-5 text-xl leading-tight sm:text-2xl">{project.title}</h3>
+              <div className="grid items-start gap-4 sm:grid-cols-2">
+                {project.images.map((image) => (
+                  <ContentImage key={image.key} image={image} className="h-auto w-full" />
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       </div>
     </ModalShell>
   );
 }
 
-function ClientsModal({
-  onClose,
-  onSelectWork,
+function ClientSection({
+  client,
+  initiallyOpen,
 }: {
-  onClose: () => void;
-  onSelectWork: (slug: string) => void;
+  client: PortfolioClient;
+  initiallyOpen: boolean;
 }) {
-  const clientGroups = useMemo(() => {
-    const groups = new Map<string, WorkItem[]>();
+  const [open, setOpen] = useState(initiallyOpen);
 
-    works.forEach((work) => {
-      if (work.artist === "Yaslynn Rivera") {
-        return;
-      }
-      groups.set(work.artist, [...(groups.get(work.artist) ?? []), work]);
-    });
+  return (
+    <section>
+      <button
+        type="button"
+        className="flex w-full cursor-pointer items-center justify-between gap-5 py-3 text-left transition-opacity hover:opacity-60"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="text-2xl leading-tight sm:text-3xl">{client.name}</span>
+        <ChevronDown
+          className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          size={22}
+          strokeWidth={1.5}
+          aria-hidden="true"
+        />
+      </button>
 
-    return Array.from(groups, ([name, clientWorks]) => ({ name, works: clientWorks }));
-  }, []);
+      {open ? (
+        <div className="space-y-10 pb-12 pt-5">
+          {client.projects.map((project) => {
+            const embed = videoEmbed(project.videoUrl);
+            return (
+              <article key={project.key}>
+                <h3 className="mb-3 text-base leading-tight text-white/80 sm:text-lg">
+                  {project.title}
+                </h3>
+                <div className="relative aspect-video w-full bg-black">
+                  {embed ? (
+                    <iframe
+                      className="absolute inset-0 size-full"
+                      src={embed.src}
+                      title={`${client.name} — ${project.title}`}
+                      loading="lazy"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <a
+                      className="absolute inset-0 grid place-items-center text-sm text-white transition-opacity hover:opacity-60"
+                      href={project.videoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open video
+                    </a>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
+function ClientsModal({
+  clients,
+  onClose,
+}: {
+  clients: PortfolioClient[];
+  onClose: () => void;
+}) {
   return (
     <ModalShell
       onClose={onClose}
       ariaLabelledBy="clients-modal-title"
-      className="w-full max-w-4xl"
+      className="w-full max-w-6xl"
     >
-      <div className="flex h-[min(calc(100dvh-3rem),52rem)] flex-col overflow-hidden bg-[#16120d] font-sans text-[#f6f0e5]">
-        <header className="px-6 pb-4 pt-7 sm:px-8 sm:pb-5 sm:pt-9">
+      <div className="flex h-[min(calc(100dvh-3rem),54rem)] flex-col overflow-hidden bg-black font-sans text-white">
+        <header className="shrink-0 px-6 pb-7 pt-8 pr-16 sm:px-9 sm:pb-9 sm:pt-10 sm:pr-20">
           <h2
             id="clients-modal-title"
             className="text-5xl leading-none sm:text-6xl"
@@ -6667,52 +6683,10 @@ function ClientsModal({
           </h2>
         </header>
 
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 pb-7 sm:px-8 sm:pb-9">
-          <div className="border-t border-white/15">
-            {clientGroups.map((client, index) => (
-              <details
-                key={client.name}
-                open={index === 0}
-                className="group border-b border-white/15"
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-1 py-4 transition-opacity hover:opacity-60 marker:content-none">
-                  <span>
-                    <span className="block text-xl leading-tight sm:text-2xl">{client.name}</span>
-                    <span className="mt-1 block text-xs text-[#b9aa92]">
-                      {client.works.length} {client.works.length === 1 ? "project" : "projects"}
-                    </span>
-                  </span>
-                  <ChevronDown
-                    className="shrink-0 text-[#b9aa92] transition-transform group-open:rotate-180"
-                    size={20}
-                    aria-hidden="true"
-                  />
-                </summary>
-
-                <div className="border-t border-white/15">
-                  {client.works.map((work) => (
-                    <button
-                      key={work.slug}
-                      type="button"
-                      onClick={() => onSelectWork(work.slug)}
-                      className="group/project flex w-full cursor-pointer items-center justify-between gap-4 border-b border-white/10 px-1 py-3 text-left transition-opacity last:border-b-0 hover:opacity-60"
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-base leading-tight text-[#f6f0e5]">
-                          {work.title}
-                        </span>
-                        <span className="mt-1 block text-xs text-[#b9aa92]">
-                          {work.credit}
-                        </span>
-                      </span>
-                      <span className="inline-flex shrink-0 items-center gap-2 text-xs uppercase tracking-[0.12em] text-[#d8cdbb] transition group-hover/project:text-white">
-                        <Play size={14} fill="currentColor" />
-                        Watch
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </details>
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 pb-10 sm:px-9 sm:pb-12">
+          <div className="space-y-2">
+            {clients.map((client, index) => (
+              <ClientSection key={client.key} client={client} initiallyOpen={index === 0} />
             ))}
           </div>
         </div>
