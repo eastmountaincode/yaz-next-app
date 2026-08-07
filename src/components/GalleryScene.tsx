@@ -66,7 +66,7 @@ const BIO_PORTABLE_TEXT_COMPONENTS = {
 
       return (
         <a
-          className="text-white underline decoration-white/40 underline-offset-[3px] transition-opacity hover:opacity-60"
+          className="text-inherit underline decoration-current/40 underline-offset-[3px] transition-opacity hover:opacity-60"
           href={href}
           target="_blank"
           rel="noreferrer"
@@ -6398,6 +6398,8 @@ const MODAL_STYLE = {
   surface: "relative max-h-full bg-black text-[#f6f0e5]",
   closeButton:
     "absolute right-2 top-2 z-20 grid size-9 cursor-pointer place-items-center bg-black/55 text-white transition-colors hover:bg-black/80 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
+  lightCloseButton:
+    "absolute right-2 top-2 z-20 grid size-9 cursor-pointer place-items-center bg-white/70 text-black transition-colors hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black",
 } as const;
 
 const MODAL_HEADING_STYLE = {
@@ -6425,6 +6427,7 @@ function ModalShell({
   onClose,
   ariaLabel,
   ariaLabelledBy,
+  closeButtonTone = "dark",
   className = "",
   style,
   children,
@@ -6432,6 +6435,7 @@ function ModalShell({
   onClose: () => void;
   ariaLabel?: string;
   ariaLabelledBy?: string;
+  closeButtonTone?: "dark" | "light";
   className?: string;
   style?: React.CSSProperties;
   children: React.ReactNode;
@@ -6456,7 +6460,11 @@ function ModalShell({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className={MODAL_STYLE.closeButton}
+          className={
+            closeButtonTone === "light"
+              ? MODAL_STYLE.lightCloseButton
+              : MODAL_STYLE.closeButton
+          }
         >
           <X size={20} strokeWidth={1.5} />
         </button>
@@ -6556,30 +6564,35 @@ function BioModal({
   const hasImage = Boolean(bio.image);
 
   return (
-    <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera bio" className="w-full max-w-5xl">
+    <ModalShell
+      onClose={onClose}
+      ariaLabel="Yaslynn Rivera bio"
+      closeButtonTone="light"
+      className="w-full max-w-5xl bg-white text-black"
+    >
       <div
-        className={`h-[min(calc(100dvh-2rem),48rem)] overflow-y-auto overscroll-contain bg-black font-sans md:grid md:h-[min(calc(100dvh-3rem),48rem)] md:overflow-hidden ${
+        className={`h-[min(calc(100dvh-2rem),48rem)] overflow-y-auto overscroll-contain bg-white font-sans md:grid md:h-[min(calc(100dvh-3rem),48rem)] md:overflow-hidden ${
           hasImage
             ? "md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1"
             : "grid-cols-1"
         }`}
       >
         {bio.image ? (
-          <div className="relative aspect-[4/5] w-full bg-black min-[480px]:mx-auto min-[480px]:mt-[7%] min-[480px]:w-[86%] sm:mt-8 sm:w-[72%] sm:max-w-md md:mx-0 md:mt-0 md:aspect-auto md:min-h-0 md:w-full md:max-w-none">
+          <div className="relative aspect-[4/5] w-full bg-white min-[480px]:mx-auto min-[480px]:mt-[7%] min-[480px]:w-[86%] sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
             <ContentImage
               image={bio.image}
               className="absolute inset-0 size-full object-cover object-[50%_35%]"
             />
           </div>
         ) : null}
-        <div className="min-h-0 px-6 py-8 pr-14 text-white sm:px-9 sm:py-10 sm:pr-16 md:overflow-y-auto md:overscroll-contain">
+        <div className="min-h-0 px-6 py-8 pr-14 text-black sm:px-9 sm:py-10 sm:pr-16 md:overflow-y-auto md:overscroll-contain">
           <h2
             className="mb-7 text-5xl leading-none md:text-6xl"
             style={MODAL_HEADING_STYLE}
           >
             {bio.heading || "Bio"}
           </h2>
-          <div className="space-y-5 text-[15px] leading-7 text-white/80 md:text-base md:leading-8">
+          <div className="space-y-5 text-[15px] leading-7 text-black/75 md:text-base md:leading-8">
             <PortableText value={bio.body} components={BIO_PORTABLE_TEXT_COMPONENTS} />
           </div>
         </div>
