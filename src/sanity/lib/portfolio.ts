@@ -1,0 +1,139 @@
+import "server-only";
+
+import { defineQuery } from "next-sanity";
+import { sanityClient } from "@/sanity/lib/client";
+import {
+  EMPTY_PORTFOLIO_CONTENT,
+  type PortfolioContent,
+  type SanityImageContent,
+} from "@/sanity/types";
+
+const portfolioQuery = defineQuery(`
+  *[_type == "portfolio" && _id == "portfolio"][0] {
+    directorReelUrl,
+    bioHeading,
+    bioBody,
+    bioImage {
+      "key": coalesce(_key, asset._ref),
+      "url": asset->url,
+      "width": asset->metadata.dimensions.width,
+      "height": asset->metadata.dimensions.height,
+      alt
+    },
+    clients[] {
+      "key": _key,
+      name,
+      projects[] {
+        "key": _key,
+        "slug": slug.current,
+        title,
+        videoUrl
+      }
+    },
+    stillProjects[] {
+      "key": _key,
+      title,
+      images[] {
+        "key": coalesce(_key, asset._ref),
+        "url": asset->url,
+        "width": asset->metadata.dimensions.width,
+        "height": asset->metadata.dimensions.height,
+        alt
+      }
+    }
+  }
+`);
+
+type RawPortfolioContent = {
+  directorReelUrl?: string;
+  bioHeading?: string;
+  bioBody?: string[];
+  bioImage?: Partial<SanityImageContent> | null;
+  clients?: Array<{
+    key?: string;
+    name?: string;
+    projects?: Array<{
+      key?: string;
+      slug?: string;
+      title?: string;
+      videoUrl?: string;
+    }>;
+  }>;
+  stillProjects?: Array<{
+    key?: string;
+    title?: string;
+    images?: Array<Partial<SanityImageContent>>;
+  }>;
+};
+
+function normalizeImage(
+  image: Partial<SanityImageContent> | null | undefined,
+): SanityImageContent | null {
+  if (!image?.url) {
+    return null;
+  }
+
+  return {
+    key: image.key || image.url,
+    url: image.url,
+    alt: image.alt || "",
+    width: image.width,
+    height: image.height,
+  };
+}
+
+function normalizePortfolio(content: RawPortfolioContent | null): PortfolioContent {
+  if (!content) {
+    return EMPTY_PORTFOLIO_CONTENT;
+  }
+
+  return {
+    directorReelUrl: content.directorReelUrl || "",
+    bio: {
+      heading: content.bioHeading || "",
+      paragraphs: (content.bioBody ?? []).filter(Boolean),
+      image: normalizeImage(content.bioImage),
+    },
+    clients: (content.clients ?? [])
+      .filter((client) => client.name)
+      .map((client, clientIndex) => ({
+        key: client.key || `client-${clientIndex}`,
+        name: client.name || "",
+        projects: (client.projects ?? [])
+          .filter((project) => project.title && project.videoUrl)
+          .map((project, projectIndex) => ({
+            key: project.key || `project-${projectIndex}`,
+            slug: project.slug || project.key || `project-${projectIndex}`,
+            title: project.title || "",
+            videoUrl: project.videoUrl || "",
+          })),
+      })),
+    stillProjects: (content.stillProjects ?? [])
+      .filter((project) => project.title)
+      .map((project, projectIndex) => ({
+        key: project.key || `stills-${projectIndex}`,
+        title: project.title || "",
+        images: (project.images ?? [])
+          .map(normalizeImage)
+          .filter((image): image is SanityImageContent => image !== null),
+      })),
+  };
+}
+
+export async function getPortfolioContent(): Promise<PortfolioContent> {
+  if (!sanityClient) {
+    return EMPTY_PORTFOLIO_CONTENT;
+  }
+
+  try {
+    const content = await sanityClient.fetch<RawPortfolioContent | null>(
+      portfolioQuery,
+      {},
+      { next: { revalidate: 60, tags: ["portfolio"] } },
+    );
+    return normalizePortfolio(content);
+  } catch (error) {
+    console.error("Could not load portfolio content from Sanity.", error);
+    return EMPTY_PORTFOLIO_CONTENT;
+  }
+}
