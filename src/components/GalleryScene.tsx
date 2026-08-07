@@ -6584,14 +6584,14 @@ function BioModal({
         }`}
       >
         {bio.image ? (
-          <div className="relative m-6 aspect-[4/5] w-auto bg-white min-[480px]:m-[7%] sm:mx-auto sm:my-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
+          <div className="relative m-6 mb-0 aspect-[4/5] w-auto bg-white min-[480px]:m-[7%] min-[480px]:mb-0 sm:mx-auto sm:mb-0 sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
             <ContentImage
               image={bio.image}
               className="absolute inset-0 size-full object-cover object-[50%_35%]"
             />
           </div>
         ) : null}
-        <div className="min-h-0 px-6 py-8 pr-14 text-black sm:px-9 sm:py-10 sm:pr-16 md:overflow-y-auto md:overscroll-contain">
+        <div className="min-h-0 px-6 pb-8 pt-6 pr-14 text-black sm:px-9 sm:pb-10 sm:pt-8 sm:pr-16 md:overflow-y-auto md:overscroll-contain md:py-10">
           <h2
             className="mb-7 text-5xl leading-none md:text-6xl"
             style={MODAL_HEADING_STYLE}
