@@ -6659,7 +6659,7 @@ function StillArtistCover({ artist }: { artist: StillArtist }) {
   const coverImage = artist.coverImage ?? artist.images[0];
 
   return coverImage ? (
-    <ContentImage image={coverImage} className="size-full object-cover grayscale" />
+    <ContentImage image={coverImage} className="size-full object-cover" />
   ) : (
     <div className="size-full bg-neutral-200" aria-hidden="true" />
   );
@@ -6749,7 +6749,7 @@ function ClientCover({ client }: { client: PortfolioClient }) {
           ...client.coverImage,
           alt: client.coverImage.alt || `${client.name} cover`,
         }}
-        className="size-full object-cover grayscale"
+        className="size-full object-cover"
       />
     );
   }
@@ -6757,7 +6757,7 @@ function ClientCover({ client }: { client: PortfolioClient }) {
   if (fallbackUrl) {
     return (
       <div
-        className="size-full bg-cover bg-center grayscale"
+        className="size-full bg-cover bg-center"
         style={{ backgroundImage: `url("${fallbackUrl}")` }}
         aria-hidden="true"
       />
@@ -6839,17 +6839,17 @@ function ClientsModal({
 
         {selectedClient ? (
           <div>
-            <div className="mt-5 flex items-center gap-4 sm:mt-6 sm:gap-5">
+            <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-baseline sm:mt-6">
               <button
                 type="button"
                 onClick={() => setSelectedClientKey(null)}
-                className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                className="inline-flex cursor-pointer items-center gap-2 justify-self-start text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 aria-label="Back to all clients"
               >
                 <ArrowLeft size={18} strokeWidth={1.5} aria-hidden="true" />
                 <span>Back</span>
               </button>
-              <h3 className="min-w-0 text-3xl leading-tight sm:text-4xl">
+              <h3 className="min-w-0 text-center text-3xl leading-tight sm:text-4xl">
                 {selectedClient.name}
               </h3>
             </div>
