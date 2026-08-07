@@ -6691,7 +6691,7 @@ function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: ()
 
         {selectedArtist ? (
           <div>
-            <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-baseline sm:mt-6">
+            <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end sm:mt-4">
               <button
                 type="button"
                 onClick={() => setSelectedArtistKey(null)}
@@ -6839,7 +6839,7 @@ function ClientsModal({
 
         {selectedClient ? (
           <div>
-            <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-baseline sm:mt-6">
+            <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end sm:mt-4">
               <button
                 type="button"
                 onClick={() => setSelectedClientKey(null)}
