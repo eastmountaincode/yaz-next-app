@@ -6239,7 +6239,13 @@ export function GalleryScene() {
         </div>
       ) : null}
 
-      {openWork ? (
+      {openWork?.slug === "yaslynn-director-reel" ? (
+        <DirectorReelModal
+          key={openWork.slug}
+          work={openWork}
+          onClose={() => setOpenWorkSlug(null)}
+        />
+      ) : openWork ? (
         <WorkModal
           key={openWork.slug}
           work={openWork}
@@ -6299,6 +6305,101 @@ function videoEmbed(sourceUrl: string): VideoEmbed | null {
   } catch {
     return null;
   }
+}
+
+const MODAL_STYLE = {
+  backdrop:
+    "absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-6",
+  surface: "relative bg-black",
+  closeButton:
+    "absolute right-0 top-0 z-20 grid size-11 cursor-pointer place-items-center bg-black/80 text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
+} as const;
+
+function useModalDismissal(onClose: () => void) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+}
+
+function DirectorReelModal({
+  work,
+  onClose,
+}: {
+  work: WorkItem;
+  onClose: () => void;
+}) {
+  const embed = videoEmbed(work.sourceUrl);
+  const [embedReady, setEmbedReady] = useState(false);
+
+  useModalDismissal(onClose);
+
+  return (
+    <div
+      className={MODAL_STYLE.backdrop}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Director's Reel"
+    >
+      <div
+        className={MODAL_STYLE.surface}
+        style={{
+          aspectRatio: "16 / 9",
+          width: "min(72rem, calc(100vw - 2rem), calc((100dvh - 2rem) * 16 / 9))",
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {work.modalPosterSrc ? (
+          <PreloadedImage
+            className={`pointer-events-none object-contain object-center ${
+              embedReady ? "opacity-0" : "opacity-100"
+            }`}
+            src={work.modalPosterSrc}
+            alt=""
+          />
+        ) : null}
+        {embed ? (
+          <iframe
+            className={`absolute inset-0 size-full ${
+              work.modalPosterSrc && !embedReady ? "opacity-0" : "opacity-100"
+            }`}
+            src={embed.src}
+            title={work.sourceTitle}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            onLoad={() => setEmbedReady(true)}
+          />
+        ) : (
+          <video
+            className="absolute inset-0 size-full object-contain"
+            src={work.clipSrc}
+            controls
+            playsInline
+            preload="metadata"
+          />
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close Director's Reel"
+          className={MODAL_STYLE.closeButton}
+        >
+          <X size={20} strokeWidth={1.5} />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function WorkModal({
