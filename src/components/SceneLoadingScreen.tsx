@@ -127,6 +127,26 @@ export function SceneLoadingScreen({
   const [loadedCount, setLoadedCount] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [headingFontReady, setHeadingFontReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const descriptor = '400 48px "Yaz Winky Show"';
+    const text = "Yaslynn Rivera";
+
+    document.fonts
+      .load(descriptor, text)
+      .then(() => {
+        if (!cancelled && document.fonts.check(descriptor, text)) {
+          setHeadingFontReady(true);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!assets || assetsReady) {
@@ -208,8 +228,10 @@ export function SceneLoadingScreen({
     >
       <div className="w-full max-w-sm text-center">
         <p
-          className="text-4xl leading-none sm:text-5xl"
-          style={{ fontFamily: '"Yaz Sobria", Sobria, serif' }}
+          className={`text-4xl leading-none sm:text-5xl ${
+            headingFontReady ? "visible" : "invisible"
+          }`}
+          style={{ fontFamily: '"Yaz Winky Show", "Winky Show Script", cursive' }}
         >
           Yaslynn Rivera
         </p>
