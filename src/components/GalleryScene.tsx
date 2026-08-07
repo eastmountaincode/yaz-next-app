@@ -39,6 +39,7 @@ import type {
   PortfolioContent,
   PortfolioProject,
   SanityImageContent,
+  StillArtist,
 } from "@/sanity/types";
 import {
   ClockCompositeConfig,
@@ -2950,8 +2951,11 @@ function scenePreloadAssets(
   if (portfolio.bio.image?.url) {
     assets.add(portfolio.bio.image.url);
   }
-  portfolio.stillProjects.forEach((project) => {
-    project.images.forEach((image) => assets.add(image.url));
+  portfolio.stillArtists.forEach((artist) => {
+    if (artist.coverImage?.url) {
+      assets.add(artist.coverImage.url);
+    }
+    artist.images.forEach((image) => assets.add(image.url));
   });
   portfolio.clients.forEach((client) => {
     const coverUrl = clientCoverUrl(client);
@@ -6387,7 +6391,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
       ) : null}
       {openImageFrameModal === "stills" ? (
         <StillsModal
-          projects={portfolio.stillProjects}
+          artists={portfolio.stillArtists}
           onClose={() => setOpenImageFrameModal(null)}
         />
       ) : null}
@@ -6651,37 +6655,83 @@ function BioModal({
   );
 }
 
-function StillsModal({
-  projects,
-  onClose,
-}: {
-  projects: PortfolioContent["stillProjects"];
-  onClose: () => void;
-}) {
+function StillArtistCover({ artist }: { artist: StillArtist }) {
+  const coverImage = artist.coverImage ?? artist.images[0];
+
+  return coverImage ? (
+    <ContentImage image={coverImage} className="size-full object-cover grayscale" />
+  ) : (
+    <div className="size-full bg-neutral-200" aria-hidden="true" />
+  );
+}
+
+function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: () => void }) {
+  const [selectedArtistKey, setSelectedArtistKey] = useState<string | null>(null);
+  const selectedArtist =
+    artists.find((artist) => artist.key === selectedArtistKey) ?? null;
+
   return (
     <ModalShell
       onClose={onClose}
-      ariaLabel="Yaslynn Rivera stills"
+      ariaLabelledBy="stills-modal-title"
       closeButtonTone="light"
       className="w-full max-w-7xl bg-white text-black"
     >
-      <div className="h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-white px-5 py-8 pr-14 font-sans text-black sm:px-9 sm:py-10 sm:pr-16">
-        <h2 className="text-5xl leading-none sm:text-6xl" style={MODAL_HEADING_STYLE}>
+      <div
+        key={selectedArtistKey ?? "all-stills-artists"}
+        className="h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-white px-6 pb-10 pt-8 font-sans text-black sm:px-9 sm:pb-12 sm:pt-10"
+      >
+        <h2
+          id="stills-modal-title"
+          className="pr-12 text-5xl leading-none sm:pr-16 sm:text-6xl"
+          style={MODAL_HEADING_STYLE}
+        >
           Stills
         </h2>
 
-        <div className="mt-12 space-y-16">
-          {projects.map((project) => (
-            <section key={project.key}>
-              <h3 className="mb-5 text-xl leading-tight sm:text-2xl">{project.title}</h3>
-              <div className="grid items-start gap-4 sm:grid-cols-2">
-                {project.images.map((image) => (
-                  <ContentImage key={image.key} image={image} className="h-auto w-full" />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+        {selectedArtist ? (
+          <div>
+            <div className="mt-5 flex items-center gap-4 sm:mt-6 sm:gap-5">
+              <button
+                type="button"
+                onClick={() => setSelectedArtistKey(null)}
+                className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                aria-label="Back to all stills artists"
+              >
+                <ArrowLeft size={18} strokeWidth={1.5} aria-hidden="true" />
+                <span>Back</span>
+              </button>
+              <h3 className="min-w-0 text-3xl leading-tight sm:text-4xl">
+                {selectedArtist.name}
+              </h3>
+            </div>
+
+            <div className="mt-10 grid items-start gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-3">
+              {selectedArtist.images.map((image) => (
+                <ContentImage key={image.key} image={image} className="h-auto w-full" />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-10 grid grid-cols-2 items-start gap-x-4 gap-y-8 sm:mt-12 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10">
+            {artists.map((artist) => (
+              <button
+                key={artist.key}
+                type="button"
+                onClick={() => setSelectedArtistKey(artist.key)}
+                className="block w-full cursor-pointer text-left transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                aria-label={`View ${artist.name} stills`}
+              >
+                <div className="aspect-square w-full overflow-hidden bg-neutral-200">
+                  <StillArtistCover artist={artist} />
+                </div>
+                <span className="mt-2 block text-sm leading-tight sm:text-base">
+                  {artist.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </ModalShell>
   );

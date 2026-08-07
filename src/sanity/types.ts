@@ -22,9 +22,10 @@ export type PortfolioClient = {
   projects: PortfolioProject[];
 };
 
-export type StillProject = {
+export type StillArtist = {
   key: string;
-  title: string;
+  name: string;
+  coverImage: SanityImageContent | null;
   images: SanityImageContent[];
 };
 
@@ -36,7 +37,7 @@ export type PortfolioContent = {
     image: SanityImageContent | null;
   };
   clients: PortfolioClient[];
-  stillProjects: StillProject[];
+  stillArtists: StillArtist[];
 };
 
 export const EMPTY_PORTFOLIO_CONTENT: PortfolioContent = {
@@ -47,5 +48,5 @@ export const EMPTY_PORTFOLIO_CONTENT: PortfolioContent = {
     image: null,
   },
   clients: [],
-  stillProjects: [],
+  stillArtists: [],
 };
