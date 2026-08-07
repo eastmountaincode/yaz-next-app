@@ -6310,9 +6310,9 @@ function videoEmbed(sourceUrl: string): VideoEmbed | null {
 const MODAL_STYLE = {
   backdrop:
     "absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-6",
-  surface: "bg-black",
+  surface: "relative bg-black p-11",
   closeButton:
-    "grid size-11 shrink-0 cursor-pointer place-items-center bg-black text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
+    "absolute right-0 top-0 grid size-11 cursor-pointer place-items-center bg-black text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
 } as const;
 
 function useModalDismissal(onClose: () => void) {
@@ -6355,20 +6355,18 @@ function DirectorReelModal({
         className={MODAL_STYLE.surface}
         style={{
           width:
-            "min(72rem, calc(100vw - 2rem), calc((100dvh - 4.75rem) * 16 / 9))",
+            "min(72rem, calc(100vw - 2rem), calc((100dvh - 8.5rem) * 16 / 9 + 5.5rem))",
         }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex h-11 justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close Director's Reel"
-            className={MODAL_STYLE.closeButton}
-          >
-            <X size={20} strokeWidth={1.5} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close Director's Reel"
+          className={MODAL_STYLE.closeButton}
+        >
+          <X size={20} strokeWidth={1.5} />
+        </button>
         <div className="relative aspect-video w-full">
           {embed ? (
             <iframe
