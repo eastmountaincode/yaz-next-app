@@ -18,6 +18,7 @@ export type PortfolioProject = {
 export type PortfolioClient = {
   key: string;
   name: string;
+  coverImage: SanityImageContent | null;
   projects: PortfolioProject[];
 };
 
