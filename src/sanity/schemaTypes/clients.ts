@@ -23,6 +23,21 @@ export const clientsType = defineType({
               validation: (rule) => rule.required(),
             }),
             defineField({
+              name: "coverImage",
+              title: "Cover image",
+              description:
+                "Optional square image for the Clients grid. The first project's video thumbnail is used when this is empty.",
+              type: "image",
+              options: { hotspot: true },
+              fields: [
+                defineField({
+                  name: "alt",
+                  title: "Alternative text",
+                  type: "string",
+                }),
+              ],
+            }),
+            defineField({
               name: "projects",
               title: "Projects",
               type: "array",
@@ -60,7 +75,7 @@ export const clientsType = defineType({
             }),
           ],
           preview: {
-            select: { title: "name" },
+            select: { title: "name", media: "coverImage" },
           },
         }),
       ],

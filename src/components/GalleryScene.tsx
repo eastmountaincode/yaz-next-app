@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PortableText, type PortableTextComponents } from "@portabletext/react";
 import Link from "next/link";
 import {
+  ArrowLeft,
   Box,
-  ChevronDown,
   Clock,
   CircleHelp,
   Eye,
@@ -147,6 +147,44 @@ function ContentImage({
       height={image.height}
       decoding="async"
     />
+  );
+}
+
+function youtubeThumbnailUrl(sourceUrl: string): string | null {
+  try {
+    const url = new URL(sourceUrl);
+    const hostname = url.hostname.replace(/^www\./, "");
+    if (
+      hostname !== "youtube.com" &&
+      hostname !== "m.youtube.com" &&
+      hostname !== "youtu.be" &&
+      hostname !== "youtube-nocookie.com"
+    ) {
+      return null;
+    }
+
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const videoId =
+      hostname === "youtu.be"
+        ? pathParts[0]
+        : url.searchParams.get("v") ??
+          (pathParts[0] === "embed" || pathParts[0] === "shorts"
+            ? pathParts[1]
+            : null);
+
+    return videoId && /^[A-Za-z0-9_-]{6,}$/.test(videoId)
+      ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function clientCoverUrl(client: PortfolioClient): string | null {
+  return (
+    client.coverImage?.url ??
+    client.projects.map((project) => youtubeThumbnailUrl(project.videoUrl)).find(Boolean) ??
+    null
   );
 }
 
@@ -2914,6 +2952,12 @@ function scenePreloadAssets(
   }
   portfolio.stillProjects.forEach((project) => {
     project.images.forEach((image) => assets.add(image.url));
+  });
+  portfolio.clients.forEach((client) => {
+    const coverUrl = clientCoverUrl(client);
+    if (coverUrl) {
+      assets.add(coverUrl);
+    }
   });
 
   return [...assets];
@@ -6643,68 +6687,73 @@ function StillsModal({
   );
 }
 
-function ClientSection({
-  client,
-  initiallyOpen,
-}: {
-  client: PortfolioClient;
-  initiallyOpen: boolean;
-}) {
-  const [open, setOpen] = useState(initiallyOpen);
+function ClientCover({ client }: { client: PortfolioClient }) {
+  const fallbackUrl = client.projects
+    .map((project) => youtubeThumbnailUrl(project.videoUrl))
+    .find(Boolean);
 
+  if (client.coverImage) {
+    return (
+      <ContentImage
+        image={{
+          ...client.coverImage,
+          alt: client.coverImage.alt || `${client.name} cover`,
+        }}
+        className="size-full object-cover grayscale"
+      />
+    );
+  }
+
+  if (fallbackUrl) {
+    return (
+      <div
+        className="size-full bg-cover bg-center grayscale"
+        style={{ backgroundImage: `url("${fallbackUrl}")` }}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return <div className="size-full bg-neutral-200" aria-hidden="true" />;
+}
+
+function ClientProjects({ client }: { client: PortfolioClient }) {
   return (
-    <section>
-      <button
-        type="button"
-        className="flex w-full cursor-pointer items-center justify-between gap-5 py-3 text-left transition-opacity hover:opacity-60"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <span className="text-2xl leading-tight sm:text-3xl">{client.name}</span>
-        <ChevronDown
-          className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-          size={22}
-          strokeWidth={1.5}
-          aria-hidden="true"
-        />
-      </button>
-
-      {open ? (
-        <div className="space-y-10 pb-12 pt-5">
-          {client.projects.map((project) => {
-            const embed = videoEmbed(project.videoUrl);
-            return (
-              <article key={project.key}>
-                <h3 className="mb-3 text-base leading-tight text-black/70 sm:text-lg">
-                  {project.title}
-                </h3>
-                <div className="relative aspect-video w-full bg-black">
-                  {embed ? (
-                    <iframe
-                      className="absolute inset-0 size-full"
-                      src={embed.src}
-                      title={`${client.name} — ${project.title}`}
-                      loading="lazy"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <a
-                      className="absolute inset-0 grid place-items-center text-sm text-white transition-opacity hover:opacity-60"
-                      href={project.videoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open video
-                    </a>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      ) : null}
-    </section>
+    <div
+      className={`mt-10 grid items-start gap-x-6 gap-y-10 sm:mt-12 ${
+        client.projects.length > 1 ? "md:grid-cols-2" : "max-w-3xl"
+      }`}
+    >
+      {client.projects.map((project) => {
+        const embed = videoEmbed(project.videoUrl);
+        return (
+          <article key={project.key}>
+            <h3 className="mb-3 text-base leading-tight sm:text-lg">{project.title}</h3>
+            <div className="relative aspect-video w-full bg-black">
+              {embed ? (
+                <iframe
+                  className="absolute inset-0 size-full"
+                  src={embed.src}
+                  title={`${client.name} — ${project.title}`}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <a
+                  className="absolute inset-0 grid place-items-center text-sm text-white transition-opacity hover:opacity-60"
+                  href={project.videoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open video
+                </a>
+              )}
+            </div>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 
@@ -6715,6 +6764,10 @@ function ClientsModal({
   clients: PortfolioClient[];
   onClose: () => void;
 }) {
+  const [selectedClientKey, setSelectedClientKey] = useState<string | null>(null);
+  const selectedClient =
+    clients.find((client) => client.key === selectedClientKey) ?? null;
+
   return (
     <ModalShell
       onClose={onClose}
@@ -6722,24 +6775,60 @@ function ClientsModal({
       closeButtonTone="light"
       className="w-full max-w-6xl bg-white text-black"
     >
-      <div className="flex h-[min(calc(100dvh-3rem),54rem)] flex-col overflow-hidden bg-white font-sans text-black">
-        <header className="shrink-0 px-6 pb-7 pt-8 pr-16 sm:px-9 sm:pb-9 sm:pt-10 sm:pr-20">
-          <h2
-            id="clients-modal-title"
-            className="text-5xl leading-none sm:text-6xl"
-            style={MODAL_HEADING_STYLE}
-          >
-            Clients
-          </h2>
-        </header>
-
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 pb-10 sm:px-9 sm:pb-12">
-          <div className="space-y-2">
-            {clients.map((client, index) => (
-              <ClientSection key={client.key} client={client} initiallyOpen={index === 0} />
-            ))}
+      <div
+        key={selectedClientKey ?? "all-clients"}
+        className="h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-white px-6 pb-10 pt-8 font-sans text-black sm:px-9 sm:pb-12 sm:pt-10"
+      >
+        {selectedClient ? (
+          <div>
+            <button
+              type="button"
+              onClick={() => setSelectedClientKey(null)}
+              className="inline-flex cursor-pointer items-center gap-2 pr-3 text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+              aria-label="Back to all clients"
+            >
+              <ArrowLeft size={18} strokeWidth={1.5} aria-hidden="true" />
+              <span>Clients</span>
+            </button>
+            <h2
+              id="clients-modal-title"
+              className="mt-7 pr-12 text-5xl leading-none sm:mt-9 sm:pr-16 sm:text-6xl"
+              style={MODAL_HEADING_STYLE}
+            >
+              {selectedClient.name}
+            </h2>
+            <ClientProjects client={selectedClient} />
           </div>
-        </div>
+        ) : (
+          <div>
+            <h2
+              id="clients-modal-title"
+              className="pr-12 text-5xl leading-none sm:pr-16 sm:text-6xl"
+              style={MODAL_HEADING_STYLE}
+            >
+              Clients
+            </h2>
+
+            <div className="mt-10 grid grid-cols-2 items-start gap-x-4 gap-y-8 sm:mt-12 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10">
+              {clients.map((client) => (
+                <button
+                  key={client.key}
+                  type="button"
+                  onClick={() => setSelectedClientKey(client.key)}
+                  className="group block w-full cursor-pointer text-left transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  aria-label={`View ${client.name} projects`}
+                >
+                  <div className="aspect-square w-full overflow-hidden bg-neutral-200">
+                    <ClientCover client={client} />
+                  </div>
+                  <span className="mt-2 block text-sm leading-tight sm:text-base">
+                    {client.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </ModalShell>
   );

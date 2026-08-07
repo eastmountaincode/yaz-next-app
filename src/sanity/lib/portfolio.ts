@@ -24,6 +24,13 @@ const portfolioQuery = defineQuery(`
     "clients": *[_type == "clients" && _id == "clients"][0].items[] {
       "key": _key,
       name,
+      coverImage {
+        "key": coalesce(_key, asset._ref),
+        "url": asset->url,
+        "width": asset->metadata.dimensions.width,
+        "height": asset->metadata.dimensions.height,
+        alt
+      },
       projects[] {
         "key": _key,
         "slug": slug.current,
@@ -53,6 +60,7 @@ type RawPortfolioContent = {
   clients?: Array<{
     key?: string;
     name?: string;
+    coverImage?: Partial<SanityImageContent> | null;
     projects?: Array<{
       key?: string;
       slug?: string;
@@ -132,6 +140,7 @@ function normalizePortfolio(content: RawPortfolioContent | null): PortfolioConte
       .map((client, clientIndex) => ({
         key: client.key || `client-${clientIndex}`,
         name: client.name || "",
+        coverImage: normalizeImage(client.coverImage),
         projects: (client.projects ?? [])
           .filter((project) => project.title && project.videoUrl)
           .map((project, projectIndex) => ({
