@@ -6691,17 +6691,17 @@ function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: ()
 
         {selectedArtist ? (
           <div>
-            <div className="mt-5 flex items-center gap-4 sm:mt-6 sm:gap-5">
+            <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-baseline sm:mt-6">
               <button
                 type="button"
                 onClick={() => setSelectedArtistKey(null)}
-                className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                className="inline-flex cursor-pointer items-center gap-2 justify-self-start text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 aria-label="Back to all stills artists"
               >
                 <ArrowLeft size={18} strokeWidth={1.5} aria-hidden="true" />
                 <span>Back</span>
               </button>
-              <h3 className="min-w-0 text-3xl leading-tight sm:text-4xl">
+              <h3 className="min-w-0 text-center text-3xl leading-tight sm:text-4xl">
                 {selectedArtist.name}
               </h3>
             </div>
