@@ -6728,7 +6728,7 @@ function ClientProjects({ client }: { client: PortfolioClient }) {
         const embed = videoEmbed(project.videoUrl);
         return (
           <article key={project.key}>
-            <h3 className="mb-3 text-base leading-tight sm:text-lg">{project.title}</h3>
+            <h4 className="mb-3 text-base leading-tight sm:text-lg">{project.title}</h4>
             <div className="relative aspect-video w-full bg-black">
               {embed ? (
                 <iframe
@@ -6779,54 +6779,48 @@ function ClientsModal({
         key={selectedClientKey ?? "all-clients"}
         className="h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-white px-6 pb-10 pt-8 font-sans text-black sm:px-9 sm:pb-12 sm:pt-10"
       >
+        <h2
+          id="clients-modal-title"
+          className="pr-12 text-5xl leading-none sm:pr-16 sm:text-6xl"
+          style={MODAL_HEADING_STYLE}
+        >
+          Clients
+        </h2>
+
         {selectedClient ? (
           <div>
             <button
               type="button"
               onClick={() => setSelectedClientKey(null)}
-              className="inline-flex cursor-pointer items-center gap-2 pr-3 text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+              className="mt-8 inline-flex cursor-pointer items-center gap-2 pr-3 text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black sm:mt-10"
               aria-label="Back to all clients"
             >
               <ArrowLeft size={18} strokeWidth={1.5} aria-hidden="true" />
-              <span>Clients</span>
+              <span>Back</span>
             </button>
-            <h2
-              id="clients-modal-title"
-              className="mt-7 pr-12 text-5xl leading-none sm:mt-9 sm:pr-16 sm:text-6xl"
-              style={MODAL_HEADING_STYLE}
-            >
+            <h3 className="mt-7 pr-12 text-3xl leading-tight sm:mt-9 sm:pr-16 sm:text-4xl">
               {selectedClient.name}
-            </h2>
+            </h3>
             <ClientProjects client={selectedClient} />
           </div>
         ) : (
-          <div>
-            <h2
-              id="clients-modal-title"
-              className="pr-12 text-5xl leading-none sm:pr-16 sm:text-6xl"
-              style={MODAL_HEADING_STYLE}
-            >
-              Clients
-            </h2>
-
-            <div className="mt-10 grid grid-cols-2 items-start gap-x-4 gap-y-8 sm:mt-12 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10">
-              {clients.map((client) => (
-                <button
-                  key={client.key}
-                  type="button"
-                  onClick={() => setSelectedClientKey(client.key)}
-                  className="group block w-full cursor-pointer text-left transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
-                  aria-label={`View ${client.name} projects`}
-                >
-                  <div className="aspect-square w-full overflow-hidden bg-neutral-200">
-                    <ClientCover client={client} />
-                  </div>
-                  <span className="mt-2 block text-sm leading-tight sm:text-base">
-                    {client.name}
-                  </span>
-                </button>
-              ))}
-            </div>
+          <div className="mt-10 grid grid-cols-2 items-start gap-x-4 gap-y-8 sm:mt-12 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10">
+            {clients.map((client) => (
+              <button
+                key={client.key}
+                type="button"
+                onClick={() => setSelectedClientKey(client.key)}
+                className="group block w-full cursor-pointer text-left transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                aria-label={`View ${client.name} projects`}
+              >
+                <div className="aspect-square w-full overflow-hidden bg-neutral-200">
+                  <ClientCover client={client} />
+                </div>
+                <span className="mt-2 block text-sm leading-tight sm:text-base">
+                  {client.name}
+                </span>
+              </button>
+            ))}
           </div>
         )}
       </div>
