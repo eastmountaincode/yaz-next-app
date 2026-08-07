@@ -6332,9 +6332,9 @@ function videoEmbed(sourceUrl: string): VideoEmbed | null {
 const MODAL_STYLE = {
   backdrop:
     "absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-6",
-  surface: "relative max-h-full bg-black p-11 text-[#f6f0e5]",
+  surface: "relative max-h-full bg-black text-[#f6f0e5]",
   closeButton:
-    "absolute right-0 top-0 grid size-11 cursor-pointer place-items-center bg-black text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
+    "absolute right-2 top-2 z-20 grid size-9 cursor-pointer place-items-center bg-black/55 text-white transition-colors hover:bg-black/80 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
 } as const;
 
 const MODAL_HEADING_STYLE = {
@@ -6418,7 +6418,7 @@ function DirectorReelModal({
       ariaLabel="Director's Reel"
       style={{
         width:
-          "min(72rem, calc(100vw - 2rem), calc((100dvh - 8.5rem) * 16 / 9 + 5.5rem))",
+          "min(72rem, calc(100vw - 2rem), calc((100dvh - 3rem) * 16 / 9))",
       }}
     >
       <div className="relative aspect-video w-full">
@@ -6460,7 +6460,7 @@ function WorkModal({
 
   return (
     <ModalShell onClose={onClose} ariaLabel={work.slug} className="w-full max-w-6xl">
-      <div className="grid h-[min(calc(100dvh-8.5rem),52rem)] overflow-hidden bg-[#16120d] font-sans lg:grid-cols-[1.35fr_0.75fr]">
+      <div className="grid h-[min(calc(100dvh-3rem),52rem)] overflow-hidden bg-[#16120d] font-sans lg:grid-cols-[1.35fr_0.75fr]">
         <div className="relative grid min-h-[20rem] overflow-hidden bg-black/35">
           {embed ? (
             <iframe
@@ -6546,7 +6546,7 @@ function WorkModal({
 function BioModal({ onClose }: { onClose: () => void }) {
   return (
     <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera bio" className="w-full max-w-5xl">
-      <div className="grid h-[min(calc(100dvh-8.5rem),48rem)] grid-rows-[minmax(12rem,35vh)_minmax(0,1fr)] overflow-hidden bg-[#16120d] font-sans md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1">
+      <div className="grid h-[min(calc(100dvh-3rem),48rem)] grid-rows-[minmax(12rem,35vh)_minmax(0,1fr)] overflow-hidden bg-[#16120d] font-sans md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1">
         <div className="relative min-h-0 bg-black/35">
           <PreloadedImage
             className="object-contain object-center md:object-cover md:object-center"
@@ -6583,7 +6583,7 @@ function StillsModal({ onClose }: { onClose: () => void }) {
 
   return (
     <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera stills" className="w-full max-w-6xl">
-      <div className="grid h-[min(calc(100dvh-8.5rem),52rem)] grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-[#16120d] font-sans">
+      <div className="grid h-[min(calc(100dvh-3rem),52rem)] grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-[#16120d] font-sans">
         <div className="relative min-h-0 bg-black/45">
           <PreloadedImage
             className="object-contain object-center"
@@ -6655,7 +6655,7 @@ function ClientsModal({
       ariaLabelledBy="clients-modal-title"
       className="w-full max-w-4xl"
     >
-      <div className="flex h-[min(calc(100dvh-8.5rem),52rem)] flex-col overflow-hidden bg-[#16120d] font-sans text-[#f6f0e5]">
+      <div className="flex h-[min(calc(100dvh-3rem),52rem)] flex-col overflow-hidden bg-[#16120d] font-sans text-[#f6f0e5]">
         <header className="px-6 pb-4 pt-7 sm:px-8 sm:pb-5 sm:pt-9">
           <h2
             id="clients-modal-title"
