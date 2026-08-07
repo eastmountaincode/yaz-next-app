@@ -6310,9 +6310,9 @@ function videoEmbed(sourceUrl: string): VideoEmbed | null {
 const MODAL_STYLE = {
   backdrop:
     "absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-6",
-  surface: "relative bg-black",
+  surface: "bg-black",
   closeButton:
-    "absolute right-0 top-0 z-20 grid size-11 cursor-pointer place-items-center bg-black/80 text-white transition-colors hover:bg-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
+    "grid size-11 shrink-0 cursor-pointer place-items-center bg-black text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
 } as const;
 
 function useModalDismissal(onClose: () => void) {
@@ -6340,7 +6340,6 @@ function DirectorReelModal({
   onClose: () => void;
 }) {
   const embed = videoEmbed(work.sourceUrl);
-  const [embedReady, setEmbedReady] = useState(false);
 
   useModalDismissal(onClose);
 
@@ -6355,48 +6354,40 @@ function DirectorReelModal({
       <div
         className={MODAL_STYLE.surface}
         style={{
-          aspectRatio: "16 / 9",
-          width: "min(72rem, calc(100vw - 2rem), calc((100dvh - 2rem) * 16 / 9))",
+          width:
+            "min(72rem, calc(100vw - 2rem), calc((100dvh - 4.75rem) * 16 / 9))",
         }}
         onClick={(event) => event.stopPropagation()}
       >
-        {work.modalPosterSrc ? (
-          <PreloadedImage
-            className={`pointer-events-none object-contain object-center ${
-              embedReady ? "opacity-0" : "opacity-100"
-            }`}
-            src={work.modalPosterSrc}
-            alt=""
-          />
-        ) : null}
-        {embed ? (
-          <iframe
-            className={`absolute inset-0 size-full ${
-              work.modalPosterSrc && !embedReady ? "opacity-0" : "opacity-100"
-            }`}
-            src={embed.src}
-            title={work.sourceTitle}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            onLoad={() => setEmbedReady(true)}
-          />
-        ) : (
-          <video
-            className="absolute inset-0 size-full object-contain"
-            src={work.clipSrc}
-            controls
-            playsInline
-            preload="metadata"
-          />
-        )}
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close Director's Reel"
-          className={MODAL_STYLE.closeButton}
-        >
-          <X size={20} strokeWidth={1.5} />
-        </button>
+        <div className="flex h-11 justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close Director's Reel"
+            className={MODAL_STYLE.closeButton}
+          >
+            <X size={20} strokeWidth={1.5} />
+          </button>
+        </div>
+        <div className="relative aspect-video w-full">
+          {embed ? (
+            <iframe
+              className="absolute inset-0 size-full"
+              src={embed.src}
+              title={work.sourceTitle}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          ) : (
+            <video
+              className="absolute inset-0 size-full object-contain"
+              src={work.clipSrc}
+              controls
+              playsInline
+              preload="metadata"
+            />
+          )}
+        </div>
       </div>
     </div>
   );
