@@ -9,18 +9,18 @@ import {
 } from "@/sanity/types";
 
 const portfolioQuery = defineQuery(`
-  *[_type == "portfolio" && _id == "portfolio"][0] {
-    directorReelUrl,
-    bioHeading,
-    bioBody,
-    bioImage {
+  {
+    "directorReelUrl": *[_type == "directorReel" && _id == "director-reel"][0].videoUrl,
+    "bioHeading": *[_type == "bio" && _id == "bio"][0].heading,
+    "bioBody": *[_type == "bio" && _id == "bio"][0].body,
+    "bioImage": *[_type == "bio" && _id == "bio"][0].image {
       "key": coalesce(_key, asset._ref),
       "url": asset->url,
       "width": asset->metadata.dimensions.width,
       "height": asset->metadata.dimensions.height,
       alt
     },
-    clients[] {
+    "clients": *[_type == "clients" && _id == "clients"][0].items[] {
       "key": _key,
       name,
       projects[] {
@@ -30,7 +30,7 @@ const portfolioQuery = defineQuery(`
         videoUrl
       }
     },
-    stillProjects[] {
+    "stillProjects": *[_type == "stills" && _id == "stills"][0].projects[] {
       "key": _key,
       title,
       images[] {
@@ -129,7 +129,12 @@ export async function getPortfolioContent(): Promise<PortfolioContent> {
     const content = await sanityClient.fetch<RawPortfolioContent | null>(
       portfolioQuery,
       {},
-      { next: { revalidate: 60, tags: ["portfolio"] } },
+      {
+        next: {
+          revalidate: 60,
+          tags: ["director-reel", "bio", "clients", "stills"],
+        },
+      },
     );
     return normalizePortfolio(content);
   } catch (error) {
