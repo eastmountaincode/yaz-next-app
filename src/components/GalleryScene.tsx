@@ -6531,21 +6531,21 @@ function BioModal({
   return (
     <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera bio" className="w-full max-w-5xl">
       <div
-        className={`grid h-[min(calc(100dvh-3rem),48rem)] overflow-hidden bg-black font-sans ${
+        className={`h-[min(calc(100dvh-2rem),48rem)] overflow-y-auto overscroll-contain bg-black font-sans md:grid md:h-[min(calc(100dvh-3rem),48rem)] md:overflow-hidden ${
           hasImage
-            ? "grid-rows-[minmax(12rem,35vh)_minmax(0,1fr)] md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1"
+            ? "md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1"
             : "grid-cols-1"
         }`}
       >
         {bio.image ? (
-          <div className="relative min-h-0 bg-black">
+          <div className="relative aspect-[4/5] w-full bg-black sm:mx-auto sm:w-[72%] sm:max-w-md md:mx-0 md:aspect-auto md:min-h-0 md:w-full md:max-w-none">
             <ContentImage
               image={bio.image}
-              className="absolute inset-0 size-full object-contain object-center md:object-cover"
+              className="absolute inset-0 size-full object-cover object-[50%_35%]"
             />
           </div>
         ) : null}
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-8 pr-14 text-white sm:px-9 sm:py-10 sm:pr-16">
+        <div className="min-h-0 px-6 py-8 pr-14 text-white sm:px-9 sm:py-10 sm:pr-16 md:overflow-y-auto md:overscroll-contain">
           <h2
             className="mb-7 text-5xl leading-none md:text-6xl"
             style={MODAL_HEADING_STYLE}
