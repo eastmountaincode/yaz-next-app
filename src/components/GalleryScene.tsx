@@ -6310,9 +6310,13 @@ function videoEmbed(sourceUrl: string): VideoEmbed | null {
 const MODAL_STYLE = {
   backdrop:
     "absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-6",
-  surface: "relative bg-black p-11",
+  surface: "relative max-h-full bg-black p-11 text-[#f6f0e5]",
   closeButton:
     "absolute right-0 top-0 grid size-11 cursor-pointer place-items-center bg-black text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
+} as const;
+
+const MODAL_HEADING_STYLE = {
+  fontFamily: '"Yaz Winky Show", "Winky Show Script", cursive',
 } as const;
 
 function useModalDismissal(onClose: () => void) {
@@ -6332,6 +6336,51 @@ function useModalDismissal(onClose: () => void) {
   }, [onClose]);
 }
 
+function ModalShell({
+  onClose,
+  ariaLabel,
+  ariaLabelledBy,
+  className = "",
+  style,
+  children,
+}: {
+  onClose: () => void;
+  ariaLabel?: string;
+  ariaLabelledBy?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  useModalDismissal(onClose);
+
+  return (
+    <div
+      className={MODAL_STYLE.backdrop}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+    >
+      <div
+        className={`${MODAL_STYLE.surface} ${className}`}
+        style={style}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className={MODAL_STYLE.closeButton}
+        >
+          <X size={20} strokeWidth={1.5} />
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function DirectorReelModal({
   work,
   onClose,
@@ -6341,53 +6390,35 @@ function DirectorReelModal({
 }) {
   const embed = videoEmbed(work.sourceUrl);
 
-  useModalDismissal(onClose);
-
   return (
-    <div
-      className={MODAL_STYLE.backdrop}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Director's Reel"
+    <ModalShell
+      onClose={onClose}
+      ariaLabel="Director's Reel"
+      style={{
+        width:
+          "min(72rem, calc(100vw - 2rem), calc((100dvh - 8.5rem) * 16 / 9 + 5.5rem))",
+      }}
     >
-      <div
-        className={MODAL_STYLE.surface}
-        style={{
-          width:
-            "min(72rem, calc(100vw - 2rem), calc((100dvh - 8.5rem) * 16 / 9 + 5.5rem))",
-        }}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close Director's Reel"
-          className={MODAL_STYLE.closeButton}
-        >
-          <X size={20} strokeWidth={1.5} />
-        </button>
-        <div className="relative aspect-video w-full">
-          {embed ? (
-            <iframe
-              className="absolute inset-0 size-full"
-              src={embed.src}
-              title={work.sourceTitle}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          ) : (
-            <video
-              className="absolute inset-0 size-full object-contain"
-              src={work.clipSrc}
-              controls
-              playsInline
-              preload="metadata"
-            />
-          )}
-        </div>
+      <div className="relative aspect-video w-full">
+        {embed ? (
+          <iframe
+            className="absolute inset-0 size-full"
+            src={embed.src}
+            title={work.sourceTitle}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        ) : (
+          <video
+            className="absolute inset-0 size-full object-contain"
+            src={work.clipSrc}
+            controls
+            playsInline
+            preload="metadata"
+          />
+        )}
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -6401,66 +6432,21 @@ function WorkModal({
   onSelectWork: (slug: string) => void;
 }) {
   const embed = videoEmbed(work.sourceUrl);
-  const [embedReady, setEmbedReady] = useState(false);
   const relatedWorks = works.filter(
     (candidate) => candidate.artist === work.artist && candidate.slug !== work.slug,
   );
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [onClose]);
-
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={work.slug}
-    >
-      <div
-        className="relative grid max-h-[min(90vh,58rem)] w-full max-w-6xl overflow-hidden rounded-lg border border-white/10 bg-[#16120d]/95 shadow-2xl lg:grid-cols-[1.35fr_0.75fr]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
-        >
-          <X size={18} />
-        </button>
+    <ModalShell onClose={onClose} ariaLabel={work.slug} className="w-full max-w-6xl">
+      <div className="grid h-[min(calc(100dvh-8.5rem),52rem)] overflow-hidden bg-[#16120d] font-sans lg:grid-cols-[1.35fr_0.75fr]">
         <div className="relative grid min-h-[20rem] overflow-hidden bg-black/35">
-          {work.modalPosterSrc ? (
-            <PreloadedImage
-              className={`pointer-events-none object-contain object-center transition-opacity duration-300 ${
-                embedReady ? "opacity-0" : "opacity-100"
-              }`}
-              src={work.modalPosterSrc}
-              alt=""
-            />
-          ) : null}
           {embed ? (
             <iframe
-              className={`relative size-full min-h-[20rem] transition-opacity duration-300 lg:min-h-[36rem] ${
-                work.modalPosterSrc && !embedReady ? "opacity-0" : "opacity-100"
-              }`}
+              className="relative size-full min-h-[20rem] lg:min-h-[36rem]"
               src={embed.src}
               title={work.sourceTitle}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
-              onLoad={() => setEmbedReady(true)}
             />
           ) : (
             <video
@@ -6473,38 +6459,29 @@ function WorkModal({
           )}
         </div>
         <div className="min-h-0 overflow-y-auto px-5 py-6 text-[#f6f0e5] sm:px-7 sm:py-8">
-          <div className="mb-5 pr-10">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.18em] text-[#b9aa92]">
-              {work.projectType}
-            </p>
-            <h2 className="text-3xl leading-tight sm:text-4xl">
+          <div className="mb-6">
+            <h2
+              className="text-5xl leading-none sm:text-6xl"
+              style={MODAL_HEADING_STYLE}
+            >
               {work.title}
             </h2>
             <p className="mt-2 text-base text-[#d8cdbb]">{work.artist}</p>
           </div>
 
-          <div className="border-y border-white/10 py-4">
-            <p className="mb-3 text-[11px] uppercase tracking-[0.16em] text-[#a99d8a]">
+          <div className="border-t border-white/15 py-4">
+            <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-[#a99d8a]">
               Yaslynn&rsquo;s Role
             </p>
-            <div className="flex flex-wrap gap-2">
-              {work.roles.map((role) => (
-                <span
-                  key={role}
-                  className="rounded border border-[#d8cdbb]/25 px-2.5 py-1 text-sm text-[#f3e6d3]"
-                >
-                  {role}
-                </span>
-              ))}
-            </div>
+            <p className="text-sm text-[#f3e6d3]">{work.roles.join(", ")}</p>
           </div>
 
-          <p className="mt-5 text-sm leading-6 text-[#d8cdbb]">
+          <p className="border-t border-white/15 pt-5 text-sm leading-6 text-[#d8cdbb]">
             {work.modalDescription}
           </p>
 
           <a
-            className="mt-5 inline-flex items-center gap-2 rounded border border-white/10 bg-white/10 px-3 py-2 text-sm text-[#f6f0e5] transition hover:bg-white/15"
+            className="mt-5 inline-flex items-center gap-2 border-b border-current pb-1 text-sm text-[#f6f0e5] transition-opacity hover:opacity-60"
             href={work.sourceUrl}
             target="_blank"
             rel="noreferrer"
@@ -6516,15 +6493,15 @@ function WorkModal({
 
           {relatedWorks.length > 0 ? (
             <div className="mt-7">
-              <p className="mb-3 text-[11px] uppercase tracking-[0.16em] text-[#a99d8a]">
+              <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-[#a99d8a]">
                 More with {work.artist}
               </p>
-              <div className="grid gap-2">
+              <div className="border-t border-white/15">
                 {relatedWorks.map((related) => (
                   <button
                     key={related.slug}
                     type="button"
-                    className="rounded border border-white/10 bg-white/[0.04] px-3 py-2 text-left transition hover:bg-white/10"
+                    className="block w-full border-b border-white/15 px-1 py-3 text-left transition-opacity hover:opacity-60"
                     onClick={() => onSelectWork(related.slug)}
                   >
                     <span className="block truncate text-sm text-[#f6f0e5]">
@@ -6540,46 +6517,14 @@ function WorkModal({
           ) : null}
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
 function BioModal({ onClose }: { onClose: () => void }) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [onClose]);
-
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Yaslynn Rivera bio"
-    >
-      <div
-        className="relative grid h-[min(88vh,54rem)] w-full max-w-5xl grid-rows-[minmax(15rem,38vh)_minmax(0,1fr)] overflow-hidden rounded-lg border border-white/10 bg-[#16120d]/95 shadow-2xl md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
-        >
-          <X size={18} />
-        </button>
+    <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera bio" className="w-full max-w-5xl">
+      <div className="grid h-[min(calc(100dvh-8.5rem),48rem)] grid-rows-[minmax(12rem,35vh)_minmax(0,1fr)] overflow-hidden bg-[#16120d] font-sans md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1">
         <div className="relative min-h-0 bg-black/35">
           <PreloadedImage
             className="object-contain object-center md:object-cover md:object-center"
@@ -6587,10 +6532,10 @@ function BioModal({ onClose }: { onClose: () => void }) {
             alt="Yaslynn Rivera"
           />
         </div>
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-7 pr-14 text-[#f6f0e5] md:px-8 md:py-9 md:pr-14">
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 py-7 text-[#f6f0e5] md:px-8 md:py-9">
           <h2
-            className="mb-5 text-4xl leading-none md:text-5xl"
-            style={{ fontFamily: '"Yaz Sobria", Sobria, serif' }}
+            className="mb-5 text-5xl leading-none md:text-6xl"
+            style={MODAL_HEADING_STYLE}
           >
             Yaslynn Rivera
           </h2>
@@ -6601,7 +6546,7 @@ function BioModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -6610,46 +6555,13 @@ function StillsModal({ onClose }: { onClose: () => void }) {
   const selectedStill =
     yaslynnStills.find((still) => still.id === selectedStillId) ?? yaslynnStills[0];
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [onClose]);
-
   if (!selectedStill) {
     return null;
   }
 
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Yaslynn Rivera stills"
-    >
-      <div
-        className="relative grid h-[min(90vh,58rem)] w-full max-w-6xl grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-lg border border-white/10 bg-[#16120d]/95 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-3 top-3 z-10 grid size-9 cursor-pointer place-items-center rounded bg-black/35 text-[#f6f0e5] transition hover:bg-black/55"
-        >
-          <X size={18} />
-        </button>
-
+    <ModalShell onClose={onClose} ariaLabel="Yaslynn Rivera stills" className="w-full max-w-6xl">
+      <div className="grid h-[min(calc(100dvh-8.5rem),52rem)] grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-[#16120d] font-sans">
         <div className="relative min-h-0 bg-black/45">
           <PreloadedImage
             className="object-contain object-center"
@@ -6658,11 +6570,13 @@ function StillsModal({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        <div className="border-t border-white/10 px-5 py-4 text-[#f6f0e5] sm:px-7">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[#b9aa92]">
-            Stills
-          </p>
-          <h2 className="mt-1 text-2xl leading-tight sm:text-3xl">{selectedStill.title}</h2>
+        <div className="px-5 py-5 text-[#f6f0e5] sm:px-7">
+          <h2
+            className="text-4xl leading-none sm:text-5xl"
+            style={MODAL_HEADING_STYLE}
+          >
+            {selectedStill.title}
+          </h2>
 
           {yaslynnStills.length > 1 ? (
             <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
@@ -6670,7 +6584,7 @@ function StillsModal({ onClose }: { onClose: () => void }) {
                 <button
                   key={still.id}
                   type="button"
-                  className={`relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden rounded border transition ${
+                  className={`relative h-20 w-20 shrink-0 cursor-pointer overflow-hidden border transition ${
                     still.id === selectedStill.id
                       ? "border-[#f6f0e5]"
                       : "border-white/15 opacity-65 hover:opacity-100"
@@ -6689,7 +6603,7 @@ function StillsModal({ onClose }: { onClose: () => void }) {
           ) : null}
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -6713,68 +6627,32 @@ function ClientsModal({
     return Array.from(groups, ([name, clientWorks]) => ({ name, works: clientWorks }));
   }, []);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [onClose]);
-
   return (
-    <div
-      className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="clients-modal-title"
+    <ModalShell
+      onClose={onClose}
+      ariaLabelledBy="clients-modal-title"
+      className="w-full max-w-4xl"
     >
-      <div
-        className="relative flex max-h-[min(90vh,58rem)] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-white/10 bg-[#16120d]/95 text-[#f6f0e5] shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute right-3 top-3 z-10 grid size-9 cursor-pointer place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10"
-        >
-          <X size={18} />
-        </button>
-
-        <header className="border-b border-white/10 px-6 py-6 pr-16 sm:px-8 sm:py-8">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-[#b9aa92]">
-            Selected work
-          </p>
+      <div className="flex h-[min(calc(100dvh-8.5rem),52rem)] flex-col overflow-hidden bg-[#16120d] font-sans text-[#f6f0e5]">
+        <header className="px-6 pb-4 pt-7 sm:px-8 sm:pb-5 sm:pt-9">
           <h2
             id="clients-modal-title"
-            className="mt-1 text-4xl leading-none sm:text-5xl"
-            style={{ fontFamily: '"Yaz Sobria", Sobria, serif' }}
+            className="text-5xl leading-none sm:text-6xl"
+            style={MODAL_HEADING_STYLE}
           >
             Clients
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#d8cdbb]">
-            Explore Yaslynn&rsquo;s work by client. Expand a name to see the projects
-            created for them.
-          </p>
         </header>
 
-        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-6">
-          <div className="grid gap-3">
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-6 pb-7 sm:px-8 sm:pb-9">
+          <div className="border-t border-white/15">
             {clientGroups.map((client, index) => (
               <details
                 key={client.name}
                 open={index === 0}
-                className="group overflow-hidden rounded border border-white/10 bg-white/[0.035]"
+                className="group border-b border-white/15"
               >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 transition hover:bg-white/[0.06] marker:content-none sm:px-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-1 py-4 transition-opacity hover:opacity-60 marker:content-none">
                   <span>
                     <span className="block text-xl leading-tight sm:text-2xl">{client.name}</span>
                     <span className="mt-1 block text-xs text-[#b9aa92]">
@@ -6788,13 +6666,13 @@ function ClientsModal({
                   />
                 </summary>
 
-                <div className="grid gap-2 border-t border-white/10 p-3 sm:p-4">
+                <div className="border-t border-white/15">
                   {client.works.map((work) => (
                     <button
                       key={work.slug}
                       type="button"
                       onClick={() => onSelectWork(work.slug)}
-                      className="group/project flex cursor-pointer items-center justify-between gap-4 rounded border border-white/10 bg-black/15 px-4 py-3 text-left transition hover:border-white/20 hover:bg-white/[0.07]"
+                      className="group/project flex w-full cursor-pointer items-center justify-between gap-4 border-b border-white/10 px-1 py-3 text-left transition-opacity last:border-b-0 hover:opacity-60"
                     >
                       <span className="min-w-0">
                         <span className="block text-base leading-tight text-[#f6f0e5]">
@@ -6816,7 +6694,7 @@ function ClientsModal({
           </div>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
