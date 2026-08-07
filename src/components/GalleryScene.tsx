@@ -245,7 +245,7 @@ const STORAGE_KEY = "yaz-environment-editor-v5";
 const LIGHTING_STORAGE_KEY = "yaz-environment-lighting-v1";
 const FRAME_STORAGE_KEY = "yaz-frame-editor-v3";
 const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
-const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v4";
+const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v5";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
 const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v2";
 const FRAME_CAPTION_COLOR = "#d71920";
@@ -257,6 +257,7 @@ const ENVIRONMENT_WIDTH = 18;
 const WALL_PANEL_SPACING = 0.55;
 const WALL_HEIGHT = 9.25;
 const WALL_TEXTURE_PATH = "/textures/plaster_wall.webp";
+const WINKY_FONT_PATH = "/fonts/WinkyShowScript.woff2";
 const SHOW_WALL_PANEL_SEAMS = false;
 const FLOOR_COLOR_PATH = "/textures/floor/floor_color.webp";
 const FLOOR_NORMAL_PATH = "/textures/floor/floor_normal.webp";
@@ -422,6 +423,24 @@ function normalizeCaptionPlacementId(value: string | null | undefined): CaptionP
 
 function normalizeCaptionDisplayMode(value: string | null | undefined): CaptionDisplayMode {
   return value === "hover" ? "hover" : "always";
+}
+
+function captionFontDescriptor(font: CaptionFontOption, size = 112) {
+  const primaryFontFamily = font.fontFamily.split(",", 1)[0].trim();
+  return `${font.fontWeight} ${size}px ${primaryFontFamily}`;
+}
+
+async function waitForCaptionFont(font: CaptionFontOption, text: string) {
+  if (!document.fonts) {
+    throw new Error("This browser cannot verify the caption font.");
+  }
+
+  const descriptor = captionFontDescriptor(font);
+  await document.fonts.load(descriptor, text);
+  await document.fonts.ready;
+  if (!document.fonts.check(descriptor, text)) {
+    throw new Error(`Caption font failed to load: ${font.label}`);
+  }
 }
 
 const frameModels = [
@@ -1223,6 +1242,11 @@ function createFrameCaptionTexture(
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     throw new Error("Could not create caption canvas.");
+  }
+
+  const readinessDescriptor = captionFontDescriptor(font);
+  if (document.fonts && !document.fonts.check(readinessDescriptor, text)) {
+    throw new Error(`Caption font was not ready: ${font.label}`);
   }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2810,7 +2834,7 @@ function scenePreloadAssets(settings: SceneObjectSetting[]) {
     FLOOR_NORMAL_PATH,
     FLOOR_ROUGHNESS_PATH,
     resolveModelAssetUrl(clockComposite.faceTexture),
-    "/fonts/Sobria-Regular.ttf",
+    WINKY_FONT_PATH,
     resolveModelAssetUrl(BASEBOARD_MODEL_PATH),
   ]);
 
@@ -4054,10 +4078,8 @@ function ThreeWallCanvas({
     window.addEventListener("resize", resize);
 
     const captionFontReady =
-      captionPlacement === "frame" && document.fonts
-        ? document.fonts
-            .load(`${captionFont.fontWeight} 112px ${captionFont.fontFamily}`)
-            .catch(() => undefined)
+      captionPlacement === "frame"
+        ? waitForCaptionFont(captionFont, "Bio Clients Director's Reel Stills")
         : Promise.resolve();
 
     Promise.all([loadSceneModels(settingsRef.current), captionFontReady])
