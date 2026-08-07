@@ -6416,9 +6416,10 @@ function DirectorReelModal({
     <ModalShell
       onClose={onClose}
       ariaLabel="Director's Reel"
+      className="p-11"
       style={{
         width:
-          "min(72rem, calc(100vw - 2rem), calc((100dvh - 3rem) * 16 / 9))",
+          "min(72rem, calc(100vw - 2rem), calc((100dvh - 8.5rem) * 16 / 9 + 5.5rem))",
       }}
     >
       <div className="relative aspect-video w-full">
