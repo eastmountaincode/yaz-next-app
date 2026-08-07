@@ -231,7 +231,7 @@ export function SceneLoadingScreen({
           className={`text-4xl leading-none sm:text-5xl ${
             headingFontReady ? "visible" : "invisible"
           }`}
-          style={{ fontFamily: '"Yaz Winky Show", "Winky Show Script", cursive' }}
+          style={{ fontFamily: '"Yaz Winky Show"' }}
         >
           Yaslynn Rivera
         </p>
