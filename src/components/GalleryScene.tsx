@@ -6792,13 +6792,13 @@ function ClientsModal({
             <button
               type="button"
               onClick={() => setSelectedClientKey(null)}
-              className="mt-8 inline-flex cursor-pointer items-center gap-2 pr-3 text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black sm:mt-10"
+              className="mt-5 inline-flex cursor-pointer items-center gap-2 pr-3 text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black sm:mt-6"
               aria-label="Back to all clients"
             >
               <ArrowLeft size={18} strokeWidth={1.5} aria-hidden="true" />
               <span>Back</span>
             </button>
-            <h3 className="mt-7 pr-12 text-3xl leading-tight sm:mt-9 sm:pr-16 sm:text-4xl">
+            <h3 className="mt-3 pr-12 text-3xl leading-tight sm:mt-4 sm:pr-16 sm:text-4xl">
               {selectedClient.name}
             </h3>
             <ClientProjects client={selectedClient} />
