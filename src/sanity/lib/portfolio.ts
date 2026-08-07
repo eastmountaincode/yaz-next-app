@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { PortableTextBlock } from "@portabletext/react";
 import { defineQuery } from "next-sanity";
 import { sanityClient } from "@/sanity/lib/client";
 import {
@@ -47,7 +48,7 @@ const portfolioQuery = defineQuery(`
 type RawPortfolioContent = {
   directorReelUrl?: string;
   bioHeading?: string;
-  bioBody?: string[];
+  bioBody?: Array<string | PortableTextBlock>;
   bioImage?: Partial<SanityImageContent> | null;
   clients?: Array<{
     key?: string;
@@ -82,6 +83,38 @@ function normalizeImage(
   };
 }
 
+function normalizeBioBody(
+  body: Array<string | PortableTextBlock> | undefined,
+): PortableTextBlock[] {
+  return (body ?? []).flatMap((item, index) => {
+    if (typeof item === "string") {
+      const text = item.trim();
+      if (!text) {
+        return [];
+      }
+
+      return [
+        {
+          _key: `legacy-bio-${index}`,
+          _type: "block",
+          style: "normal",
+          markDefs: [],
+          children: [
+            {
+              _key: `legacy-bio-span-${index}`,
+              _type: "span",
+              marks: [],
+              text,
+            },
+          ],
+        },
+      ];
+    }
+
+    return item?._type === "block" && Array.isArray(item.children) ? [item] : [];
+  });
+}
+
 function normalizePortfolio(content: RawPortfolioContent | null): PortfolioContent {
   if (!content) {
     return EMPTY_PORTFOLIO_CONTENT;
@@ -91,7 +124,7 @@ function normalizePortfolio(content: RawPortfolioContent | null): PortfolioConte
     directorReelUrl: content.directorReelUrl || "",
     bio: {
       heading: content.bioHeading || "",
-      paragraphs: (content.bioBody ?? []).filter(Boolean),
+      body: normalizeBioBody(content.bioBody),
       image: normalizeImage(content.bioImage),
     },
     clients: (content.clients ?? [])
