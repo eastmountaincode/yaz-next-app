@@ -349,7 +349,7 @@ const captionFontOptions: CaptionFontOption[] = [
   {
     id: "winky-show",
     label: "Winky Show Solid",
-    fontFamily: '"Yaz Winky Show", "Winky Show Script", cursive',
+    fontFamily: '"Yaz Winky Show"',
     fontWeight: 400,
   },
   {
@@ -6338,7 +6338,7 @@ const MODAL_STYLE = {
 } as const;
 
 const MODAL_HEADING_STYLE = {
-  fontFamily: '"Yaz Winky Show", "Winky Show Script", cursive',
+  fontFamily: '"Yaz Winky Show"',
 } as const;
 
 function useModalDismissal(onClose: () => void) {
