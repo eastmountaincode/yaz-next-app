@@ -38,9 +38,16 @@ const portfolioQuery = defineQuery(`
         videoUrl
       }
     },
-    "stillProjects": *[_type == "stills" && _id == "stills"][0].projects[] {
+    "stillArtists": *[_type == "stills" && _id == "stills"][0].artists[] {
       "key": _key,
-      title,
+      name,
+      coverImage {
+        "key": coalesce(_key, asset._ref),
+        "url": asset->url,
+        "width": asset->metadata.dimensions.width,
+        "height": asset->metadata.dimensions.height,
+        alt
+      },
       images[] {
         "key": coalesce(_key, asset._ref),
         "url": asset->url,
@@ -68,9 +75,10 @@ type RawPortfolioContent = {
       videoUrl?: string;
     }>;
   }>;
-  stillProjects?: Array<{
+  stillArtists?: Array<{
     key?: string;
-    title?: string;
+    name?: string;
+    coverImage?: Partial<SanityImageContent> | null;
     images?: Array<Partial<SanityImageContent>>;
   }>;
 };
@@ -150,12 +158,13 @@ function normalizePortfolio(content: RawPortfolioContent | null): PortfolioConte
             videoUrl: project.videoUrl || "",
           })),
       })),
-    stillProjects: (content.stillProjects ?? [])
-      .filter((project) => project.title)
-      .map((project, projectIndex) => ({
-        key: project.key || `stills-${projectIndex}`,
-        title: project.title || "",
-        images: (project.images ?? [])
+    stillArtists: (content.stillArtists ?? [])
+      .filter((artist) => artist.name)
+      .map((artist, artistIndex) => ({
+        key: artist.key || `stills-artist-${artistIndex}`,
+        name: artist.name || "",
+        coverImage: normalizeImage(artist.coverImage),
+        images: (artist.images ?? [])
           .map(normalizeImage)
           .filter((image): image is SanityImageContent => image !== null),
       })),
