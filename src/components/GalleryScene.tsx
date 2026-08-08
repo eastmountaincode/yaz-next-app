@@ -6447,7 +6447,7 @@ const MODAL_STYLE = {
   closeButton:
     "absolute right-2 top-2 z-20 grid size-9 cursor-pointer place-items-center bg-black/55 text-white transition-colors hover:bg-black/80 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white",
   lightCloseButton:
-    "absolute right-2 top-2 z-20 grid size-9 cursor-pointer place-items-center bg-white/70 text-black transition-colors hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black",
+    "absolute right-2 top-2 z-20 grid size-9 cursor-pointer place-items-center bg-white/70 text-black/55 transition-colors hover:bg-white hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black",
 } as const;
 
 const MODAL_HEADING_STYLE = {
