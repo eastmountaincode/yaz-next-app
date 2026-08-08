@@ -6706,14 +6706,14 @@ function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: ()
               </h3>
             </div>
 
-            <div className="mt-10 grid items-start gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid items-start gap-4 sm:mt-8 sm:grid-cols-2 lg:grid-cols-3">
               {selectedArtist.images.map((image) => (
                 <ContentImage key={image.key} image={image} className="h-auto w-full" />
               ))}
             </div>
           </div>
         ) : (
-          <div className="mt-10 grid grid-cols-2 items-start gap-x-4 gap-y-8 sm:mt-12 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10">
+          <div className="mt-6 grid grid-cols-2 items-start gap-x-4 gap-y-8 sm:mt-8 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10">
             {artists.map((artist) => (
               <button
                 key={artist.key}
@@ -6770,7 +6770,7 @@ function ClientCover({ client }: { client: PortfolioClient }) {
 function ClientProjects({ client }: { client: PortfolioClient }) {
   return (
     <div
-      className={`mt-10 grid items-start gap-x-6 gap-y-10 sm:mt-12 ${
+      className={`mt-6 grid items-start gap-x-6 gap-y-10 sm:mt-8 ${
         client.projects.length > 1 ? "md:grid-cols-2" : "max-w-3xl"
       }`}
     >
@@ -6856,7 +6856,7 @@ function ClientsModal({
             <ClientProjects client={selectedClient} />
           </div>
         ) : (
-          <div className="mt-10 grid grid-cols-2 items-start gap-x-4 gap-y-8 sm:mt-12 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10">
+          <div className="mt-6 grid grid-cols-2 items-start gap-x-4 gap-y-8 sm:mt-8 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10">
             {clients.map((client) => (
               <button
                 key={client.key}
