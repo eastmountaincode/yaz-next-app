@@ -341,7 +341,8 @@ const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
 const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v2";
 const CAPTION_VISIBILITY_STORAGE_KEY = "yaz-caption-visibility-v1";
 const FRAME_CAPTION_COLOR = "#d71920";
-const HELPER_CONTROLS_ENABLED = process.env.NEXT_PUBLIC_PRODUCTION !== "false";
+const HELPER_CONTROLS_ENABLED =
+  process.env.NEXT_PUBLIC_SHOW_HELPER_CONTROLS === "true";
 const MODEL_FLOOR_Y = -2.88;
 const ENVIRONMENT_FINE_DRAG_SENSITIVITY = 0.2;
 const OBJECT_ROTATION_LIMIT = Number((Math.PI * 1.875).toFixed(3));
