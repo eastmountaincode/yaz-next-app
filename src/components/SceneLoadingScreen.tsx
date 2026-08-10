@@ -197,30 +197,29 @@ export function SceneLoadingScreen({
 
   return (
     <div
-      className="absolute inset-0 z-[70] grid place-items-center bg-[#e7e4de] px-6 text-[#1d1d1b]"
+      className="absolute inset-0 z-[70] grid place-items-center bg-black px-6 text-white"
       role="status"
       aria-live="polite"
       aria-label={`Loading ${displayedPercentage}%`}
     >
-      <div className="w-full max-w-sm">
-        <div className="flex items-baseline justify-between gap-4 text-sm">
-          <span>Loading</span>
-          <span className="tabular-nums">{displayedPercentage}%</span>
-        </div>
+      <div className="w-full max-w-sm text-center">
+        <div className="text-sm">Loading</div>
 
-        <div className="mt-3 h-0.5 overflow-hidden bg-black/15">
+        <div className="mt-3 h-0.5 overflow-hidden bg-white/20">
           <div
-            className="h-full bg-[#1d1d1b] transition-[width] duration-300 ease-out"
+            className="h-full bg-white transition-[width] duration-300 ease-out"
             style={{ width: `${displayedPercentage}%` }}
           />
         </div>
 
+        <div className="mt-3 text-sm tabular-nums">{displayedPercentage}%</div>
+
         {displayedError ? (
           <div className="mt-6">
-            <p className="text-sm leading-6 text-[#7b211b]">{displayedError}</p>
+            <p className="text-sm leading-6 text-[#f0aaa4]">{displayedError}</p>
             <button
               type="button"
-              className="mt-4 border border-black/30 px-4 py-2 text-sm transition hover:bg-black/5"
+              className="mt-4 border border-white/30 px-4 py-2 text-sm transition hover:bg-white/10"
               onClick={() => {
                 if (loadError) {
                   setLoadedCount(0);
