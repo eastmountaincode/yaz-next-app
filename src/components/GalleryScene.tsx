@@ -339,6 +339,7 @@ const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
 const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v5";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
 const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v2";
+const CAPTION_VISIBILITY_STORAGE_KEY = "yaz-caption-visibility-v1";
 const FRAME_CAPTION_COLOR = "#d71920";
 const HELPER_CONTROLS_ENABLED = process.env.NEXT_PUBLIC_PRODUCTION !== "false";
 const MODEL_FLOOR_Y = -2.88;
@@ -3071,6 +3072,7 @@ function ThreeWallCanvas({
   captionFont,
   captionPlacement,
   captionDisplayMode,
+  captionsVisible,
   speakerPlaying,
   candleLit,
   onSceneError,
@@ -3094,6 +3096,7 @@ function ThreeWallCanvas({
   captionFont: CaptionFontOption;
   captionPlacement: CaptionPlacementId;
   captionDisplayMode: CaptionDisplayMode;
+  captionsVisible: boolean;
   speakerPlaying: boolean;
   candleLit: boolean;
   onSceneError: (error: Error) => void;
@@ -3114,6 +3117,7 @@ function ThreeWallCanvas({
   const showHitboxHelpersRef = useRef(showHitboxHelpers);
   const activeCaptionFrameIdRef = useRef(activeCaptionFrameId ?? null);
   const captionDisplayModeRef = useRef(captionDisplayMode);
+  const captionsVisibleRef = useRef(captionsVisible);
   const speakerPlayingRef = useRef(speakerPlaying);
   const candleLitRef = useRef(candleLit);
   const syncLightingRef = useRef<(() => void) | null>(null);
@@ -3211,6 +3215,11 @@ function ThreeWallCanvas({
     captionDisplayModeRef.current = captionDisplayMode;
     syncFrameCaptionVisibilityRef.current?.();
   }, [captionDisplayMode]);
+
+  useEffect(() => {
+    captionsVisibleRef.current = captionsVisible;
+    syncFrameCaptionVisibilityRef.current?.();
+  }, [captionsVisible]);
 
   useEffect(() => {
     speakerPlayingRef.current = speakerPlaying;
@@ -3647,6 +3656,7 @@ function ThreeWallCanvas({
           const isHovered = canUseFrameHoverEffects() && clip === hoveredFrameClip;
           const isEditorActive = sceneObjectId === activeCaptionFrameIdRef.current;
           caption.visible =
+            captionsVisibleRef.current &&
             shouldShowFrameCaption(clip) &&
             (captionDisplayModeRef.current === "always" || isHovered || isEditorActive);
           if (caption.material instanceof THREE.MeshBasicMaterial) {
@@ -4850,6 +4860,8 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
       return "always";
     }
   });
+  const [captionsVisible, setCaptionsVisible] = useState(true);
+  const [captionVisibilityReady, setCaptionVisibilityReady] = useState(false);
   const [layoutMode, setLayoutMode] = useState<SceneLayoutMode>("desktop");
   const openWork = useMemo(
     () => (openWorkSlug ? works.find((w) => w.slug === openWorkSlug) ?? null : null),
@@ -4943,6 +4955,37 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
       // Non-critical preference.
     }
   }, [captionDisplayMode]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      try {
+        setCaptionsVisible(
+          window.localStorage.getItem(CAPTION_VISIBILITY_STORAGE_KEY) !== "hidden",
+        );
+      } catch {
+        // Non-critical preference.
+      } finally {
+        setCaptionVisibilityReady(true);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!captionVisibilityReady) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        CAPTION_VISIBILITY_STORAGE_KEY,
+        captionsVisible ? "visible" : "hidden",
+      );
+    } catch {
+      // Non-critical preference.
+    }
+  }, [captionVisibilityReady, captionsVisible]);
 
   useEffect(() => {
     let cancelled = false;
@@ -5421,6 +5464,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         captionFont={captionFont}
         captionPlacement={captionPlacementId}
         captionDisplayMode={captionDisplayMode}
+        captionsVisible={captionsVisible}
         speakerPlaying={speakerPlaying}
         candleLit={candleLit}
         onSceneError={handleSceneError}
@@ -5445,7 +5489,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         onError={handleInitialAssetError}
       />
 
-      {hoveredWork && captionPlacementId === "corner" && !editorOpen && !lightingOpen && !openWork && !bioOpen && !openImageFrameModal ? (
+      {captionsVisible && hoveredWork && captionPlacementId === "corner" && !editorOpen && !lightingOpen && !openWork && !bioOpen && !openImageFrameModal ? (
         <div
           className="pointer-events-none absolute bottom-7 left-5 max-w-[calc(100vw-2.5rem)] break-words text-5xl leading-none text-[#f6f0e5] sm:bottom-9 sm:left-8 sm:text-7xl lg:text-8xl"
           style={{
@@ -5510,6 +5554,18 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
                   }}
                 >
                   <Type size={18} />
+                </button>
+                <button
+                  type="button"
+                  className={`grid size-10 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10 ${
+                    captionsVisible ? "bg-white/15" : ""
+                  }`}
+                  aria-pressed={captionsVisible}
+                  aria-label={captionsVisible ? "Hide all captions" : "Show all captions"}
+                  title={captionsVisible ? "Hide all captions" : "Show all captions"}
+                  onClick={() => setCaptionsVisible((current) => !current)}
+                >
+                  {captionsVisible ? <Eye size={18} /> : <EyeOff size={18} />}
                 </button>
                 <button
                   type="button"
