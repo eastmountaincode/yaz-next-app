@@ -4650,36 +4650,40 @@ function SceneLightingControls({
           tooltip={ambientHelp}
           min={0}
           max={3}
-          step={0.05}
+          step={0.001}
           value={lighting.ambientIntensity}
           onChange={(value) => onChange({ ambientIntensity: value })}
+          fine
         />
         <RangeControl
           label="Key"
           tooltip={keyHelp}
           min={0}
           max={4}
-          step={0.05}
+          step={0.001}
           value={lighting.keyIntensity}
           onChange={(value) => onChange({ keyIntensity: value })}
+          fine
         />
         <RangeControl
           label="Fill"
           tooltip={fillHelp}
           min={0}
           max={6}
-          step={0.05}
+          step={0.001}
           value={lighting.fillIntensity}
           onChange={(value) => onChange({ fillIntensity: value })}
+          fine
         />
         <RangeControl
           label="Exposure"
           tooltip={exposureHelp}
           min={0.35}
           max={1.6}
-          step={0.01}
+          step={0.001}
           value={lighting.exposure}
           onChange={(value) => onChange({ exposure: value })}
+          fine
         />
       </div>
 
@@ -4731,54 +4735,60 @@ function SceneLightingControls({
           tooltip="Move the main shadow-casting light source left or right."
           min={-6}
           max={6}
-          step={0.05}
+          step={0.001}
           value={lighting.keyPosition[0]}
           onChange={(value) => updatePosition("keyPosition", 0, value)}
+          fine
         />
         <RangeControl
           label="Key Y"
           tooltip="Move the main shadow-casting light source up or down."
           min={-1}
           max={6}
-          step={0.05}
+          step={0.001}
           value={lighting.keyPosition[1]}
           onChange={(value) => updatePosition("keyPosition", 1, value)}
+          fine
         />
         <RangeControl
           label="Key Z"
           tooltip="Move the main shadow-casting light source closer to or farther from the wall."
           min={-1}
           max={8}
-          step={0.05}
+          step={0.001}
           value={lighting.keyPosition[2]}
           onChange={(value) => updatePosition("keyPosition", 2, value)}
+          fine
         />
         <RangeControl
           label="Fill X"
           tooltip="Move the softer fill light left or right."
           min={-6}
           max={6}
-          step={0.05}
+          step={0.001}
           value={lighting.fillPosition[0]}
           onChange={(value) => updatePosition("fillPosition", 0, value)}
+          fine
         />
         <RangeControl
           label="Fill Y"
           tooltip="Move the softer fill light up or down."
           min={-1}
           max={6}
-          step={0.05}
+          step={0.001}
           value={lighting.fillPosition[1]}
           onChange={(value) => updatePosition("fillPosition", 1, value)}
+          fine
         />
         <RangeControl
           label="Fill Z"
           tooltip="Move the softer fill light closer to or farther from the wall."
           min={-1}
           max={8}
-          step={0.05}
+          step={0.001}
           value={lighting.fillPosition[2]}
           onChange={(value) => updatePosition("fillPosition", 2, value)}
+          fine
         />
       </div>
     </div>
@@ -5643,7 +5653,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
       ) : null}
 
       {HELPER_CONTROLS_ENABLED && lightingOpen ? (
-        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[22rem] sm:max-h-[calc(100vh-7rem)]">
+        <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[30rem] sm:max-h-[calc(100vh-7rem)]">
           <SceneLightingControls
             lighting={lighting}
             onChange={updateLighting}
