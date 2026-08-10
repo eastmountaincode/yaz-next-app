@@ -5559,18 +5559,6 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
                 <button
                   type="button"
                   className={`grid size-10 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10 ${
-                    captionsVisible ? "bg-white/15" : ""
-                  }`}
-                  aria-pressed={captionsVisible}
-                  aria-label={captionsVisible ? "Hide all captions" : "Show all captions"}
-                  title={captionsVisible ? "Hide all captions" : "Show all captions"}
-                  onClick={() => setCaptionsVisible((current) => !current)}
-                >
-                  {captionsVisible ? <Eye size={18} /> : <EyeOff size={18} />}
-                </button>
-                <button
-                  type="button"
-                  className={`grid size-10 place-items-center rounded text-[#f6f0e5] transition hover:bg-white/10 ${
                     editorOpen ? "bg-white/15" : ""
                   }`}
                   aria-label="Toggle environment object editor"
@@ -5676,6 +5664,19 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
             <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
               Display
             </div>
+            <button
+              type="button"
+              className={`flex items-center justify-between gap-3 rounded border px-3 py-2 text-left text-xs transition ${
+                captionsVisible
+                  ? "border-sky-300 bg-sky-300/15 text-sky-100"
+                  : "border-white/10 bg-white/5 text-[#f6f0e5] hover:bg-white/10"
+              }`}
+              aria-pressed={captionsVisible}
+              onClick={() => setCaptionsVisible((current) => !current)}
+            >
+              <span>{captionsVisible ? "Captions visible" : "Captions hidden"}</span>
+              {captionsVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+            </button>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { id: "always", label: "Always visible" },
