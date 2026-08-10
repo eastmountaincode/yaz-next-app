@@ -127,26 +127,6 @@ export function SceneLoadingScreen({
   const [loadedCount, setLoadedCount] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [headingFontReady, setHeadingFontReady] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const descriptor = '400 48px "Yaz Winky Show"';
-    const text = "Yaslynn Rivera";
-
-    document.fonts
-      .load(descriptor, text)
-      .then(() => {
-        if (!cancelled && document.fonts.check(descriptor, text)) {
-          setHeadingFontReady(true);
-        }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!assets || assetsReady) {
@@ -212,48 +192,35 @@ export function SceneLoadingScreen({
     return null;
   }
 
-  const status = !assets
-    ? "Opening the room"
-    : assetsReady
-      ? "Preparing the room"
-      : "Loading the room";
   const displayedError = loadError ?? sceneError;
+  const displayedPercentage = assetsReady ? 100 : percentage;
 
   return (
     <div
-      className="absolute inset-0 z-[70] grid place-items-center bg-[#15130f] px-6 text-[#f6f0e5]"
+      className="absolute inset-0 z-[70] grid place-items-center bg-[#e7e4de] px-6 text-[#1d1d1b]"
       role="status"
       aria-live="polite"
-      aria-label={status}
+      aria-label={`Loading ${displayedPercentage}%`}
     >
-      <div className="w-full max-w-sm text-center">
-        <p
-          className={`text-4xl leading-none sm:text-5xl ${
-            headingFontReady ? "visible" : "invisible"
-          }`}
-          style={{ fontFamily: '"Yaz Winky Show"' }}
-        >
-          Yaslynn Rivera
-        </p>
-        <p className="mt-4 text-xs uppercase tracking-[0.22em] text-[#b9aa92]">{status}</p>
+      <div className="w-full max-w-sm">
+        <div className="flex items-baseline justify-between gap-4 text-sm">
+          <span>Loading</span>
+          <span className="tabular-nums">{displayedPercentage}%</span>
+        </div>
 
-        <div className="mt-6 h-px overflow-hidden bg-white/15">
+        <div className="mt-3 h-0.5 overflow-hidden bg-black/15">
           <div
-            className="h-full bg-[#f6f0e5] transition-[width] duration-300 ease-out"
-            style={{ width: `${assetsReady ? 100 : percentage}%` }}
+            className="h-full bg-[#1d1d1b] transition-[width] duration-300 ease-out"
+            style={{ width: `${displayedPercentage}%` }}
           />
         </div>
 
-        <p className="mt-3 font-mono text-xs tabular-nums text-[#b9aa92]">
-          {assetsReady ? 100 : percentage}%
-        </p>
-
         {displayedError ? (
           <div className="mt-6">
-            <p className="text-sm leading-6 text-[#e2b8a7]">{displayedError}</p>
+            <p className="text-sm leading-6 text-[#7b211b]">{displayedError}</p>
             <button
               type="button"
-              className="mt-4 cursor-pointer rounded border border-white/20 px-4 py-2 text-sm transition hover:bg-white/10"
+              className="mt-4 border border-black/30 px-4 py-2 text-sm transition hover:bg-black/5"
               onClick={() => {
                 if (loadError) {
                   setLoadedCount(0);
