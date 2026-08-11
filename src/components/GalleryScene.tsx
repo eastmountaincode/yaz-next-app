@@ -1011,6 +1011,13 @@ function createCandleAccentLightSetting(seed?: Partial<LightSetting>): LightSett
   });
 }
 
+function isCandleAccentLight(setting: SceneObjectSetting): setting is LightSetting {
+  return (
+    setting.kind === "light" &&
+    (setting.label === "Candle accent light" || setting.id.startsWith("candle-accent-light-"))
+  );
+}
+
 function lampHitboxPlacementFromModel(setting: ModelSetting) {
   const offset = new THREE.Vector3(...LAMP_TOGGLE_ZONE_LOCAL_POSITION);
   offset.multiplyScalar(setting.wallScale);
@@ -1419,7 +1426,7 @@ function createFrameCaptionTexture(
     const fontSize = Math.min(...lines.map((line) => fitText(line, lineStartSize, 44)));
     ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
     lines.forEach((line, index) => {
-      drawCaptionText(line, canvas.width / 2, index === 0 ? 54 : 150);
+      drawCaptionText(line, canvas.width / 2, index === 0 ? 62 : 150);
     });
   } else {
     const line = lines[0] ?? text;
@@ -3111,6 +3118,7 @@ function ThreeWallCanvas({
   settings,
   lighting,
   showSceneLightMarkers,
+  showObjectLightMarkers,
   showHitboxHelpers,
   activeCaptionFrameId,
   resetSignal,
@@ -3136,6 +3144,7 @@ function ThreeWallCanvas({
   settings: SceneObjectSetting[];
   lighting: SceneLighting;
   showSceneLightMarkers: boolean;
+  showObjectLightMarkers: boolean;
   showHitboxHelpers: boolean;
   activeCaptionFrameId?: string | null;
   resetSignal: number;
@@ -3162,6 +3171,7 @@ function ThreeWallCanvas({
   const settingsRef = useRef(settings);
   const lightingRef = useRef(lighting);
   const showSceneLightMarkersRef = useRef(showSceneLightMarkers);
+  const showObjectLightMarkersRef = useRef(showObjectLightMarkers);
   const showHitboxHelpersRef = useRef(showHitboxHelpers);
   const activeCaptionFrameIdRef = useRef(activeCaptionFrameId ?? null);
   const captionDisplayModeRef = useRef(captionDisplayMode);
@@ -3248,6 +3258,11 @@ function ThreeWallCanvas({
     syncLightingRef.current?.();
     syncFrameCaptionVisibilityRef.current?.();
   }, [showSceneLightMarkers]);
+
+  useEffect(() => {
+    showObjectLightMarkersRef.current = showObjectLightMarkers;
+    syncHitboxHelpersRef.current?.();
+  }, [showObjectLightMarkers]);
 
   useEffect(() => {
     showHitboxHelpersRef.current = showHitboxHelpers;
@@ -3703,7 +3718,7 @@ function ThreeWallCanvas({
           const sceneObjectId = clip.userData?.sceneObjectId as string | undefined;
           const supportsHover = canUseFrameHoverEffects();
           const isHovered = supportsHover && clip === hoveredFrameClip;
-          const showImmediately = !supportsHover;
+          const showImmediately = viewportMode === "mobile" || !supportsHover;
           const isEditorActive = sceneObjectId === activeCaptionFrameIdRef.current;
           caption.visible =
             captionsVisibleRef.current &&
@@ -3769,7 +3784,7 @@ function ThreeWallCanvas({
     };
 
     const syncHitboxHelpers = () => {
-      const helpersVisible = showHitboxHelpersRef.current;
+      const lightMarkersVisible = showObjectLightMarkersRef.current;
       const opacity = showHitboxHelpersRef.current ? 0.55 : 0;
       sceneObjectsRef.current.forEach((group) => {
         group.traverse((child) => {
@@ -3777,7 +3792,7 @@ function ThreeWallCanvas({
             child instanceof THREE.Mesh &&
             (child.name === "editable-light-marker" || child.name === "editable-light-halo")
           ) {
-            child.visible = helpersVisible;
+            child.visible = lightMarkersVisible;
             return;
           }
           if (
@@ -4691,11 +4706,19 @@ function ObjectPreviewButton({
 
 function SceneLightingControls({
   lighting,
+  candleAccentLight,
+  layoutMode,
   onChange,
+  onCandleAccentChange,
+  onAddCandleAccent,
   onReset,
 }: {
   lighting: SceneLighting;
+  candleAccentLight?: LightSetting;
+  layoutMode: SceneLayoutMode;
   onChange: (partial: Partial<SceneLighting>) => void;
+  onCandleAccentChange: (partial: Partial<LightSetting>) => void;
+  onAddCandleAccent: () => void;
   onReset: () => void;
 }) {
   const ambientHelp = "The base wash of light across the whole room. Higher values lift shadows everywhere.";
@@ -4710,6 +4733,14 @@ function SceneLightingControls({
     const position = [...lighting[property]] as VectorTuple;
     position[axis] = value;
     onChange({ [property]: position });
+  };
+  const updateCandlePosition = (axis: 0 | 1 | 2, value: number) => {
+    if (!candleAccentLight) {
+      return;
+    }
+    const position = [...candleAccentLight.position] as VectorTuple;
+    position[axis] = value;
+    onCandleAccentChange({ position });
   };
 
   return (
@@ -4879,6 +4910,104 @@ function SceneLightingControls({
           fine
         />
       </div>
+
+      <div className="mt-5 border-t border-white/10 pt-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+              Candle accent
+            </div>
+            <div className="font-mono text-[11px] text-[#fff7e8]">point light</div>
+          </div>
+          {candleAccentLight ? (
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-[11px] text-[#d8cdbb]">
+                Visible on {layoutMode}
+                <input
+                  className="accent-amber-300"
+                  type="checkbox"
+                  checked={isSceneObjectVisible(candleAccentLight)}
+                  onChange={(event) => onCandleAccentChange({ visible: event.target.checked })}
+                />
+              </label>
+              <label className="flex items-center gap-2 text-[11px] text-[#d8cdbb]">
+                Enabled
+                <input
+                  className="accent-amber-300"
+                  type="checkbox"
+                  checked={candleAccentLight.enabled}
+                  onChange={(event) => onCandleAccentChange({ enabled: event.target.checked })}
+                />
+              </label>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="rounded border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs text-amber-100 hover:bg-amber-300/15"
+              onClick={onAddCandleAccent}
+            >
+              Add candle light
+            </button>
+          )}
+        </div>
+
+        {candleAccentLight ? (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <label className="grid min-w-0 gap-1 text-[11px] text-[#d8cdbb]">
+                Color
+                <input
+                  className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
+                  type="color"
+                  value={candleAccentLight.color}
+                  onChange={(event) => onCandleAccentChange({ color: event.target.value })}
+                />
+              </label>
+              <RangeControl
+                label="Intensity"
+                min={0}
+                max={10}
+                step={0.001}
+                value={candleAccentLight.intensity}
+                onChange={(value) => onCandleAccentChange({ intensity: value })}
+                fine
+              />
+              <RangeControl
+                label="Distance"
+                min={0}
+                max={12}
+                step={0.001}
+                value={candleAccentLight.distance}
+                onChange={(value) => onCandleAccentChange({ distance: value })}
+                fine
+              />
+            </div>
+            <div className="mt-3 grid grid-cols-4 gap-3">
+              <RangeControl
+                label="Falloff"
+                min={0}
+                max={4}
+                step={0.001}
+                value={candleAccentLight.decay}
+                onChange={(value) => onCandleAccentChange({ decay: value })}
+                fine
+              />
+              {(["X", "Y", "Z"] as const).map((axisLabel, axis) => (
+                <RangeControl
+                  key={axisLabel}
+                  label={`Light ${axisLabel}`}
+                  min={axis === 1 ? -7.875 : -10}
+                  max={axis === 1 ? 6 : 10}
+                  step={0.001}
+                  value={candleAccentLight.position[axis as 0 | 1 | 2]}
+                  onChange={(value) => updateCandlePosition(axis as 0 | 1 | 2, value)}
+                  fine
+                />
+              ))}
+            </div>
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -4993,6 +5122,17 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   const activeSettings = useMemo(
     () => settings.map((setting) => resolveSceneObjectLayout(setting, layoutMode)),
     [layoutMode, settings],
+  );
+  const candleAccentLight = useMemo(
+    () => activeSettings.find(isCandleAccentLight),
+    [activeSettings],
+  );
+  const environmentObjectEntries = useMemo(
+    () =>
+      activeSettings
+        .map((setting, index) => ({ setting, index }))
+        .filter(({ setting }) => !isCandleAccentLight(setting)),
+    [activeSettings],
   );
   const selectedBase = settings[selectedObject] ?? settings[0];
   const selected = selectedBase
@@ -5316,6 +5456,37 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
     setLighting((current) => normalizeSceneLighting({ ...current, ...partial }));
   }, []);
 
+  const updateCandleAccentLight = useCallback(
+    (partial: Partial<LightSetting>) => {
+      setSceneError(null);
+      setSettings((current) =>
+        current.map((setting) => {
+          if (!isCandleAccentLight(setting)) {
+            return setting;
+          }
+
+          const { position, visible, ...sharedPartial } = partial;
+          const layoutChanged = Boolean(position) || typeof visible === "boolean";
+          return {
+            ...setting,
+            ...sharedPartial,
+            layouts: layoutChanged
+              ? {
+                  ...setting.layouts,
+                  [layoutMode]: {
+                    ...setting.layouts?.[layoutMode],
+                    ...(position ? { position } : {}),
+                    ...(typeof visible === "boolean" ? { visible } : {}),
+                  },
+                }
+              : setting.layouts,
+          };
+        }),
+      );
+    },
+    [layoutMode],
+  );
+
   const playLampSwitchSound = useCallback((turningOn: boolean) => {
     const element = new Audio(turningOn ? LAMP_SWITCH_ON_AUDIO_PATH : LAMP_SWITCH_OFF_AUDIO_PATH);
     element.preload = "auto";
@@ -5568,6 +5739,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         settings={activeSettings}
         lighting={lighting}
         showSceneLightMarkers={HELPER_CONTROLS_ENABLED && lightingOpen}
+        showObjectLightMarkers={HELPER_CONTROLS_ENABLED && (lightingOpen || editorOpen)}
         showHitboxHelpers={HELPER_CONTROLS_ENABLED && editorOpen}
         activeCaptionFrameId={
           HELPER_CONTROLS_ENABLED &&
@@ -5684,7 +5856,11 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
                   aria-label="Toggle environment object editor"
                   title="Toggle environment object editor"
                   onClick={() => {
-                    setEditorOpen((current) => !current);
+                    const opening = !editorOpen;
+                    if (opening && selected && isCandleAccentLight(selected)) {
+                      setSelectedObject(environmentObjectEntries[0]?.index ?? 0);
+                    }
+                    setEditorOpen(opening);
                     setCaptionOpen(false);
                     setLightingOpen(false);
                   }}
@@ -5766,7 +5942,11 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         <div className="absolute bottom-3 left-3 right-3 max-h-[56vh] overflow-auto rounded border border-white/10 bg-[#16120d]/58 p-3 text-xs text-[#f6f0e5] shadow-2xl backdrop-blur-[2px] sm:left-auto sm:right-4 sm:top-20 sm:bottom-auto sm:w-[30rem] sm:max-h-[calc(100vh-7rem)]">
           <SceneLightingControls
             lighting={lighting}
+            candleAccentLight={candleAccentLight}
+            layoutMode={layoutMode}
             onChange={updateLighting}
+            onCandleAccentChange={updateCandleAccentLight}
+            onAddCandleAccent={() => addObject("light", "candle-accent")}
             onReset={() => setPendingReset("lighting")}
           />
         </div>
@@ -5894,7 +6074,11 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
                 Environment objects
               </div>
               <div className="font-mono text-[11px] text-[#fff7e8]">
-                {selectedObject + 1} / {settings.length}
+                {Math.max(
+                  1,
+                  environmentObjectEntries.findIndex(({ index }) => index === selectedObject) + 1,
+                )}{" "}
+                / {environmentObjectEntries.length}
               </div>
               <div className="mt-1 text-[10px] uppercase tracking-[0.08em] text-sky-100">
                 Editing {layoutMode}
@@ -5993,13 +6177,6 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
             </button>
             <button
               type="button"
-              className="rounded border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs text-amber-100 hover:bg-amber-300/15"
-              onClick={() => addObject("light", "candle-accent")}
-            >
-              Add candle light
-            </button>
-            <button
-              type="button"
               className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
               onClick={() => addObject("hitbox")}
             >
@@ -6022,7 +6199,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
           </div>
 
           <div className="mb-3 grid grid-cols-2 gap-2">
-            {activeSettings.map((setting, index) => (
+            {environmentObjectEntries.map(({ setting, index }) => (
               <ObjectPreviewButton
                 key={setting.id}
                 index={index}
