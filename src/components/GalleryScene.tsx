@@ -442,7 +442,7 @@ type CaptionFontOption = {
 const captionFontOptions: CaptionFontOption[] = [
   {
     id: "winky-show",
-    label: "Winky Show Solid",
+    label: "Winky Show Dotted",
     fontFamily: '"Yaz Winky Show"',
     fontWeight: 400,
   },
@@ -1350,13 +1350,6 @@ function createFrameCaptionTexture(
   ctx.textBaseline = "middle";
 
   const drawCaptionText = (line: string, x: number, y: number) => {
-    if (font.id === "winky-show") {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.strokeText(line, x, y);
-    }
     ctx.fillText(line, x, y);
   };
 
