@@ -279,6 +279,7 @@ type CandleCompositeSetting = BaseObjectSetting & {
   kind: "candle-composite";
   holderModel: string;
   candleModel: string;
+  separateCandleModel: boolean;
   flameTexture: string;
   candleOffset: VectorTuple;
   candleScale: number;
@@ -384,6 +385,8 @@ const BASEBOARD_WALL_OFFSET = 0.006;
 const CANDLE_HOLDER_MODEL_PATH = "/3d-models/candle-and-holder/holder.glb";
 const CANDLE_MODEL_PATH = "/3d-models/candle-and-holder/candle_no_flame_shorter.glb";
 const CANDLE_FLAME_TEXTURE_PATH = "/3d-models/candle-and-holder/candleflame_atlas.png";
+const CLAY_SAUCER_CANDLE_MODEL_PATH =
+  "/3d-models/candles/low-poly_candle_on_clay_saucer_optimized.glb";
 const SPEAKER_MODEL_PATH = "/3d-models/decor/portable_bluetooth_speaker.glb";
 const SPEAKER_MUSIC_AUDIO_PATH = "/audio/speaker-radio-track.mp3";
 const SPEAKER_BUTTON_AUDIO_PATH = "/audio/dragon-studio-button-press-2.mp3";
@@ -1045,6 +1048,7 @@ function createCandleCompositeSetting(
     layouts: normalizeLayoutOverrides(seed?.layouts),
     holderModel: seed?.holderModel ?? CANDLE_HOLDER_MODEL_PATH,
     candleModel: seed?.candleModel ?? CANDLE_MODEL_PATH,
+    separateCandleModel: seed?.separateCandleModel ?? true,
     flameTexture: seed?.flameTexture ?? CANDLE_FLAME_TEXTURE_PATH,
     candleOffset: seed?.candleOffset ?? [0, 0.42, 0.02],
     candleScale: seed?.candleScale ?? 0.46,
@@ -1055,6 +1059,25 @@ function createCandleCompositeSetting(
     flameLightIntensity: seed?.flameLightIntensity ?? 0.3,
     flameLightDistance: seed?.flameLightDistance ?? 1.1,
   };
+}
+
+function createClaySaucerCandleSetting(
+  seed?: Partial<CandleCompositeSetting>,
+): CandleCompositeSetting {
+  return createCandleCompositeSetting({
+    label: "Low-poly candle on clay saucer",
+    holderModel: CLAY_SAUCER_CANDLE_MODEL_PATH,
+    separateCandleModel: false,
+    candleOffset: [0, 0, 0],
+    candleScale: 1,
+    flameOffset: [0, 0.98, 0.02],
+    flameScale: 0.075,
+    flameOpacity: 0.92,
+    flameLightColor: "#ffb86b",
+    flameLightIntensity: 0.1,
+    flameLightDistance: 4,
+    ...seed,
+  });
 }
 
 function createSpeakerCompositeSetting(
@@ -1122,6 +1145,17 @@ const defaultSceneSettings = [
     flameLightIntensity: 0.1,
     flameLightDistance: 4,
     layouts: { desktop: { visible: false } },
+  }),
+  createClaySaucerCandleSetting({
+    id: "clay-saucer-candle-composite",
+    visible: false,
+    position: [0, 0, 0.08],
+    rotation: [0, 0, 0],
+    wallScale: 0.8,
+    layouts: {
+      desktop: { visible: false },
+      mobile: { visible: false },
+    },
   }),
   createClockSetting({
     id: "clock-vintage-wall",
@@ -2015,8 +2049,10 @@ function createCandleCompositeObject(
   onSceneError: (error: Error) => void,
 ) {
   const holderSource = sourceModels.get(setting.holderModel);
-  const candleSource = sourceModels.get(setting.candleModel);
-  if (!holderSource || !candleSource) {
+  const candleSource = setting.separateCandleModel
+    ? sourceModels.get(setting.candleModel)
+    : undefined;
+  if (!holderSource || (setting.separateCandleModel && !candleSource)) {
     throw new Error("Candle composite model assets did not load.");
   }
 
@@ -2030,7 +2066,9 @@ function createCandleCompositeObject(
 
   const candleRoot = new THREE.Group();
   candleRoot.name = "candle-composite-candle-root";
-  candleRoot.add(createNormalizedModel(candleSource));
+  if (candleSource) {
+    candleRoot.add(createNormalizedModel(candleSource));
+  }
   group.add(candleRoot);
 
   const flameTexture = createAnimatedImageTexture(
@@ -2875,10 +2913,9 @@ function sceneModelPaths(settings: SceneObjectSetting[]) {
     }
 
     if (setting.kind === "candle-composite") {
-      return [
-        safeAssetPath(setting.holderModel, ""),
-        safeAssetPath(setting.candleModel, ""),
-      ];
+      return setting.separateCandleModel
+        ? [safeAssetPath(setting.holderModel, ""), safeAssetPath(setting.candleModel, "")]
+        : [safeAssetPath(setting.holderModel, "")];
     }
 
     if (setting.kind === "speaker-composite") {
@@ -5381,10 +5418,15 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
               ],
             })
         : kind === "candle-composite"
-          ? createCandleCompositeSetting({
-              id: `candle-composite-${Date.now().toString(36)}`,
-              position: nextPosition,
-            })
+          ? modelCatalogId === "clay-saucer"
+            ? createClaySaucerCandleSetting({
+                id: `clay-saucer-candle-${Date.now().toString(36)}`,
+                position: nextPosition,
+              })
+            : createCandleCompositeSetting({
+                id: `candle-composite-${Date.now().toString(36)}`,
+                position: nextPosition,
+              })
         : kind === "speaker-composite"
           ? createSpeakerCompositeSetting({
               id: `speaker-composite-${Date.now().toString(36)}`,
@@ -5884,6 +5926,13 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
             <button
               type="button"
               className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addObject("candle-composite", "clay-saucer")}
+            >
+              Add clay candle
+            </button>
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
               onClick={() => addObject("speaker-composite")}
             >
               Add speaker
@@ -6236,7 +6285,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
           {selected.kind === "candle-composite" ? (
             <Link
               className="mt-3 inline-block rounded border border-amber-300/30 bg-amber-300/15 px-3 py-2 text-xs text-amber-100 hover:bg-amber-300/20"
-              href="/candle-editor"
+              href={`/candle-editor?id=${encodeURIComponent(selected.id)}`}
             >
               Candle editor
             </Link>

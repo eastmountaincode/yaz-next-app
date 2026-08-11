@@ -71,6 +71,9 @@ for (const model of optionalModels) {
 
 for (const object of environment.objects ?? []) {
   for (const key of ["model", "holderModel", "candleModel", "speakerModel"]) {
+    if (key === "candleModel" && object.separateCandleModel === false) {
+      continue;
+    }
     if (typeof object[key] === "string" && object[key].endsWith(".glb")) {
       assetPaths.add(object[key]);
     }

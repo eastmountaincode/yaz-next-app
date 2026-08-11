@@ -31,10 +31,15 @@ async function readEnvironment(): Promise<StoredEnvironment> {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const environment = await readEnvironment();
+  const requestedId = new URL(request.url).searchParams.get("id");
   const candleComposite =
-    environment.objects?.find(isCandleComposite) ?? defaultCandleComposite;
+    environment.objects?.find(
+      (object) =>
+        isCandleComposite(object) &&
+        (!requestedId || (typeof object.id === "string" && object.id === requestedId)),
+    ) ?? environment.objects?.find(isCandleComposite) ?? defaultCandleComposite;
 
   return NextResponse.json(normalizeCandleComposite(candleComposite));
 }
@@ -43,7 +48,12 @@ export async function POST(request: Request) {
   const candleComposite = normalizeCandleComposite(await request.json());
   const environment = await readEnvironment();
   const objects = Array.isArray(environment.objects) ? [...environment.objects] : [];
-  const existingIndex = objects.findIndex(isCandleComposite);
+  const existingIndex = objects.findIndex(
+    (object) =>
+      isCandleComposite(object) &&
+      typeof object.id === "string" &&
+      object.id === candleComposite.id,
+  );
 
   if (existingIndex >= 0) {
     objects[existingIndex] = candleComposite;
