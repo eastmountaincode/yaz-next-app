@@ -25,10 +25,10 @@ export const clientsType = defineType({
             defineField({
               name: "coverImage",
               title: "Cover image",
-              description:
-                "Optional square image for the Clients grid. The first project's video thumbnail is used when this is empty.",
+              description: "Square image shown for this client in the Clients grid.",
               type: "image",
               options: { hotspot: true },
+              validation: (rule) => rule.required(),
               fields: [
                 defineField({
                   name: "alt",
