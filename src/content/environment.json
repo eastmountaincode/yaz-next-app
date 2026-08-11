@@ -127,6 +127,51 @@
       "flameLightDistance": 4
     },
     {
+      "id": "clay-saucer-candle-composite",
+      "kind": "candle-composite",
+      "label": "Low-poly candle on clay saucer",
+      "visible": false,
+      "position": [
+        0,
+        0,
+        0.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "wallScale": 0.8,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        },
+        "mobile": {
+          "visible": false
+        }
+      },
+      "holderModel": "/3d-models/candles/low-poly_candle_on_clay_saucer_optimized.glb",
+      "candleModel": "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
+      "separateCandleModel": false,
+      "flameTexture": "/3d-models/candle-and-holder/candleflame_atlas.png",
+      "candleOffset": [
+        0,
+        0,
+        0
+      ],
+      "candleScale": 1,
+      "flameOffset": [
+        0,
+        0.98,
+        0.02
+      ],
+      "flameScale": 0.075,
+      "flameOpacity": 0.92,
+      "flameLightColor": "#ffb86b",
+      "flameLightIntensity": 0.1,
+      "flameLightDistance": 4
+    },
+    {
       "id": "clock-vintage-wall",
       "kind": "clock",
       "label": "Vintage clock",

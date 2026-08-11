@@ -249,7 +249,9 @@ function CandleCanvas({
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
     Promise.all([
       loader.loadAsync(resolveModelAssetUrl(configRef.current.holderModel)),
-      loader.loadAsync(resolveModelAssetUrl(configRef.current.candleModel)),
+      configRef.current.separateCandleModel
+        ? loader.loadAsync(resolveModelAssetUrl(configRef.current.candleModel))
+        : Promise.resolve(null),
     ])
       .then(([holder, candle]) => {
         if (disposed) {
@@ -258,8 +260,10 @@ function CandleCanvas({
 
         holderModel = createNormalizedModel(holder.scene);
         holderRoot.add(holderModel);
-        candleModel = createNormalizedModel(candle.scene);
-        candleRoot.add(candleModel);
+        if (candle) {
+          candleModel = createNormalizedModel(candle.scene);
+          candleRoot.add(candleModel);
+        }
 
         const flameTexture = createAnimatedImageTexture(
           resolveModelAssetUrl(configRef.current.flameTexture),
@@ -405,12 +409,12 @@ function CandleCanvas({
   return <div ref={hostRef} className="absolute inset-0" />;
 }
 
-function readStoredCandle() {
+function readStoredCandle(storageKey: string) {
   if (typeof window === "undefined") {
     return defaultCandleComposite;
   }
 
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = window.localStorage.getItem(storageKey);
   if (!stored) {
     return defaultCandleComposite;
   }
@@ -432,7 +436,8 @@ function updateVector(
   return next;
 }
 
-export function CandleCompositeEditor() {
+export function CandleCompositeEditor({ requestedId = "" }: { requestedId?: string }) {
+  const storageKey = requestedId ? `${STORAGE_KEY}:${requestedId}` : STORAGE_KEY;
   const storageReadyRef = useRef(false);
   const [config, setConfig] = useState<CandleCompositeConfig>(defaultCandleComposite);
   const [showGrid, setShowGrid] = useState(true);
@@ -449,14 +454,15 @@ export function CandleCompositeEditor() {
     const timeout = window.setTimeout(() => {
       void (async () => {
         try {
-          const response = await fetch("/api/candle-composite", { cache: "no-store" });
+          const query = requestedId ? `?id=${encodeURIComponent(requestedId)}` : "";
+          const response = await fetch(`/api/candle-composite${query}`, { cache: "no-store" });
           if (!response.ok) {
             throw new Error("Failed to load candle composite: " + response.status);
           }
           setConfig(normalizeCandleComposite(await response.json()));
         } catch (nextError) {
           try {
-            setConfig(readStoredCandle());
+            setConfig(readStoredCandle(storageKey));
           } catch {
             setConfig(defaultCandleComposite);
           }
@@ -468,13 +474,13 @@ export function CandleCompositeEditor() {
     }, 0);
 
     return () => window.clearTimeout(timeout);
-  }, []);
+  }, [requestedId, storageKey]);
 
   useEffect(() => {
     if (storageReadyRef.current) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      window.localStorage.setItem(storageKey, JSON.stringify(config));
     }
-  }, [config]);
+  }, [config, storageKey]);
 
   const updateConfig = useCallback((partial: Partial<CandleCompositeConfig>) => {
     setError(null);
@@ -507,6 +513,7 @@ export function CandleCompositeEditor() {
     <main className="grid min-h-screen bg-[#15130f] text-[#f6f0e5] lg:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)]">
       <section className="relative min-h-[58vh] lg:min-h-screen">
         <CandleCanvas
+          key={`${config.holderModel}:${config.candleModel}:${config.separateCandleModel}`}
           config={config}
           showGrid={showGrid}
           viewResetSignal={viewResetSignal}

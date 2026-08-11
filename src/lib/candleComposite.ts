@@ -10,6 +10,7 @@ export type CandleCompositeConfig = {
   wallScale: number;
   holderModel: string;
   candleModel: string;
+  separateCandleModel: boolean;
   flameTexture: string;
   candleOffset: VectorTuple;
   candleScale: number;
@@ -38,6 +39,7 @@ export const defaultCandleComposite: CandleCompositeConfig = {
   wallScale: 0.92,
   holderModel: "/3d-models/candle-and-holder/holder.glb",
   candleModel: "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
+  separateCandleModel: true,
   flameTexture: "/3d-models/candle-and-holder/candleflame_atlas.png",
   candleOffset: [0, 0.42, 0.02],
   candleScale: 0.46,
@@ -100,6 +102,7 @@ export function normalizeCandleComposite(
     wallScale: clampNumber(seed.wallScale, defaultCandleComposite.wallScale, 0.35, 2.4),
     holderModel: normalizePath(seed.holderModel, defaultCandleComposite.holderModel),
     candleModel: normalizePath(seed.candleModel, defaultCandleComposite.candleModel),
+    separateCandleModel: seed.separateCandleModel !== false,
     flameTexture: normalizePath(seed.flameTexture, defaultCandleComposite.flameTexture),
     candleOffset: normalizeVector(seed.candleOffset, defaultCandleComposite.candleOffset, [-0.8, -0.2, -0.8], [0.8, 1.4, 0.8]),
     candleScale: clampNumber(seed.candleScale, defaultCandleComposite.candleScale, 0.08, 1.2),
