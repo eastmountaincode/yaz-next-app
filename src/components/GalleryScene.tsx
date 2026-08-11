@@ -7040,10 +7040,8 @@ function BioModal({
 }
 
 function StillArtistCover({ artist }: { artist: StillArtist }) {
-  const coverImage = artist.coverImage ?? artist.images[0];
-
-  return coverImage ? (
-    <ContentImage image={coverImage} className="size-full object-cover" />
+  return artist.coverImage ? (
+    <ContentImage image={artist.coverImage} className="size-full object-cover" />
   ) : (
     <div className="size-full bg-neutral-200" aria-hidden="true" />
   );
