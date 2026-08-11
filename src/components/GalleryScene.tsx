@@ -67,7 +67,7 @@ const BIO_PORTABLE_TEXT_COMPONENTS = {
 
       return (
         <a
-          className="text-inherit underline decoration-current/40 underline-offset-[3px] transition-opacity hover:opacity-60"
+          className="text-inherit underline decoration-current/40 underline-offset-[3px] hover:opacity-80"
           href={href}
           target="_blank"
           rel="noreferrer"
@@ -6978,7 +6978,7 @@ function ProjectModal({
             />
           ) : (
             <a
-              className="absolute inset-0 grid place-items-center text-sm text-white transition-opacity hover:opacity-60"
+              className="absolute inset-0 grid place-items-center text-sm text-white hover:opacity-80"
               href={project.videoUrl}
               target="_blank"
               rel="noreferrer"
@@ -7079,7 +7079,7 @@ function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: ()
               <button
                 type="button"
                 onClick={() => setSelectedArtistKey(null)}
-                className="inline-flex cursor-pointer items-center gap-2 justify-self-start text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                className="inline-flex cursor-pointer items-center gap-2 justify-self-start text-sm hover:opacity-80 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 aria-label="Back to all stills artists"
               >
                 <ArrowLeft size={18} strokeWidth={1.5} aria-hidden="true" />
@@ -7103,7 +7103,7 @@ function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: ()
                 key={artist.key}
                 type="button"
                 onClick={() => setSelectedArtistKey(artist.key)}
-                className="block w-full cursor-pointer text-left transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                className="block w-full cursor-pointer text-left hover:opacity-80 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 aria-label={`View ${artist.name} stills`}
               >
                 <div className="aspect-square w-full overflow-hidden bg-neutral-200">
@@ -7175,7 +7175,7 @@ function ClientProjects({ client }: { client: PortfolioClient }) {
                 />
               ) : (
                 <a
-                  className="absolute inset-0 grid place-items-center text-sm text-white transition-opacity hover:opacity-60"
+                  className="absolute inset-0 grid place-items-center text-sm text-white hover:opacity-80"
                   href={project.videoUrl}
                   target="_blank"
                   rel="noreferrer"
@@ -7227,7 +7227,7 @@ function ClientsModal({
               <button
                 type="button"
                 onClick={() => setSelectedClientKey(null)}
-                className="inline-flex cursor-pointer items-center gap-2 justify-self-start text-sm transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                className="inline-flex cursor-pointer items-center gap-2 justify-self-start text-sm hover:opacity-80 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 aria-label="Back to all clients"
               >
                 <ArrowLeft size={18} strokeWidth={1.5} aria-hidden="true" />
@@ -7246,7 +7246,7 @@ function ClientsModal({
                 key={client.key}
                 type="button"
                 onClick={() => setSelectedClientKey(client.key)}
-                className="group block w-full cursor-pointer text-left transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                className="group block w-full cursor-pointer text-left hover:opacity-80 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 aria-label={`View ${client.name} projects`}
               >
                 <div className="aspect-square w-full overflow-hidden bg-neutral-200">
