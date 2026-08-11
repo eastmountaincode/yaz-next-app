@@ -173,51 +173,6 @@
       "flameLightDistance": 4
     },
     {
-      "id": "glass-candle-composite",
-      "kind": "candle-composite",
-      "label": "Candle in glass",
-      "visible": false,
-      "position": [
-        0,
-        0,
-        0.08
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "wallScale": 0.8,
-      "layouts": {
-        "desktop": {
-          "visible": false
-        },
-        "mobile": {
-          "visible": false
-        }
-      },
-      "holderModel": "/3d-models/candles/candle_in_a_glass_optimized.glb",
-      "candleModel": "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
-      "separateCandleModel": false,
-      "flameTexture": "/3d-models/candle-and-holder/candleflame_atlas.png",
-      "candleOffset": [
-        0,
-        0,
-        0
-      ],
-      "candleScale": 1,
-      "flameOffset": [
-        0,
-        0.72,
-        0.02
-      ],
-      "flameScale": 0.12,
-      "flameOpacity": 0.92,
-      "flameLightColor": "#ffb86b",
-      "flameLightIntensity": 0.1,
-      "flameLightDistance": 4
-    },
-    {
       "id": "clock-vintage-wall",
       "kind": "clock",
       "label": "Vintage clock",
@@ -818,12 +773,12 @@
           "visible": true,
           "position": [
             0.581,
-            -1.1,
-            0.394
+            -1.113,
+            0.413
           ],
           "rotation": [
-            0.01,
-            0.08,
+            0.007,
+            2.107,
             0
           ],
           "wallScale": 0.365
@@ -874,7 +829,7 @@
           "visible": true,
           "position": [
             0.59,
-            -0.711,
+            -0.423,
             0.417
           ]
         },
@@ -888,10 +843,61 @@
         }
       },
       "color": "#ffb36b",
-      "intensity": 1.41,
-      "distance": 5.04,
+      "intensity": 0.749,
+      "distance": 5.096,
       "decay": 1.82,
       "enabled": true
+    },
+    {
+      "id": "glass-candle-msp2j05n",
+      "kind": "candle-composite",
+      "label": "Candle in glass",
+      "visible": true,
+      "position": [
+        1.231,
+        -1.28,
+        0.394
+      ],
+      "rotation": [
+        0,
+        0.08,
+        0
+      ],
+      "wallScale": 0.92,
+      "layouts": {
+        "desktop": {
+          "visible": false,
+          "position": [
+            0.588,
+            -1.08,
+            0.425
+          ],
+          "wallScale": 1.75
+        },
+        "mobile": {
+          "visible": false
+        }
+      },
+      "holderModel": "/3d-models/candles/candle_in_a_glass_optimized.glb",
+      "candleModel": "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
+      "separateCandleModel": false,
+      "flameTexture": "/3d-models/candle-and-holder/candleflame_atlas.png",
+      "candleOffset": [
+        0,
+        0,
+        0
+      ],
+      "candleScale": 1,
+      "flameOffset": [
+        0,
+        0.106,
+        0.006
+      ],
+      "flameScale": 0.075,
+      "flameOpacity": 0.92,
+      "flameLightColor": "#ffb86b",
+      "flameLightIntensity": 0.1,
+      "flameLightDistance": 4
     }
   ]
 }
