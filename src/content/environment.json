@@ -2,22 +2,22 @@
   "captionColor": "#ffffff",
   "lighting": {
     "ambientColor": "#aa9f8d",
-    "ambientIntensity": 0.777,
-    "keyColor": "#c4ad97",
-    "keyIntensity": 3.74,
+    "ambientIntensity": 0.268,
+    "keyColor": "#ffb36e",
+    "keyIntensity": 1.404,
     "keyPosition": [
       -0.113,
       2.708,
       0.531
     ],
     "fillColor": "#6a7595",
-    "fillIntensity": 3.601,
+    "fillIntensity": 2.22,
     "fillPosition": [
       4.458,
       3.474,
       5.032
     ],
-    "exposure": 0.923
+    "exposure": 1.207
   },
   "objects": [
     {
@@ -108,6 +108,7 @@
       },
       "holderModel": "/3d-models/candle-and-holder/holder.glb",
       "candleModel": "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
+      "separateCandleModel": true,
       "flameTexture": "/3d-models/candle-and-holder/candleflame_atlas.png",
       "candleOffset": [
         0,
@@ -750,6 +751,97 @@
           "visible": false
         }
       }
+    },
+    {
+      "id": "clay-saucer-candle-mso2zstv",
+      "kind": "candle-composite",
+      "label": "Low-poly candle on clay saucer",
+      "visible": true,
+      "position": [
+        -1.5,
+        0.661,
+        -0.03
+      ],
+      "rotation": [
+        0,
+        0.08,
+        0
+      ],
+      "wallScale": 0.92,
+      "layouts": {
+        "desktop": {
+          "visible": true,
+          "position": [
+            0.581,
+            -1.1,
+            0.394
+          ],
+          "rotation": [
+            0.01,
+            0.08,
+            0
+          ],
+          "wallScale": 0.365
+        },
+        "mobile": {
+          "visible": false
+        }
+      },
+      "holderModel": "/3d-models/candles/low-poly_candle_on_clay_saucer_optimized.glb",
+      "candleModel": "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
+      "separateCandleModel": false,
+      "flameTexture": "/3d-models/candle-and-holder/candleflame_atlas.png",
+      "candleOffset": [
+        0,
+        0,
+        0
+      ],
+      "candleScale": 1,
+      "flameOffset": [
+        0.03,
+        1.039,
+        0.02
+      ],
+      "flameScale": 0.144,
+      "flameOpacity": 0.92,
+      "flameLightColor": "#ffb86b",
+      "flameLightIntensity": 0.1,
+      "flameLightDistance": 4
+    },
+    {
+      "id": "candle-accent-light-mso388va",
+      "kind": "light",
+      "label": "Candle accent light",
+      "visible": true,
+      "position": [
+        -1.5,
+        0.661,
+        -0.03
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "wallScale": 0.08,
+      "layouts": {
+        "desktop": {
+          "visible": true,
+          "position": [
+            0.59,
+            -0.711,
+            0.417
+          ]
+        },
+        "mobile": {
+          "visible": false
+        }
+      },
+      "color": "#ffb36b",
+      "intensity": 1.41,
+      "distance": 5.04,
+      "decay": 1.82,
+      "enabled": true
     }
   ]
 }
