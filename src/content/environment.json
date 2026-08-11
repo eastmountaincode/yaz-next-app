@@ -282,7 +282,7 @@
             0.008
           ],
           "wallScale": 0.781,
-          "captionOffsetY": 0.85,
+          "captionOffsetY": 0.31,
           "captionOffsetZ": 0.053,
           "captionScale": 1.778
         }
@@ -568,7 +568,7 @@
           ],
           "wallScale": 0.905,
           "captionOffsetX": 0,
-          "captionOffsetY": 0.615,
+          "captionOffsetY": 0.227,
           "captionScale": 1.685
         }
       },
