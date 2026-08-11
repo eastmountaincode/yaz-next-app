@@ -4458,13 +4458,33 @@ async function readPersistedEnvironment(): Promise<{
   lighting: SceneLighting;
   captionColor: string;
 }> {
+  let storedSettings: SceneObjectSetting[] | null = null;
+  let storedLighting: SceneLighting | null = null;
+
+  try {
+    const hasStoredSettings = Boolean(
+      window.localStorage.getItem(STORAGE_KEY) ??
+        window.localStorage.getItem(FRAME_STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_STORAGE_KEY),
+    );
+    if (hasStoredSettings) {
+      storedSettings = readStoredSettings();
+    }
+
+    if (window.localStorage.getItem(LIGHTING_STORAGE_KEY)) {
+      storedLighting = readStoredLighting();
+    }
+  } catch {
+    // Ignore malformed or unavailable browser storage and use committed defaults.
+  }
+
   try {
     const response = await fetch("/api/environment", { cache: "no-store" });
     if (response.ok) {
       const environment = (await response.json()) as StoredEnvironment;
       return {
-        settings: normalizeSceneSettings(environment.objects),
-        lighting: normalizeSceneLighting(environment.lighting),
+        settings: storedSettings ?? normalizeSceneSettings(environment.objects),
+        lighting: storedLighting ?? normalizeSceneLighting(environment.lighting),
         captionColor: normalizeHexColor(
           environment.captionColor,
           DEFAULT_FRAME_CAPTION_COLOR,
@@ -4476,8 +4496,8 @@ async function readPersistedEnvironment(): Promise<{
   }
 
   return {
-    settings: readStoredSettings(),
-    lighting: readStoredLighting(),
+    settings: storedSettings ?? defaultSceneSettings,
+    lighting: storedLighting ?? defaultSceneLighting,
     captionColor: DEFAULT_FRAME_CAPTION_COLOR,
   };
 }
