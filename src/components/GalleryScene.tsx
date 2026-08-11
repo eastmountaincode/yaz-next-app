@@ -4470,9 +4470,16 @@ async function readPersistedEnvironment(): Promise<{
     const response = await fetch("/api/environment", { cache: "no-store" });
     if (response.ok) {
       const environment = (await response.json()) as StoredEnvironment;
+      const preferBrowserEdits = process.env.NODE_ENV === "development";
       return {
-        settings: storedSettings ?? normalizeSceneSettings(environment.objects),
-        lighting: storedLighting ?? normalizeSceneLighting(environment.lighting),
+        settings:
+          preferBrowserEdits && storedSettings
+            ? storedSettings
+            : normalizeSceneSettings(environment.objects),
+        lighting:
+          preferBrowserEdits && storedLighting
+            ? storedLighting
+            : normalizeSceneLighting(environment.lighting),
         captionColor: normalizeHexColor(
           environment.captionColor,
           DEFAULT_FRAME_CAPTION_COLOR,
