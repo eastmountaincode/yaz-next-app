@@ -3650,14 +3650,19 @@ function ThreeWallCanvas({
         const caption = clip.userData.captionMesh as THREE.Mesh | undefined;
         if (caption) {
           const sceneObjectId = clip.userData?.sceneObjectId as string | undefined;
-          const isHovered = canUseFrameHoverEffects() && clip === hoveredFrameClip;
+          const supportsHover = canUseFrameHoverEffects();
+          const isHovered = supportsHover && clip === hoveredFrameClip;
+          const showImmediately = !supportsHover;
           const isEditorActive = sceneObjectId === activeCaptionFrameIdRef.current;
           caption.visible =
             captionsVisibleRef.current &&
             shouldShowFrameCaption(clip) &&
-            (captionDisplayModeRef.current === "always" || isHovered || isEditorActive);
+            (captionDisplayModeRef.current === "always" ||
+              showImmediately ||
+              isHovered ||
+              isEditorActive);
           if (caption.material instanceof THREE.MeshBasicMaterial) {
-            caption.material.opacity = isHovered ? 1 : 0.58;
+            caption.material.opacity = isHovered || showImmediately ? 1 : 0.58;
             caption.material.needsUpdate = true;
           }
         }
