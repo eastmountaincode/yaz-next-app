@@ -1224,11 +1224,11 @@ function addFrameMediaGrayscale(
       "#include <map_fragment>",
       `#include <map_fragment>
        float frameMediaLuma = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-       float frameMediaContrast = clamp((frameMediaLuma - 0.5) * 1.32 + 0.44, 0.0, 1.0);
+       float frameMediaContrast = clamp((frameMediaLuma - 0.5) * 1.16 + 0.47, 0.0, 1.0);
        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(frameMediaContrast), frameMediaGrayscale);`,
     );
   };
-  material.customProgramCacheKey = () => "frame-media-grayscale-v4";
+  material.customProgramCacheKey = () => "frame-media-grayscale-v5";
   return grayscaleStrength;
 }
 
