@@ -104,7 +104,7 @@ type SceneLayoutOverride = {
   captionScale?: number;
 };
 type SceneLayoutOverrides = Partial<Record<SceneLayoutMode, SceneLayoutOverride>>;
-type ClickZoneAction = "toggle-nearest-light" | "speaker-click" | "candle-toggle";
+type ClickZoneAction = "toggle-nearest-light" | "speaker-click";
 type ImageFrameModalId = "stills" | "clients";
 
 function PreloadedImage({
@@ -395,9 +395,6 @@ const LAMP_SWITCH_ON_AUDIO_PATH = "/audio/lamp-switch-on.mp3";
 const LAMP_SWITCH_OFF_AUDIO_PATH = "/audio/lamp-switch-off.mp3";
 const LAMP_TOGGLE_ZONE_NAME = "lamp-toggle-zone";
 const SPEAKER_CLICK_ZONE_NAME = "speaker-click-zone";
-const CANDLE_CLICK_ZONE_NAME = "candle-click-zone";
-const CANDLE_CLICK_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.52, 0];
-const CANDLE_CLICK_ZONE_LOCAL_SIZE: VectorTuple = [1.1, 1.34, 0.82];
 const LAMP_TOGGLE_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.68, 0];
 const LAMP_TOGGLE_ZONE_LOCAL_SIZE: VectorTuple = [0.34, 0.64, 0.34];
 const DESKTOP_CAMERA_DEFAULTS = {
@@ -2039,19 +2036,9 @@ function syncCandleCompositeAnimation(
   group: THREE.Group,
   camera: THREE.Camera,
   timeSeconds: number,
-  candleLit: boolean,
 ) {
   const flame = group.getObjectByName("candle-composite-flame");
   if (!(flame instanceof THREE.Mesh)) {
-    return;
-  }
-
-  flame.visible = candleLit;
-  const light = group.getObjectByName("candle-composite-flame-light");
-  if (light instanceof THREE.PointLight) {
-    light.visible = candleLit;
-  }
-  if (!candleLit) {
     return;
   }
 
@@ -2130,29 +2117,6 @@ function createCandleCompositeObject(
   flameLight.name = "candle-composite-flame-light";
   flameLight.castShadow = false;
   group.add(flameLight);
-
-  const hitZone = new THREE.Mesh(
-    makeGeometry(new THREE.BoxGeometry(...CANDLE_CLICK_ZONE_LOCAL_SIZE), geometries),
-    makeMaterial(
-      new THREE.MeshBasicMaterial({
-        color: "#fbbf24",
-        depthWrite: false,
-        opacity: 0,
-        transparent: true,
-        wireframe: true,
-      }),
-      materials,
-    ),
-  );
-  hitZone.name = CANDLE_CLICK_ZONE_NAME;
-  hitZone.position.set(...CANDLE_CLICK_ZONE_LOCAL_POSITION);
-  hitZone.castShadow = false;
-  hitZone.receiveShadow = false;
-  hitZone.renderOrder = 20;
-  hitZone.userData.isClickZone = true;
-  hitZone.userData.clickAction = "candle-toggle" satisfies ClickZoneAction;
-  hitZone.userData.sceneObjectId = setting.id;
-  group.add(hitZone);
 
   syncCandleCompositeObject(group, setting);
   return group;
@@ -3132,7 +3096,6 @@ function ThreeWallCanvas({
   captionDisplayMode,
   captionsVisible,
   speakerPlaying,
-  candleLit,
   onSceneError,
   onCameraInfoChange,
   onFrameClick,
@@ -3141,7 +3104,6 @@ function ThreeWallCanvas({
   onFrameHover,
   onLampToggle,
   onSpeakerClick,
-  onCandleClick,
   onSceneReady,
 }: {
   settings: SceneObjectSetting[];
@@ -3158,7 +3120,6 @@ function ThreeWallCanvas({
   captionDisplayMode: CaptionDisplayMode;
   captionsVisible: boolean;
   speakerPlaying: boolean;
-  candleLit: boolean;
   onSceneError: (error: Error) => void;
   onCameraInfoChange?: (info: CameraInfo) => void;
   onFrameClick?: (workSlug: string) => void;
@@ -3167,7 +3128,6 @@ function ThreeWallCanvas({
   onFrameHover?: (info: FrameHoverInfo | null) => void;
   onLampToggle?: (position: VectorTuple) => void;
   onSpeakerClick?: () => void;
-  onCandleClick?: () => void;
   onSceneReady?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -3180,7 +3140,6 @@ function ThreeWallCanvas({
   const captionDisplayModeRef = useRef(captionDisplayMode);
   const captionsVisibleRef = useRef(captionsVisible);
   const speakerPlayingRef = useRef(speakerPlaying);
-  const candleLitRef = useRef(candleLit);
   const syncLightingRef = useRef<(() => void) | null>(null);
   const syncHitboxHelpersRef = useRef<(() => void) | null>(null);
   const syncFrameCaptionVisibilityRef = useRef<(() => void) | null>(null);
@@ -3195,7 +3154,6 @@ function ThreeWallCanvas({
   const frameHoverCallbackRef = useRef(onFrameHover);
   const lampToggleCallbackRef = useRef(onLampToggle);
   const speakerClickCallbackRef = useRef(onSpeakerClick);
-  const candleClickCallbackRef = useRef(onCandleClick);
   const sceneReadyCallbackRef = useRef(onSceneReady);
 
   useEffect(() => {
@@ -3227,16 +3185,8 @@ function ThreeWallCanvas({
   }, [onSpeakerClick]);
 
   useEffect(() => {
-    candleClickCallbackRef.current = onCandleClick;
-  }, [onCandleClick]);
-
-  useEffect(() => {
     sceneReadyCallbackRef.current = onSceneReady;
   }, [onSceneReady]);
-
-  useEffect(() => {
-    candleLitRef.current = candleLit;
-  }, [candleLit]);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -4076,8 +4026,6 @@ function ThreeWallCanvas({
         ]);
       } else if (action === "speaker-click") {
         speakerClickCallbackRef.current?.();
-      } else if (action === "candle-toggle") {
-        candleClickCallbackRef.current?.();
       }
       return true;
     };
@@ -4186,7 +4134,7 @@ function ThreeWallCanvas({
           syncClockPendulum(group, timeSeconds);
         }
         if (group.name === "editable-candle-composite") {
-          syncCandleCompositeAnimation(group, camera, timeSeconds, candleLitRef.current);
+          syncCandleCompositeAnimation(group, camera, timeSeconds);
         }
         if (group.name === "editable-speaker-composite") {
           syncSpeakerCompositePulse(group, timeSeconds, speakerPlayingRef.current);
@@ -5051,7 +4999,6 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   const [bioOpen, setBioOpen] = useState(false);
   const [openImageFrameModal, setOpenImageFrameModal] = useState<ImageFrameModalId | null>(null);
   const [speakerPlaying, setSpeakerPlaying] = useState(false);
-  const [candleLit, setCandleLit] = useState(true);
   const [initialAssetPaths, setInitialAssetPaths] = useState<string[] | null>(null);
   const [initialAssetsReady, setInitialAssetsReady] = useState(false);
   const [initialSceneReady, setInitialSceneReady] = useState(false);
@@ -5385,11 +5332,6 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
       setSceneError(error instanceof Error ? error.message : String(error));
     });
   }, [playSpeakerButtonSound]);
-
-  const handleCandleClick = useCallback(() => {
-    setSceneError(null);
-    setCandleLit((current) => !current);
-  }, []);
 
   const handleInitialAssetsReady = useCallback(() => {
     setInitialAssetsReady(true);
@@ -5761,7 +5703,6 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         captionDisplayMode={captionDisplayMode}
         captionsVisible={captionsVisible}
         speakerPlaying={speakerPlaying}
-        candleLit={candleLit}
         onSceneError={handleSceneError}
         onCameraInfoChange={setCameraInfo}
         onFrameClick={setOpenWorkSlug}
@@ -5770,7 +5711,6 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         onFrameHover={setHoveredFrameInfo}
         onLampToggle={toggleNearestLight}
         onSpeakerClick={handleSpeakerClick}
-        onCandleClick={handleCandleClick}
         onSceneReady={handleInitialSceneReady}
       />
       ) : null}
