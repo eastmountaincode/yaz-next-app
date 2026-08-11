@@ -6283,12 +6283,50 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
           ) : null}
 
           {selected.kind === "candle-composite" ? (
-            <Link
-              className="mt-3 inline-block rounded border border-amber-300/30 bg-amber-300/15 px-3 py-2 text-xs text-amber-100 hover:bg-amber-300/20"
-              href={`/candle-editor?id=${encodeURIComponent(selected.id)}`}
-            >
-              Candle editor
-            </Link>
+            <div className="mt-4 grid gap-3">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+                Flame
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {(["X", "Y", "Z"] as const).map((axisLabel, axis) => (
+                  <RangeControl
+                    key={axisLabel}
+                    label={`Flame ${axisLabel}`}
+                    min={axis === 1 ? -0.5 : -1.5}
+                    max={axis === 1 ? 2.5 : 1.5}
+                    step={0.001}
+                    value={selected.flameOffset[axis]}
+                    onChange={(value) => {
+                      const flameOffset = [...selected.flameOffset] as VectorTuple;
+                      flameOffset[axis] = value;
+                      updateSelectedObject({
+                        flameOffset,
+                      } as Partial<SceneObjectSetting>);
+                    }}
+                    fine
+                  />
+                ))}
+                <RangeControl
+                  label="Flame Size"
+                  min={0.01}
+                  max={1.2}
+                  step={0.001}
+                  value={selected.flameScale}
+                  onChange={(value) =>
+                    updateSelectedObject({
+                      flameScale: value,
+                    } as Partial<SceneObjectSetting>)
+                  }
+                  fine
+                />
+              </div>
+              <Link
+                className="inline-block rounded border border-amber-300/30 bg-amber-300/15 px-3 py-2 text-xs text-amber-100 hover:bg-amber-300/20"
+                href={`/candle-editor?id=${encodeURIComponent(selected.id)}`}
+              >
+                Open composite editor
+              </Link>
+            </div>
           ) : null}
 
           {selected.kind === "speaker-composite" ? (
