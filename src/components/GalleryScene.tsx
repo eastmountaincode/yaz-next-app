@@ -999,6 +999,18 @@ function createLightSetting(seed?: Partial<LightSetting>): LightSetting {
   };
 }
 
+function createCandleAccentLightSetting(seed?: Partial<LightSetting>): LightSetting {
+  return createLightSetting({
+    label: "Candle accent light",
+    wallScale: 0.08,
+    color: "#ffb36b",
+    intensity: 1.8,
+    distance: 2.6,
+    decay: 2,
+    ...seed,
+  });
+}
+
 function lampHitboxPlacementFromModel(setting: ModelSetting) {
   const offset = new THREE.Vector3(...LAMP_TOGGLE_ZONE_LOCAL_POSITION);
   offset.multiplyScalar(setting.wallScale);
@@ -5398,10 +5410,15 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         : nextPosition;
     const nextObject =
       kind === "light"
-        ? createLightSetting({
-            id: `light-${Date.now().toString(36)}`,
-            position: nextLightPosition,
-          })
+        ? modelCatalogId === "candle-accent"
+          ? createCandleAccentLightSetting({
+              id: `candle-accent-light-${Date.now().toString(36)}`,
+              position: nextLightPosition,
+            })
+          : createLightSetting({
+              id: `light-${Date.now().toString(36)}`,
+              position: nextLightPosition,
+            })
         : kind === "clock"
           ? createClockSetting({
               id: `clock-${Date.now().toString(36)}`,
@@ -5963,6 +5980,13 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
               onClick={() => addObject("light")}
             >
               Add light
+            </button>
+            <button
+              type="button"
+              className="rounded border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs text-amber-100 hover:bg-amber-300/15"
+              onClick={() => addObject("light", "candle-accent")}
+            >
+              Add candle light
             </button>
             <button
               type="button"
