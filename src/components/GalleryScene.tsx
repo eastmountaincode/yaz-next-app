@@ -1183,14 +1183,14 @@ const defaultSceneSettings = [
 
 const defaultSceneLighting: SceneLighting = {
   ambientColor: "#aa9f8d",
-  ambientIntensity: 1.6,
+  ambientIntensity: 0.777,
   keyColor: "#c4ad97",
-  keyIntensity: 2.65,
-  keyPosition: [-1.709, 2.325, 1.161],
+  keyIntensity: 3.74,
+  keyPosition: [-0.113, 2.708, 0.531],
   fillColor: "#6a7595",
-  fillIntensity: 3.85,
-  fillPosition: [4.2, 2.1, 3.6],
-  exposure: 1.07,
+  fillIntensity: 3.601,
+  fillPosition: [4.458, 3.474, 5.032],
+  exposure: 0.923,
 };
 
 function normalizeVectorTuple(
