@@ -442,7 +442,7 @@ type CaptionFontOption = {
 const captionFontOptions: CaptionFontOption[] = [
   {
     id: "winky-show",
-    label: "Winky Show Dotted",
+    label: "Winky Show Solid",
     fontFamily: '"Yaz Winky Show"',
     fontWeight: 400,
   },
@@ -1350,6 +1350,13 @@ function createFrameCaptionTexture(
   ctx.textBaseline = "middle";
 
   const drawCaptionText = (line: string, x: number, y: number) => {
+    if (font.id === "winky-show") {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.strokeText(line, x, y);
+    }
     ctx.fillText(line, x, y);
   };
 
@@ -1594,7 +1601,7 @@ function createFrame(
 
   if (captionPlacement === "frame") {
     const captionText =
-      setting.workSlug === "yaslynn-director-reel" ? "Director's Reel" : work.artist;
+      setting.workSlug === "yaslynn-director-reel" ? "Director's\nReel" : work.artist;
     const captionMesh = createFrameCaptionMesh(
       setting,
       captionText,
