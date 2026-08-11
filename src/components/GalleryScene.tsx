@@ -1385,9 +1385,11 @@ function createFrameCaptionTexture(
   color: string,
   textures: THREE.Texture[],
 ) {
+  const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+  const canvasHeight = lines.length > 1 ? 224 : 192;
   const canvas = document.createElement("canvas");
   canvas.width = 1024;
-  canvas.height = 192;
+  canvas.height = canvasHeight;
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     throw new Error("Could not create caption canvas.");
@@ -1420,13 +1422,12 @@ function createFrameCaptionTexture(
     return fontSize;
   };
 
-  const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
   if (lines.length > 1) {
     const lineStartSize = font.id === "winky-show" ? 135 : font.id === "sobria" ? 78 : 84;
     const fontSize = Math.min(...lines.map((line) => fitText(line, lineStartSize, 44)));
     ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
     lines.forEach((line, index) => {
-      drawCaptionText(line, canvas.width / 2, index === 0 ? 72 : 158);
+      drawCaptionText(line, canvas.width / 2, index === 0 ? 78 : 180);
     });
   } else {
     const line = lines[0] ?? text;
@@ -1455,10 +1456,12 @@ function createFrameCaptionMesh(
 ) {
   const aperture = visibleSize(setting);
   const texture = createFrameCaptionTexture(artist, font, color, textures);
-  const height = artist.includes("\n")
-    ? THREE.MathUtils.clamp(aperture.height * 0.28, 0.18, 0.34)
+  const multilineCaption = artist.includes("\n");
+  const textureHeight = multilineCaption ? 224 : 192;
+  const height = multilineCaption
+    ? THREE.MathUtils.clamp(aperture.height * 0.28, 0.18, 0.34) * (textureHeight / 192)
     : THREE.MathUtils.clamp(aperture.height * 0.2, 0.13, 0.27);
-  const width = height * (1024 / 192);
+  const width = height * (1024 / textureHeight);
   const mesh = new THREE.Mesh(
     makeGeometry(new THREE.PlaneGeometry(width, height), geometries),
     makeMaterial(
