@@ -33,7 +33,7 @@ export const stillsType = defineType({
                 defineField({
                   name: "alt",
                   title: "Alternative text",
-                  description: "Briefly describe the image for people who can’t see it.",
+                  description: "Describe the image for people using screen readers.",
                   type: "string",
                 }),
               ],
@@ -51,7 +51,7 @@ export const stillsType = defineType({
                     defineField({
                       name: "alt",
                       title: "Alternative text",
-                      description: "Briefly describe the image for people who can’t see it.",
+                      description: "Describe the image for people using screen readers.",
                       type: "string",
                     }),
                   ],
