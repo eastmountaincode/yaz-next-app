@@ -33,6 +33,7 @@ export const clientsType = defineType({
                 defineField({
                   name: "alt",
                   title: "Alternative text",
+                  description: "Briefly describe the image for people who can’t see it.",
                   type: "string",
                 }),
               ],
