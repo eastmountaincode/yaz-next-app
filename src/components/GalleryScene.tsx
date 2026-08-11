@@ -1427,7 +1427,7 @@ function createFrameCaptionTexture(
     const fontSize = Math.min(...lines.map((line) => fitText(line, lineStartSize, 44)));
     ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
     lines.forEach((line, index) => {
-      drawCaptionText(line, canvas.width / 2, index === 0 ? 78 : 180);
+      drawCaptionText(line, canvas.width / 2, index === 0 ? 78 : 174);
     });
   } else {
     const line = lines[0] ?? text;
