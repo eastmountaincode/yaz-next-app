@@ -202,7 +202,7 @@ export function SceneLoadingScreen({
       aria-live="polite"
       aria-label={`Loading ${displayedPercentage}%`}
     >
-      <div className="w-full max-w-sm text-center">
+      <div className="w-full max-w-xs text-center">
         <div className="text-sm">Loading</div>
 
         <div className="mt-3 h-0.5 overflow-hidden bg-white/20">
