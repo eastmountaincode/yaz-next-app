@@ -834,7 +834,12 @@
           ]
         },
         "mobile": {
-          "visible": false
+          "visible": true,
+          "position": [
+            0.654,
+            -0.72,
+            0.444
+          ]
         }
       },
       "color": "#ffb36b",
