@@ -1378,9 +1378,12 @@ function createFrameCaptionTexture(
   color: string,
   textures: THREE.Texture[],
 ) {
+  const logicalWidth = 1024;
+  const logicalHeight = 192;
+  const resolutionScale = 4;
   const canvas = document.createElement("canvas");
-  canvas.width = 1024;
-  canvas.height = 192;
+  canvas.width = logicalWidth * resolutionScale;
+  canvas.height = logicalHeight * resolutionScale;
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     throw new Error("Could not create caption canvas.");
@@ -1391,7 +1394,8 @@ function createFrameCaptionTexture(
     throw new Error(`Caption font was not ready: ${font.label}`);
   }
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(resolutionScale, resolutionScale);
+  ctx.clearRect(0, 0, logicalWidth, logicalHeight);
   ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -1400,7 +1404,7 @@ function createFrameCaptionTexture(
     ctx.fillText(line, x, y);
   };
 
-  const maxWidth = canvas.width - 96;
+  const maxWidth = logicalWidth - 96;
   const fitText = (line: string, startSize: number, minSize: number) => {
     let fontSize = startSize;
     do {
@@ -1419,14 +1423,14 @@ function createFrameCaptionTexture(
     const fontSize = Math.min(...lines.map((line) => fitText(line, lineStartSize, 44)));
     ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
     lines.forEach((line, index) => {
-      drawCaptionText(line, canvas.width / 2, index === 0 ? 54 : 150);
+      drawCaptionText(line, logicalWidth / 2, index === 0 ? 54 : 150);
     });
   } else {
     const line = lines[0] ?? text;
     const lineStartSize = font.id === "winky-show" ? 180 : font.id === "sobria" ? 96 : 104;
     const fontSize = fitText(line, lineStartSize, 46);
     ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
-    drawCaptionText(line, canvas.width / 2, canvas.height / 2 + 2);
+    drawCaptionText(line, logicalWidth / 2, logicalHeight / 2 + 2);
   }
 
   const texture = new THREE.CanvasTexture(canvas);
