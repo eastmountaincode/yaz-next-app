@@ -353,6 +353,7 @@ const CANDLE_MODEL_PATH = "/3d-models/candle-and-holder/candle_no_flame_shorter.
 const CANDLE_FLAME_TEXTURE_PATH = "/3d-models/candle-and-holder/candleflame_atlas.png";
 const CLAY_SAUCER_CANDLE_MODEL_PATH =
   "/3d-models/candles/low-poly_candle_on_clay_saucer_optimized.glb";
+const GLASS_CANDLE_MODEL_PATH = "/3d-models/candles/candle_in_a_glass_optimized.glb";
 const SPEAKER_MODEL_PATH = "/3d-models/decor/portable_bluetooth_speaker.glb";
 const SPEAKER_MUSIC_AUDIO_PATH = "/audio/speaker-radio-track.mp3";
 const SPEAKER_BUTTON_AUDIO_PATH = "/audio/dragon-studio-button-press-2.mp3";
@@ -1062,6 +1063,25 @@ function createClaySaucerCandleSetting(
   });
 }
 
+function createGlassCandleSetting(
+  seed?: Partial<CandleCompositeSetting>,
+): CandleCompositeSetting {
+  return createCandleCompositeSetting({
+    label: "Candle in glass",
+    holderModel: GLASS_CANDLE_MODEL_PATH,
+    separateCandleModel: false,
+    candleOffset: [0, 0, 0],
+    candleScale: 1,
+    flameOffset: [0, 0.72, 0.02],
+    flameScale: 0.12,
+    flameOpacity: 0.92,
+    flameLightColor: "#ffb86b",
+    flameLightIntensity: 0.1,
+    flameLightDistance: 4,
+    ...seed,
+  });
+}
+
 function createSpeakerCompositeSetting(
   seed?: Partial<SpeakerCompositeSetting>,
 ): SpeakerCompositeSetting {
@@ -1130,6 +1150,17 @@ const defaultSceneSettings = [
   }),
   createClaySaucerCandleSetting({
     id: "clay-saucer-candle-composite",
+    visible: false,
+    position: [0, 0, 0.08],
+    rotation: [0, 0, 0],
+    wallScale: 0.8,
+    layouts: {
+      desktop: { visible: false },
+      mobile: { visible: false },
+    },
+  }),
+  createGlassCandleSetting({
+    id: "glass-candle-composite",
     visible: false,
     position: [0, 0, 0.08],
     rotation: [0, 0, 0],
@@ -5559,6 +5590,11 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
                 id: `clay-saucer-candle-${Date.now().toString(36)}`,
                 position: nextPosition,
               })
+            : modelCatalogId === "glass"
+              ? createGlassCandleSetting({
+                  id: `glass-candle-${Date.now().toString(36)}`,
+                  position: nextPosition,
+                })
             : createCandleCompositeSetting({
                 id: `candle-composite-${Date.now().toString(36)}`,
                 position: nextPosition,
@@ -6076,6 +6112,13 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
               onClick={() => addObject("candle-composite", "clay-saucer")}
             >
               Add clay candle
+            </button>
+            <button
+              type="button"
+              className="rounded border border-white/10 bg-white/10 px-3 py-2 text-xs hover:bg-white/15"
+              onClick={() => addObject("candle-composite", "glass")}
+            >
+              Add glass candle
             </button>
             <button
               type="button"

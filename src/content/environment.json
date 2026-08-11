@@ -173,6 +173,51 @@
       "flameLightDistance": 4
     },
     {
+      "id": "glass-candle-composite",
+      "kind": "candle-composite",
+      "label": "Candle in glass",
+      "visible": false,
+      "position": [
+        0,
+        0,
+        0.08
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "wallScale": 0.8,
+      "layouts": {
+        "desktop": {
+          "visible": false
+        },
+        "mobile": {
+          "visible": false
+        }
+      },
+      "holderModel": "/3d-models/candles/candle_in_a_glass_optimized.glb",
+      "candleModel": "/3d-models/candle-and-holder/candle_no_flame_shorter.glb",
+      "separateCandleModel": false,
+      "flameTexture": "/3d-models/candle-and-holder/candleflame_atlas.png",
+      "candleOffset": [
+        0,
+        0,
+        0
+      ],
+      "candleScale": 1,
+      "flameOffset": [
+        0,
+        0.72,
+        0.02
+      ],
+      "flameScale": 0.12,
+      "flameOpacity": 0.92,
+      "flameLightColor": "#ffb86b",
+      "flameLightIntensity": 0.1,
+      "flameLightDistance": 4
+    },
+    {
       "id": "clock-vintage-wall",
       "kind": "clock",
       "label": "Vintage clock",
