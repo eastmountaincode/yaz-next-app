@@ -151,42 +151,8 @@ function ContentImage({
   );
 }
 
-function youtubeThumbnailUrl(sourceUrl: string): string | null {
-  try {
-    const url = new URL(sourceUrl);
-    const hostname = url.hostname.replace(/^www\./, "");
-    if (
-      hostname !== "youtube.com" &&
-      hostname !== "m.youtube.com" &&
-      hostname !== "youtu.be" &&
-      hostname !== "youtube-nocookie.com"
-    ) {
-      return null;
-    }
-
-    const pathParts = url.pathname.split("/").filter(Boolean);
-    const videoId =
-      hostname === "youtu.be"
-        ? pathParts[0]
-        : url.searchParams.get("v") ??
-          (pathParts[0] === "embed" || pathParts[0] === "shorts"
-            ? pathParts[1]
-            : null);
-
-    return videoId && /^[A-Za-z0-9_-]{6,}$/.test(videoId)
-      ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 function clientCoverUrl(client: PortfolioClient): string | null {
-  return (
-    client.coverImage?.url ??
-    client.projects.map((project) => youtubeThumbnailUrl(project.videoUrl)).find(Boolean) ??
-    null
-  );
+  return client.coverImage?.url ?? null;
 }
 
 type BaseObjectSetting = {
@@ -7120,10 +7086,6 @@ function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: ()
 }
 
 function ClientCover({ client }: { client: PortfolioClient }) {
-  const fallbackUrl = client.projects
-    .map((project) => youtubeThumbnailUrl(project.videoUrl))
-    .find(Boolean);
-
   if (client.coverImage) {
     return (
       <ContentImage
@@ -7132,16 +7094,6 @@ function ClientCover({ client }: { client: PortfolioClient }) {
           alt: client.coverImage.alt || `${client.name} cover`,
         }}
         className="size-full object-cover"
-      />
-    );
-  }
-
-  if (fallbackUrl) {
-    return (
-      <div
-        className="size-full bg-cover bg-center"
-        style={{ backgroundImage: `url("${fallbackUrl}")` }}
-        aria-hidden="true"
       />
     );
   }
