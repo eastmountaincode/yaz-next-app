@@ -1066,19 +1066,28 @@ function createClaySaucerCandleSetting(
 function createGlassCandleSetting(
   seed?: Partial<CandleCompositeSetting>,
 ): CandleCompositeSetting {
+  const usesLegacyNormalizedModelDefaults =
+    seed?.flameOffset?.[0] === 0 &&
+    seed.flameOffset[1] === 0.72 &&
+    seed.flameOffset[2] === 0.02 &&
+    seed.flameScale === 0.12;
+
   return createCandleCompositeSetting({
     label: "Candle in glass",
     holderModel: GLASS_CANDLE_MODEL_PATH,
     separateCandleModel: false,
     candleOffset: [0, 0, 0],
     candleScale: 1,
-    flameOffset: [0, 0.72, 0.02],
-    flameScale: 0.12,
+    flameOffset: [0, 0.106, 0.006],
+    flameScale: 0.075,
     flameOpacity: 0.92,
     flameLightColor: "#ffb86b",
     flameLightIntensity: 0.1,
     flameLightDistance: 4,
     ...seed,
+    ...(usesLegacyNormalizedModelDefaults
+      ? { flameOffset: [0, 0.106, 0.006], flameScale: 0.075 }
+      : {}),
   });
 }
 
@@ -1900,12 +1909,12 @@ function createModelObject(
   return group;
 }
 
-function createNormalizedModel(sourceModel: THREE.Object3D) {
+function createNormalizedModel(sourceModel: THREE.Object3D, normalizeHeight = true) {
   const model = sourceModel.clone(true);
   const modelBox = new THREE.Box3().setFromObject(model);
   const modelSize = modelBox.getSize(new THREE.Vector3());
   const modelCenter = modelBox.getCenter(new THREE.Vector3());
-  const normalizingScale = modelSize.y > 0 ? 1 / modelSize.y : 1;
+  const normalizingScale = normalizeHeight && modelSize.y > 0 ? 1 / modelSize.y : 1;
 
   model.position.set(-modelCenter.x * normalizingScale, -modelBox.min.y * normalizingScale, -modelCenter.z * normalizingScale);
   model.scale.setScalar(normalizingScale);
@@ -2066,7 +2075,10 @@ function createCandleCompositeObject(
   group.name = "editable-candle-composite";
   applyObjectPlacement(group, setting);
 
-  const holder = createNormalizedModel(holderSource);
+  const holder = createNormalizedModel(
+    holderSource,
+    setting.holderModel !== GLASS_CANDLE_MODEL_PATH,
+  );
   holder.name = "candle-composite-holder";
   group.add(holder);
 
@@ -4379,7 +4391,10 @@ function normalizeSceneSettings(parsed: Partial<SceneObjectSetting>[] | undefine
     }
 
     if (setting.kind === "candle-composite") {
-      return createCandleCompositeSetting(setting as Partial<CandleCompositeSetting>);
+      const candleSetting = setting as Partial<CandleCompositeSetting>;
+      return candleSetting.holderModel === GLASS_CANDLE_MODEL_PATH
+        ? createGlassCandleSetting(candleSetting)
+        : createCandleCompositeSetting(candleSetting);
     }
 
     if (setting.kind === "speaker-composite") {
