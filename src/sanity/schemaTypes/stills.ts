@@ -25,10 +25,10 @@ export const stillsType = defineType({
             defineField({
               name: "coverImage",
               title: "Cover image",
-              description:
-                "Optional square image for the artist grid. The first still is used when this is empty.",
+              description: "Square image shown for this artist in the Stills grid.",
               type: "image",
               options: { hotspot: true },
+              validation: (rule) => rule.required(),
               fields: [
                 defineField({
                   name: "alt",
@@ -61,11 +61,10 @@ export const stillsType = defineType({
             select: {
               title: "name",
               coverImage: "coverImage",
-              firstImage: "images.0",
             },
-            prepare: ({ title, coverImage, firstImage }) => ({
+            prepare: ({ title, coverImage }) => ({
               title,
-              media: coverImage ?? firstImage,
+              media: coverImage,
             }),
           },
         }),
