@@ -31,7 +31,11 @@ export async function POST(request: Request) {
     );
   }
 
-  if (process.env.VERCEL) {
+  const hostname = request.headers.get("host")?.split(":")[0]?.toLowerCase();
+  const isLocalRequest =
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+
+  if (process.env.VERCEL && !isLocalRequest) {
     return NextResponse.json({ ok: true, persisted: false, storage: "browser" });
   }
 
