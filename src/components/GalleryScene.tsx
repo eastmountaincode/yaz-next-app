@@ -2180,6 +2180,7 @@ function createLightObject(
     markerMaterial,
   );
   marker.name = "editable-light-marker";
+  marker.visible = false;
   marker.scale.setScalar(setting.wallScale);
   marker.castShadow = false;
   marker.receiveShadow = false;
@@ -2199,6 +2200,7 @@ function createLightObject(
     haloMaterial,
   );
   halo.name = "editable-light-halo";
+  halo.visible = false;
   halo.scale.setScalar(setting.wallScale);
   halo.castShadow = false;
   halo.receiveShadow = false;
@@ -3767,9 +3769,17 @@ function ThreeWallCanvas({
     };
 
     const syncHitboxHelpers = () => {
+      const helpersVisible = showHitboxHelpersRef.current;
       const opacity = showHitboxHelpersRef.current ? 0.55 : 0;
       sceneObjectsRef.current.forEach((group) => {
         group.traverse((child) => {
+          if (
+            child instanceof THREE.Mesh &&
+            (child.name === "editable-light-marker" || child.name === "editable-light-halo")
+          ) {
+            child.visible = helpersVisible;
+            return;
+          }
           if (
             !(child instanceof THREE.Mesh) ||
             !(child.userData?.isClickZone || child.userData?.isLampToggleZone)
