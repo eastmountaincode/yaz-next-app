@@ -339,7 +339,7 @@ const FRAME_STORAGE_KEY = "yaz-frame-editor-v3";
 const LEGACY_STORAGE_KEY = "yaz-frame-editor-v2";
 const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v5";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
-const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v2";
+const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v3";
 const CAPTION_VISIBILITY_STORAGE_KEY = "yaz-caption-visibility-v1";
 const DEFAULT_FRAME_CAPTION_COLOR = "#d71920";
 const HELPER_CONTROLS_ENABLED =
@@ -516,7 +516,7 @@ function normalizeCaptionPlacementId(value: string | null | undefined): CaptionP
 }
 
 function normalizeCaptionDisplayMode(value: string | null | undefined): CaptionDisplayMode {
-  return value === "hover" ? "hover" : "always";
+  return value === "always" ? "always" : "hover";
 }
 
 function captionFontDescriptor(font: CaptionFontOption, size = 112) {
@@ -3670,7 +3670,7 @@ function ThreeWallCanvas({
             shouldShowFrameCaption(clip) &&
             (captionDisplayModeRef.current === "always" || isHovered || isEditorActive);
           if (caption.material instanceof THREE.MeshBasicMaterial) {
-            caption.material.opacity = isHovered ? 0.58 : 1;
+            caption.material.opacity = isHovered ? 1 : 0.58;
             caption.material.needsUpdate = true;
           }
         }
@@ -4877,7 +4877,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   });
   const [captionDisplayMode, setCaptionDisplayMode] = useState<CaptionDisplayMode>(() => {
     if (typeof window === "undefined") {
-      return "always";
+      return "hover";
     }
 
     try {
@@ -4885,7 +4885,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         window.localStorage.getItem(CAPTION_DISPLAY_STORAGE_KEY),
       );
     } catch {
-      return "always";
+      return "hover";
     }
   });
   const [captionsVisible, setCaptionsVisible] = useState(true);
