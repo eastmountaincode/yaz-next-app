@@ -1375,19 +1375,12 @@ function createFrameCaptionTexture(
 
   const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
   if (lines.length > 1) {
-    const title = lines[0];
-    const subtitle = lines.slice(1).join(" ");
-    const titleStartSize = font.id === "winky-show" ? 135 : font.id === "sobria" ? 78 : 84;
-    const titleSize = fitText(title, titleStartSize, 44);
-    ctx.font = `${font.fontWeight} ${titleSize}px ${font.fontFamily}`;
-    drawCaptionText(title, canvas.width / 2, 78);
-
-    ctx.globalAlpha = 0.86;
-    const subtitleStartSize = font.id === "winky-show" ? 75 : font.id === "sobria" ? 42 : 46;
-    const subtitleSize = fitText(subtitle, subtitleStartSize, 28);
-    ctx.font = `${font.fontWeight} ${subtitleSize}px ${font.fontFamily}`;
-    drawCaptionText(subtitle, canvas.width / 2, 142);
-    ctx.globalAlpha = 1;
+    const lineStartSize = font.id === "winky-show" ? 135 : font.id === "sobria" ? 78 : 84;
+    const fontSize = Math.min(...lines.map((line) => fitText(line, lineStartSize, 44)));
+    ctx.font = `${font.fontWeight} ${fontSize}px ${font.fontFamily}`;
+    lines.forEach((line, index) => {
+      drawCaptionText(line, canvas.width / 2, index === 0 ? 62 : 142);
+    });
   } else {
     const line = lines[0] ?? text;
     const lineStartSize = font.id === "winky-show" ? 180 : font.id === "sobria" ? 96 : 104;
