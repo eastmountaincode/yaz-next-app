@@ -323,6 +323,7 @@ type SceneLighting = {
 };
 
 type StoredEnvironment = {
+  captionColor?: string;
   lighting?: Partial<SceneLighting>;
   objects?: Partial<SceneObjectSetting>[];
 };
@@ -340,7 +341,7 @@ const CAPTION_FONT_STORAGE_KEY = "yaz-caption-font-v5";
 const CAPTION_PLACEMENT_STORAGE_KEY = "yaz-caption-placement-v1";
 const CAPTION_DISPLAY_STORAGE_KEY = "yaz-caption-display-v2";
 const CAPTION_VISIBILITY_STORAGE_KEY = "yaz-caption-visibility-v1";
-const FRAME_CAPTION_COLOR = "#d71920";
+const DEFAULT_FRAME_CAPTION_COLOR = "#d71920";
 const HELPER_CONTROLS_ENABLED =
   process.env.NEXT_PUBLIC_SHOW_HELPER_CONTROLS === "true";
 const MODEL_FLOOR_Y = -2.88;
@@ -1327,6 +1328,7 @@ function createClipGeometry(
 function createFrameCaptionTexture(
   text: string,
   font: CaptionFontOption,
+  color: string,
   textures: THREE.Texture[],
 ) {
   const canvas = document.createElement("canvas");
@@ -1343,13 +1345,13 @@ function createFrameCaptionTexture(
   }
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = FRAME_CAPTION_COLOR;
+  ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   const drawCaptionText = (line: string, x: number, y: number) => {
     if (font.id === "winky-show") {
-      ctx.strokeStyle = FRAME_CAPTION_COLOR;
+      ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
@@ -1406,12 +1408,13 @@ function createFrameCaptionMesh(
   setting: FrameLikeSetting,
   artist: string,
   font: CaptionFontOption,
+  color: string,
   geometries: THREE.BufferGeometry[],
   materials: THREE.Material[],
   textures: THREE.Texture[],
 ) {
   const aperture = visibleSize(setting);
-  const texture = createFrameCaptionTexture(artist, font, textures);
+  const texture = createFrameCaptionTexture(artist, font, color, textures);
   const height = artist.includes("\n")
     ? THREE.MathUtils.clamp(aperture.height * 0.28, 0.18, 0.34)
     : THREE.MathUtils.clamp(aperture.height * 0.2, 0.13, 0.27);
@@ -1484,6 +1487,7 @@ function createFrame(
   videos: HTMLVideoElement[],
   _selected: boolean,
   captionFont: CaptionFontOption,
+  captionColor: string,
   captionPlacement: CaptionPlacementId,
   onSceneError: (error: Error) => void,
 ) {
@@ -1602,6 +1606,7 @@ function createFrame(
       setting,
       captionText,
       captionFont,
+      captionColor,
       geometries,
       materials,
       textures,
@@ -1640,6 +1645,7 @@ function createImageFrame(
   materials: THREE.Material[],
   textures: THREE.Texture[],
   captionFont: CaptionFontOption,
+  captionColor: string,
   captionPlacement: CaptionPlacementId,
   onSceneError: (error: Error) => void,
 ) {
@@ -1746,6 +1752,7 @@ function createImageFrame(
       setting,
       setting.captionText,
       captionFont,
+      captionColor,
       geometries,
       materials,
       textures,
@@ -3071,6 +3078,7 @@ function ThreeWallCanvas({
   resetSignal,
   freeOrbit,
   captionFont,
+  captionColor,
   captionPlacement,
   captionDisplayMode,
   captionsVisible,
@@ -3095,6 +3103,7 @@ function ThreeWallCanvas({
   resetSignal: number;
   freeOrbit: boolean;
   captionFont: CaptionFontOption;
+  captionColor: string;
   captionPlacement: CaptionPlacementId;
   captionDisplayMode: CaptionDisplayMode;
   captionsVisible: boolean;
@@ -4256,6 +4265,7 @@ function ThreeWallCanvas({
               materials,
               textures,
               captionFont,
+              captionColor,
               captionPlacement,
               onSceneError,
             );
@@ -4270,6 +4280,7 @@ function ThreeWallCanvas({
             videos,
             false,
             captionFont,
+            captionColor,
             captionPlacement,
             onSceneError,
           );
@@ -4326,7 +4337,7 @@ function ThreeWallCanvas({
       textures.forEach((texture) => texture.dispose());
       renderer.domElement.remove();
     };
-  }, [captionFont, captionPlacement, onSceneError, resetSignal]);
+  }, [captionColor, captionFont, captionPlacement, onSceneError, resetSignal]);
 
   return <div ref={hostRef} className="absolute inset-0" />;
 }
@@ -4416,6 +4427,7 @@ function readStoredLighting() {
 async function readPersistedEnvironment(): Promise<{
   settings: SceneObjectSetting[];
   lighting: SceneLighting;
+  captionColor: string;
 }> {
   try {
     const response = await fetch("/api/environment", { cache: "no-store" });
@@ -4424,6 +4436,10 @@ async function readPersistedEnvironment(): Promise<{
       return {
         settings: normalizeSceneSettings(environment.objects),
         lighting: normalizeSceneLighting(environment.lighting),
+        captionColor: normalizeHexColor(
+          environment.captionColor,
+          DEFAULT_FRAME_CAPTION_COLOR,
+        ),
       };
     }
   } catch {
@@ -4433,6 +4449,7 @@ async function readPersistedEnvironment(): Promise<{
   return {
     settings: readStoredSettings(),
     lighting: readStoredLighting(),
+    captionColor: DEFAULT_FRAME_CAPTION_COLOR,
   };
 }
 
@@ -4873,6 +4890,8 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   });
   const [captionsVisible, setCaptionsVisible] = useState(true);
   const [captionVisibilityReady, setCaptionVisibilityReady] = useState(false);
+  const [captionColor, setCaptionColor] = useState(DEFAULT_FRAME_CAPTION_COLOR);
+  const [captionColorDraft, setCaptionColorDraft] = useState(DEFAULT_FRAME_CAPTION_COLOR);
   const [layoutMode, setLayoutMode] = useState<SceneLayoutMode>("desktop");
   const openWork = useMemo(
     () => (openWorkSlug ? works.find((w) => w.slug === openWorkSlug) ?? null : null),
@@ -4909,8 +4928,8 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
     ? resolveSceneObjectLayout(selectedBase, layoutMode)
     : undefined;
   const exportedSettings = useMemo(
-    () => JSON.stringify({ lighting, objects: settings }, null, 2),
-    [lighting, settings],
+    () => JSON.stringify({ captionColor, lighting, objects: settings }, null, 2),
+    [captionColor, lighting, settings],
   );
 
   useEffect(() => {
@@ -5003,13 +5022,19 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
     const timeout = window.setTimeout(() => {
       void (async () => {
         try {
-          const { settings: loadedSettings, lighting: loadedLighting } = await readPersistedEnvironment();
+          const {
+            settings: loadedSettings,
+            lighting: loadedLighting,
+            captionColor: loadedCaptionColor,
+          } = await readPersistedEnvironment();
           if (cancelled) {
             return;
           }
 
           setSettings(loadedSettings);
           setLighting(loadedLighting);
+          setCaptionColor(loadedCaptionColor);
+          setCaptionColorDraft(loadedCaptionColor);
           setInitialAssetPaths(scenePreloadAssets(loadedSettings, portfolio));
           setSelectedObject((current) => Math.min(current, loadedSettings.length - 1));
           setResetSignal((current) => current + 1);
@@ -5077,6 +5102,8 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
       window.localStorage.removeItem(LEGACY_STORAGE_KEY);
       setSettings(defaultSceneSettings);
       setLighting(defaultSceneLighting);
+      setCaptionColor(DEFAULT_FRAME_CAPTION_COLOR);
+      setCaptionColorDraft(DEFAULT_FRAME_CAPTION_COLOR);
       setSelectedObject(0);
       setSceneError(null);
       setResetSignal((current) => current + 1);
@@ -5473,6 +5500,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         resetSignal={resetSignal}
         freeOrbit={freeOrbit}
         captionFont={captionFont}
+        captionColor={captionColorDraft}
         captionPlacement={captionPlacementId}
         captionDisplayMode={captionDisplayMode}
         captionsVisible={captionsVisible}
@@ -5502,8 +5530,9 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
 
       {captionsVisible && hoveredWork && captionPlacementId === "corner" && !editorOpen && !lightingOpen && !openWork && !bioOpen && !openImageFrameModal ? (
         <div
-          className="pointer-events-none absolute bottom-7 left-5 max-w-[calc(100vw-2.5rem)] break-words text-5xl leading-none text-[#f6f0e5] sm:bottom-9 sm:left-8 sm:text-7xl lg:text-8xl"
+          className="pointer-events-none absolute bottom-7 left-5 max-w-[calc(100vw-2.5rem)] break-words text-5xl leading-none sm:bottom-9 sm:left-8 sm:text-7xl lg:text-8xl"
           style={{
+            color: captionColorDraft,
             fontFamily: captionFont.fontFamily,
             fontWeight: captionFont.fontWeight,
           }}
@@ -5708,6 +5737,33 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="mb-4 grid gap-2">
+            <div className="text-[11px] uppercase tracking-[0.08em] text-[#a99d8a]">
+              Caption color
+            </div>
+            <div className="flex items-end gap-2">
+              <label className="grid min-w-0 flex-1 gap-1 text-[11px] text-[#d8cdbb]">
+                <span className="font-mono uppercase text-[#fff7e8]">
+                  {captionColorDraft}
+                </span>
+                <input
+                  className="h-9 w-full rounded border border-white/10 bg-[#221d17]/70 p-1"
+                  type="color"
+                  value={captionColorDraft}
+                  onChange={(event) => setCaptionColorDraft(event.currentTarget.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="h-9 rounded border border-white/10 bg-white/10 px-3 text-xs transition enabled:hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={captionColorDraft === captionColor}
+                onClick={() => setCaptionColor(captionColorDraft)}
+              >
+                Save color
+              </button>
             </div>
           </div>
 
