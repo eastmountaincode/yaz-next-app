@@ -7111,7 +7111,26 @@ function FamilyFrameModal({
       if (!framedPhoto) {
         return;
       }
-      const box = new THREE.Box3().setFromObject(framedPhoto);
+      framedPhoto.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      framedPhoto.traverse((object) => {
+        if (
+          !(object instanceof THREE.Mesh) ||
+          object.userData?.isFrameHitTarget ||
+          object.userData?.isFrameCaption
+        ) {
+          return;
+        }
+        if (!object.geometry.boundingBox) {
+          object.geometry.computeBoundingBox();
+        }
+        if (object.geometry.boundingBox) {
+          box.union(object.geometry.boundingBox.clone().applyMatrix4(object.matrixWorld));
+        }
+      });
+      if (box.isEmpty()) {
+        return;
+      }
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       const padding = 1.08;
