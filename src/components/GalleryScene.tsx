@@ -7056,8 +7056,10 @@ function InstagramIcon({ className = "" }: { className?: string }) {
 
 function LinkedInIcon({ className = "" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M5.2 8.3H2V21h3.2V8.3ZM3.6 3A1.9 1.9 0 1 0 3.6 6.8 1.9 1.9 0 0 0 3.6 3ZM21 13.7c0-3.8-2-5.7-4.7-5.7-2.2 0-3.1 1.2-3.7 2V8.3H9.4V21h3.2v-6.3c0-1.7.3-3.3 2.4-3.3 2 0 2.1 1.9 2.1 3.4V21H21v-7.3Z" />
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="8" cy="8" r="1" fill="currentColor" />
+      <path d="M8 11v6M12 17v-6m0 2.7c.7-1.8 4-2.3 4 1V17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -7485,7 +7487,7 @@ function BioModal({
           </h2>
           {(bio.instagramUrl || bio.linkedinUrl || bio.email) ? (
             <nav
-              className="mb-7 flex items-center justify-center gap-5"
+              className="mb-7 flex items-center justify-center gap-5 text-black/75"
               aria-label="Yaslynn Rivera contact links"
             >
               {bio.instagramUrl ? (
@@ -7494,7 +7496,7 @@ function BioModal({
                   target="_blank"
                   rel="noreferrer"
                   aria-label="Instagram"
-                  className="text-black hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
                   <InstagramIcon className="size-5" />
                 </a>
@@ -7505,7 +7507,7 @@ function BioModal({
                   target="_blank"
                   rel="noreferrer"
                   aria-label="LinkedIn"
-                  className="text-black hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
                   <LinkedInIcon className="size-5" />
                 </a>
@@ -7514,7 +7516,7 @@ function BioModal({
                 <a
                   href={`mailto:${bio.email}`}
                   aria-label={`Email ${bio.email}`}
-                  className="text-black hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
                   <Mail className="size-5" strokeWidth={1.5} />
                 </a>
