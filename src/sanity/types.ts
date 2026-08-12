@@ -12,6 +12,7 @@ export type PortfolioProject = {
   key: string;
   slug: string;
   title: string;
+  role: string;
   videoUrl: string;
 };
 

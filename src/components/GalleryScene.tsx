@@ -7637,7 +7637,12 @@ function ClientProjects({ client }: { client: PortfolioClient }) {
         const embed = videoEmbed(project.videoUrl);
         return (
           <article key={project.key}>
-            <h4 className="mb-3 text-base leading-tight sm:text-lg">{project.title}</h4>
+            <div className="mb-3">
+              <h4 className="text-base leading-tight sm:text-lg">{project.title}</h4>
+              {project.role ? (
+                <p className="mt-1 text-sm leading-tight text-black/60">{project.role}</p>
+              ) : null}
+            </div>
             <div className="relative aspect-video w-full bg-black">
               {embed ? (
                 <iframe

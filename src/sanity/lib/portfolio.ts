@@ -38,6 +38,7 @@ const portfolioQuery = defineQuery(`
         "key": _key,
         "slug": slug.current,
         title,
+        role,
         videoUrl
       }
     },
@@ -78,6 +79,7 @@ type RawPortfolioContent = {
       key?: string;
       slug?: string;
       title?: string;
+      role?: string;
       videoUrl?: string;
     }>;
   }>;
@@ -164,6 +166,7 @@ function normalizePortfolio(content: RawPortfolioContent | null): PortfolioConte
             key: project.key || `project-${projectIndex}`,
             slug: project.slug || project.key || `project-${projectIndex}`,
             title: project.title || "",
+            role: project.role || "",
             videoUrl: project.videoUrl || "",
           })),
       })),

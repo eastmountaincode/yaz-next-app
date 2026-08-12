@@ -55,6 +55,13 @@ export const clientsType = defineType({
                       validation: (rule) => rule.required(),
                     }),
                     defineField({
+                      name: "role",
+                      title: "Role",
+                      type: "string",
+                      description:
+                        "Yaslynn's role on this project, such as Director or Producer.",
+                    }),
+                    defineField({
                       name: "slug",
                       title: "Internal slug",
                       type: "slug",
@@ -69,7 +76,7 @@ export const clientsType = defineType({
                     }),
                   ],
                   preview: {
-                    select: { title: "title" },
+                    select: { title: "title", subtitle: "role" },
                   },
                 }),
               ],
