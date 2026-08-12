@@ -7236,7 +7236,7 @@ function FamilyFrameModal({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="absolute right-0 top-0 grid size-10 translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center bg-white/85 text-black hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black"
+            className="absolute left-full top-0 grid size-10 -translate-y-1/2 cursor-pointer place-items-center bg-white/85 text-black hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black"
           >
             <X size={22} strokeWidth={1.5} />
           </button>
