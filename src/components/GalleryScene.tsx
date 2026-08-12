@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PortableText, type PortableTextComponents } from "@portabletext/react";
 import Link from "next/link";
+import { FaInstagram, FaLinkedinIn } from "react-icons/fa6";
 import {
   ArrowLeft,
   Box,
@@ -7044,26 +7045,6 @@ const MODAL_HEADING_STYLE = {
   fontFamily: '"Yaz Winky Show"',
 } as const;
 
-function InstagramIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="17.4" cy="6.6" r="1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function LinkedInIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="8" cy="8" r="1" fill="currentColor" />
-      <path d="M8 11v6M12 17v-6m0 2.7c.7-1.8 4-2.3 4 1V17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function useModalDismissal(onClose: () => void) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -7498,7 +7479,7 @@ function BioModal({
                   aria-label="Instagram"
                   className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
-                  <InstagramIcon className="size-5" />
+                  <FaInstagram className="size-5" aria-hidden="true" />
                 </a>
               ) : null}
               {bio.linkedinUrl ? (
@@ -7509,7 +7490,7 @@ function BioModal({
                   aria-label="LinkedIn"
                   className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
-                  <LinkedInIcon className="size-5" />
+                  <FaLinkedinIn className="size-5" aria-hidden="true" />
                 </a>
               ) : null}
               {bio.email ? (
