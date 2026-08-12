@@ -7461,7 +7461,7 @@ function BioModal({
         ) : null}
         <div className="scrollbar-hidden min-h-0 px-6 pb-8 pt-6 pr-14 text-black sm:px-9 sm:pb-10 sm:pt-8 sm:pr-16 md:overflow-y-auto md:overscroll-contain md:py-10">
           <h2
-            className="mb-2 text-center text-5xl leading-none md:text-6xl"
+            className="mb-5 text-center text-5xl leading-none md:text-6xl"
             style={MODAL_HEADING_STYLE}
           >
             {bio.heading || "Bio"}
@@ -7471,6 +7471,15 @@ function BioModal({
               className="mb-7 flex items-center justify-center gap-5 text-black/75"
               aria-label="Yaslynn Rivera contact links"
             >
+              {bio.email ? (
+                <a
+                  href={`mailto:${bio.email}`}
+                  aria-label={`Email ${bio.email}`}
+                  className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                >
+                  <Mail className="size-[22px]" strokeWidth={1.5} />
+                </a>
+              ) : null}
               {bio.instagramUrl ? (
                 <a
                   href={bio.instagramUrl}
@@ -7479,7 +7488,7 @@ function BioModal({
                   aria-label="Instagram"
                   className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
-                  <FaInstagram className="size-5" aria-hidden="true" />
+                  <FaInstagram className="size-[22px]" aria-hidden="true" />
                 </a>
               ) : null}
               {bio.linkedinUrl ? (
@@ -7490,16 +7499,7 @@ function BioModal({
                   aria-label="LinkedIn"
                   className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
-                  <FaLinkedinIn className="size-5" aria-hidden="true" />
-                </a>
-              ) : null}
-              {bio.email ? (
-                <a
-                  href={`mailto:${bio.email}`}
-                  aria-label={`Email ${bio.email}`}
-                  className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
-                >
-                  <Mail className="size-5" strokeWidth={1.5} />
+                  <FaLinkedinIn className="size-[22px]" aria-hidden="true" />
                 </a>
               ) : null}
             </nav>
