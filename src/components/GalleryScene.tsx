@@ -7092,6 +7092,10 @@ function FamilyFrameModal({
     host.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
+    scene.add(new THREE.AmbientLight("#fff4df", 2.4));
+    const frameLight = new THREE.DirectionalLight("#fff8ec", 3.2);
+    frameLight.position.set(2.5, 3.5, 6);
+    scene.add(frameLight);
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100);
     camera.position.set(0, 0, 8);
     camera.lookAt(0, 0, 0);
@@ -7177,7 +7181,7 @@ function FamilyFrameModal({
 
   return (
     <div
-      className="absolute inset-0 z-50 bg-black/85"
+      className="absolute inset-0 z-50 bg-transparent"
       role="dialog"
       aria-modal="true"
       aria-label="Enlarged family photograph"
@@ -7185,14 +7189,13 @@ function FamilyFrameModal({
     >
       <div
         ref={hostRef}
-        className="absolute inset-4 sm:inset-6 md:inset-8"
-        onClick={(event) => event.stopPropagation()}
+        className="pointer-events-none absolute inset-4 drop-shadow-[0_18px_24px_rgba(0,0,0,0.35)] sm:inset-6 md:inset-8"
       />
       <button
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="absolute right-3 top-3 z-10 grid size-10 cursor-pointer place-items-center bg-black/55 text-white hover:bg-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white sm:right-5 sm:top-5"
+        className="absolute right-3 top-3 z-10 grid size-10 cursor-pointer place-items-center bg-white/85 text-black hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black sm:right-5 sm:top-5"
       >
         <X size={22} strokeWidth={1.5} />
       </button>
