@@ -7034,9 +7034,9 @@ const MODAL_STYLE = {
     "absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-6",
   surface: "relative max-h-full bg-black text-[#f6f0e5]",
   closeButton:
-    "absolute right-2 top-2 z-20 grid size-9 cursor-pointer place-items-center bg-transparent text-white hover:bg-neutral-800 focus-visible:bg-neutral-800 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white active:bg-neutral-700",
+    "absolute right-2 top-2 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-white hover:bg-neutral-800 focus-visible:bg-neutral-800 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white active:bg-neutral-700 sm:size-9",
   lightCloseButton:
-    "absolute right-2 top-2 z-20 grid size-9 cursor-pointer place-items-center bg-transparent text-black hover:bg-neutral-200 focus-visible:bg-neutral-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black active:bg-neutral-300",
+    "absolute right-2 top-2 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-black hover:bg-neutral-200 focus-visible:bg-neutral-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black active:bg-neutral-300 sm:size-9",
 } as const;
 
 const MODAL_HEADING_STYLE = {
@@ -7103,7 +7103,7 @@ function ModalShell({
               : MODAL_STYLE.closeButton
           }
         >
-          <X size={20} strokeWidth={1.5} />
+          <X className="size-[18px] sm:size-5" strokeWidth={1.5} />
         </button>
         {children}
       </div>
@@ -7288,9 +7288,9 @@ function FamilyFrameModal({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="absolute left-full top-0 grid size-10 -translate-y-1/2 cursor-pointer place-items-center bg-white/85 text-black hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black"
+            className="absolute left-full top-0 grid size-9 -translate-y-1/2 cursor-pointer place-items-center bg-white/85 text-black hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black sm:size-10"
           >
-            <X size={22} strokeWidth={1.5} />
+            <X className="size-5 sm:size-[22px]" strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -7444,7 +7444,7 @@ function BioModal({
         }`}
       >
         {bio.image ? (
-          <div className="relative m-6 mb-0 aspect-[4/5] w-auto bg-white min-[480px]:m-[7%] min-[480px]:mb-0 sm:mx-auto sm:mb-0 sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
+          <div className="relative mb-0 ml-6 mr-14 mt-6 aspect-[4/5] w-auto bg-white min-[480px]:m-[7%] min-[480px]:mb-0 sm:mx-auto sm:mb-0 sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
             <ContentImage
               image={bio.image}
               className="absolute inset-0 size-full object-cover object-[50%_35%]"
