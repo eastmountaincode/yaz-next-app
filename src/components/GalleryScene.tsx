@@ -7466,18 +7466,21 @@ function BioModal({
           >
             {bio.heading || "Bio"}
           </h2>
+          <div className="space-y-5 text-[15px] leading-7 text-black/75 md:text-base md:leading-8">
+            <PortableText value={bio.body} components={BIO_PORTABLE_TEXT_COMPONENTS} />
+          </div>
           {(bio.instagramUrl || bio.linkedinUrl || bio.email) ? (
             <nav
-              className="mb-7 flex items-center justify-center gap-5 text-black/75"
+              className="mt-8 flex items-center justify-center gap-6 text-black/55"
               aria-label="Yaslynn Rivera contact links"
             >
               {bio.email ? (
                 <a
                   href={`mailto:${bio.email}`}
                   aria-label={`Email ${bio.email}`}
-                  className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className="hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
-                  <Mail className="size-[22px]" strokeWidth={1.5} />
+                  <Mail className="size-6" strokeWidth={1.5} />
                 </a>
               ) : null}
               {bio.instagramUrl ? (
@@ -7486,9 +7489,9 @@ function BioModal({
                   target="_blank"
                   rel="noreferrer"
                   aria-label="Instagram"
-                  className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className="hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
-                  <FaInstagram className="size-[22px]" aria-hidden="true" />
+                  <FaInstagram className="size-6" aria-hidden="true" />
                 </a>
               ) : null}
               {bio.linkedinUrl ? (
@@ -7497,16 +7500,13 @@ function BioModal({
                   target="_blank"
                   rel="noreferrer"
                   aria-label="LinkedIn"
-                  className="text-inherit hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className="hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
-                  <FaLinkedinIn className="size-[22px]" aria-hidden="true" />
+                  <FaLinkedinIn className="size-6" aria-hidden="true" />
                 </a>
               ) : null}
             </nav>
           ) : null}
-          <div className="space-y-5 text-[15px] leading-7 text-black/75 md:text-base md:leading-8">
-            <PortableText value={bio.body} components={BIO_PORTABLE_TEXT_COMPONENTS} />
-          </div>
         </div>
       </div>
     </ModalShell>
