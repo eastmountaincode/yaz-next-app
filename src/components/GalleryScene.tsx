@@ -7437,7 +7437,7 @@ function BioModal({
       className="w-full max-w-5xl bg-white text-black"
     >
       <div
-        className={`h-[min(calc(100dvh-2rem),48rem)] overflow-y-auto overscroll-contain bg-white font-sans md:grid md:h-[min(calc(100dvh-3rem),48rem)] md:overflow-hidden ${
+        className={`scrollbar-hidden h-[min(calc(100dvh-2rem),48rem)] overflow-y-auto overscroll-contain bg-white font-sans md:grid md:h-[min(calc(100dvh-3rem),48rem)] md:overflow-hidden ${
           hasImage
             ? "md:grid-cols-[0.9fr_minmax(0,1.1fr)] md:grid-rows-1"
             : "grid-cols-1"
@@ -7451,7 +7451,7 @@ function BioModal({
             />
           </div>
         ) : null}
-        <div className="min-h-0 px-6 pb-8 pt-6 pr-14 text-black sm:px-9 sm:pb-10 sm:pt-8 sm:pr-16 md:overflow-y-auto md:overscroll-contain md:py-10">
+        <div className="scrollbar-hidden min-h-0 px-6 pb-8 pt-6 pr-14 text-black sm:px-9 sm:pb-10 sm:pt-8 sm:pr-16 md:overflow-y-auto md:overscroll-contain md:py-10">
           <h2
             className="mb-7 text-5xl leading-none md:text-6xl"
             style={MODAL_HEADING_STYLE}
@@ -7489,7 +7489,7 @@ function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: ()
     >
       <div
         key={selectedArtistKey ?? "all-stills-artists"}
-        className="h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-white px-6 pb-10 pt-8 font-sans text-black sm:px-9 sm:pb-12 sm:pt-10"
+        className="scrollbar-hidden h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-white px-6 pb-10 pt-8 font-sans text-black sm:px-9 sm:pb-12 sm:pt-10"
       >
         <h2
           id="stills-modal-title"
@@ -7623,7 +7623,7 @@ function ClientsModal({
     >
       <div
         key={selectedClientKey ?? "all-clients"}
-        className="h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-white px-6 pb-10 pt-8 font-sans text-black sm:px-9 sm:pb-12 sm:pt-10"
+        className="scrollbar-hidden h-[min(calc(100dvh-3rem),54rem)] overflow-y-auto overscroll-contain bg-white px-6 pb-10 pt-8 font-sans text-black sm:px-9 sm:pb-12 sm:pt-10"
       >
         <h2
           id="clients-modal-title"
