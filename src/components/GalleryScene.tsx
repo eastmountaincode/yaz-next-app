@@ -7034,9 +7034,9 @@ const MODAL_STYLE = {
     "absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-6",
   surface: "relative max-h-full bg-black text-[#f6f0e5]",
   closeButton:
-    "absolute right-0 top-0 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-white hover:bg-neutral-800 focus-visible:bg-neutral-800 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white active:bg-neutral-700 sm:right-2 sm:top-2 sm:size-9",
+    "absolute right-2 top-2 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-white hover:bg-neutral-800 focus-visible:bg-neutral-800 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white active:bg-neutral-700 sm:size-9",
   lightCloseButton:
-    "absolute right-0 top-0 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-black hover:bg-neutral-200 focus-visible:bg-neutral-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black active:bg-neutral-300 sm:right-2 sm:top-2 sm:size-9",
+    "absolute right-2 top-2 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-black hover:bg-neutral-200 focus-visible:bg-neutral-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black active:bg-neutral-300 sm:size-9",
 } as const;
 
 const MODAL_HEADING_STYLE = {
@@ -7348,7 +7348,7 @@ function DirectorReelModal({
       onClose={onClose}
       ariaLabel="Director's Reel"
       closeButtonTone="light"
-      className="bg-white p-8 text-black sm:p-11"
+      className="bg-white p-10 text-black sm:p-11"
       style={{
         width:
           "min(72rem, calc(100vw - 2rem), calc((100dvh - 8.5rem) * 16 / 9 + 5.5rem))",
@@ -7444,7 +7444,7 @@ function BioModal({
         }`}
       >
         {bio.image ? (
-          <div className="relative m-8 mb-0 aspect-[4/5] w-auto bg-white sm:mx-auto sm:mb-0 sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
+          <div className="relative m-10 mb-0 aspect-[4/5] w-auto bg-white sm:mx-auto sm:mb-0 sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
             <ContentImage
               image={bio.image}
               className="absolute inset-0 size-full object-cover object-[50%_35%]"
