@@ -7461,7 +7461,7 @@ function BioModal({
         ) : null}
         <div className="scrollbar-hidden min-h-0 px-6 pb-8 pt-6 pr-14 text-black sm:px-9 sm:pb-10 sm:pt-8 sm:pr-16 md:overflow-y-auto md:overscroll-contain md:py-10">
           <h2
-            className="mb-7 text-center text-5xl leading-none md:text-6xl"
+            className="mb-2 text-center text-5xl leading-none md:text-6xl"
             style={MODAL_HEADING_STYLE}
           >
             {bio.heading || "Bio"}
