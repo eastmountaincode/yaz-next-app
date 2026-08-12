@@ -104,7 +104,7 @@ type SceneLayoutOverride = {
   captionScale?: number;
 };
 type SceneLayoutOverrides = Partial<Record<SceneLayoutMode, SceneLayoutOverride>>;
-type ClickZoneAction = "toggle-nearest-light" | "speaker-click";
+type ClickZoneAction = "toggle-nearest-light" | "toggle-candle" | "speaker-click";
 type ImageFrameModalId = "stills" | "clients";
 
 function PreloadedImage({
@@ -243,6 +243,7 @@ type HitboxSetting = BaseObjectSetting & {
 
 type CandleCompositeSetting = BaseObjectSetting & {
   kind: "candle-composite";
+  enabled?: boolean;
   holderModel: string;
   candleModel: string;
   separateCandleModel: boolean;
@@ -351,6 +352,7 @@ const BASEBOARD_WALL_OFFSET = 0.006;
 const CANDLE_HOLDER_MODEL_PATH = "/3d-models/candle-and-holder/holder.glb";
 const CANDLE_MODEL_PATH = "/3d-models/candle-and-holder/candle_no_flame_shorter.glb";
 const CANDLE_FLAME_TEXTURE_PATH = "/3d-models/candle-and-holder/candleflame_atlas.png";
+const CANDLE_ACCENT_PAIR_DISTANCE = 1.5;
 const CLAY_SAUCER_CANDLE_MODEL_PATH =
   "/3d-models/candles/low-poly_candle_on_clay_saucer_optimized.glb";
 const GLASS_CANDLE_MODEL_PATH = "/3d-models/candles/candle_in_a_glass_optimized.glb";
@@ -980,6 +982,18 @@ function isCandleAccentLight(setting: SceneObjectSetting): setting is LightSetti
     setting.kind === "light" &&
     (setting.label === "Candle accent light" || setting.id.startsWith("candle-accent-light-"))
   );
+}
+
+function isCandleLightPair(
+  setting: SceneObjectSetting,
+  candle: CandleCompositeSetting,
+): setting is LightSetting {
+  if (!isCandleAccentLight(setting)) {
+    return false;
+  }
+
+  const pairedCandleId = (setting as LightSetting & { candleId?: string }).candleId;
+  return !pairedCandleId || pairedCandleId === candle.id;
 }
 
 function lampHitboxPlacementFromModel(setting: ModelSetting) {
@@ -2023,6 +2037,7 @@ function syncCandleCompositeObject(group: THREE.Group, setting: CandleCompositeS
   if (flame instanceof THREE.Mesh) {
     flame.position.set(...setting.flameOffset);
     flame.scale.setScalar(setting.flameScale);
+    flame.visible = setting.enabled !== false;
     if (flame.material instanceof THREE.MeshBasicMaterial) {
       flame.material.opacity = setting.flameOpacity;
       flame.material.needsUpdate = true;
@@ -2033,7 +2048,7 @@ function syncCandleCompositeObject(group: THREE.Group, setting: CandleCompositeS
   if (light instanceof THREE.PointLight) {
     light.position.set(...setting.flameOffset);
     light.color.set(setting.flameLightColor);
-    light.intensity = setting.flameLightIntensity;
+    light.intensity = setting.enabled !== false ? setting.flameLightIntensity : 0;
     light.distance = setting.flameLightDistance;
   }
 }
@@ -2080,12 +2095,27 @@ function createCandleCompositeObject(
     setting.holderModel !== GLASS_CANDLE_MODEL_PATH,
   );
   holder.name = "candle-composite-holder";
+  holder.traverse((object) => {
+    if (object instanceof THREE.Mesh) {
+      object.userData.isClickZone = true;
+      object.userData.clickAction = "toggle-candle" satisfies ClickZoneAction;
+      object.userData.candleId = setting.id;
+    }
+  });
   group.add(holder);
 
   const candleRoot = new THREE.Group();
   candleRoot.name = "candle-composite-candle-root";
   if (candleSource) {
-    candleRoot.add(createNormalizedModel(candleSource));
+    const candle = createNormalizedModel(candleSource);
+    candle.traverse((object) => {
+      if (object instanceof THREE.Mesh) {
+        object.userData.isClickZone = true;
+        object.userData.clickAction = "toggle-candle" satisfies ClickZoneAction;
+        object.userData.candleId = setting.id;
+      }
+    });
+    candleRoot.add(candle);
   }
   group.add(candleRoot);
 
@@ -2115,6 +2145,9 @@ function createCandleCompositeObject(
   flame.renderOrder = 10;
   flame.userData.isCandleFlameBillboard = true;
   flame.userData.animatedTexture = flameTexture;
+  flame.userData.isClickZone = true;
+  flame.userData.clickAction = "toggle-candle" satisfies ClickZoneAction;
+  flame.userData.candleId = setting.id;
   group.add(flame);
 
   const flameLight = new THREE.PointLight(
@@ -3112,6 +3145,7 @@ function ThreeWallCanvas({
   onImageFrameClick,
   onFrameHover,
   onLampToggle,
+  onCandleToggle,
   onSpeakerClick,
   onSceneReady,
 }: {
@@ -3136,6 +3170,7 @@ function ThreeWallCanvas({
   onImageFrameClick?: (modalId: ImageFrameModalId) => void;
   onFrameHover?: (info: FrameHoverInfo | null) => void;
   onLampToggle?: (position: VectorTuple) => void;
+  onCandleToggle?: (candleId: string) => void;
   onSpeakerClick?: () => void;
   onSceneReady?: () => void;
 }) {
@@ -3162,6 +3197,7 @@ function ThreeWallCanvas({
   const imageFrameClickCallbackRef = useRef(onImageFrameClick);
   const frameHoverCallbackRef = useRef(onFrameHover);
   const lampToggleCallbackRef = useRef(onLampToggle);
+  const candleToggleCallbackRef = useRef(onCandleToggle);
   const speakerClickCallbackRef = useRef(onSpeakerClick);
   const sceneReadyCallbackRef = useRef(onSceneReady);
 
@@ -3188,6 +3224,10 @@ function ThreeWallCanvas({
   useEffect(() => {
     lampToggleCallbackRef.current = onLampToggle;
   }, [onLampToggle]);
+
+  useEffect(() => {
+    candleToggleCallbackRef.current = onCandleToggle;
+  }, [onCandleToggle]);
 
   useEffect(() => {
     speakerClickCallbackRef.current = onSpeakerClick;
@@ -4033,6 +4073,12 @@ function ThreeWallCanvas({
           formatNumber(localPoint.y),
           formatNumber(localPoint.z),
         ]);
+      } else if (action === "toggle-candle") {
+        const candleId = hit.object.userData?.candleId as string | undefined;
+        if (!candleId || !candleToggleCallbackRef.current) {
+          return false;
+        }
+        candleToggleCallbackRef.current(candleId);
       } else if (action === "speaker-click") {
         speakerClickCallbackRef.current?.();
       }
@@ -5018,6 +5064,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   const [bioOpen, setBioOpen] = useState(false);
   const [openImageFrameModal, setOpenImageFrameModal] = useState<ImageFrameModalId | null>(null);
   const [speakerPlaying, setSpeakerPlaying] = useState(false);
+  const [candleEnabled, setCandleEnabled] = useState<Record<string, boolean>>({});
   const [initialAssetPaths, setInitialAssetPaths] = useState<string[] | null>(null);
   const [initialAssetsReady, setInitialAssetsReady] = useState(false);
   const [initialSceneReady, setInitialSceneReady] = useState(false);
@@ -5088,10 +5135,40 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   );
   const [settings, setSettings] = useState<SceneObjectSetting[]>(defaultSceneSettings);
   const [lighting, setLighting] = useState<SceneLighting>(defaultSceneLighting);
-  const activeSettings = useMemo(
-    () => settings.map((setting) => resolveSceneObjectLayout(setting, layoutMode)),
-    [layoutMode, settings],
-  );
+  const activeSettings = useMemo(() => {
+    const resolved = settings.map((setting) => resolveSceneObjectLayout(setting, layoutMode));
+    const next = [...resolved];
+
+    resolved.forEach((setting, candleIndex) => {
+      if (setting.kind !== "candle-composite" || candleEnabled[setting.id] !== false) {
+        return;
+      }
+
+      next[candleIndex] = { ...setting, enabled: false };
+      let accentIndex = -1;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+      resolved.forEach((candidate, index) => {
+        if (!isCandleLightPair(candidate, setting) || !isSceneObjectVisible(candidate)) {
+          return;
+        }
+        const dx = candidate.position[0] - setting.position[0];
+        const dy = candidate.position[1] - setting.position[1];
+        const dz = candidate.position[2] - setting.position[2];
+        const distance = dx * dx + dy * dy + dz * dz;
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          accentIndex = index;
+        }
+      });
+      if (accentIndex !== -1 && next[accentIndex].kind === "light") {
+        if (Math.sqrt(nearestDistance) <= CANDLE_ACCENT_PAIR_DISTANCE) {
+          next[accentIndex] = { ...next[accentIndex], enabled: false } as LightSetting;
+        }
+      }
+    });
+
+    return next;
+  }, [candleEnabled, layoutMode, settings]);
   const candleAccentLight = useMemo(
     () => activeSettings.find(isCandleAccentLight),
     [activeSettings],
@@ -5460,6 +5537,14 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
     });
   }, []);
 
+  const toggleCandle = useCallback((candleId: string) => {
+    setSceneError(null);
+    setCandleEnabled((current) => ({
+      ...current,
+      [candleId]: current[candleId] === false,
+    }));
+  }, []);
+
   const toggleNearestLight = useCallback((position: VectorTuple) => {
     setSceneError(null);
     const hasVisibleLight = activeSettings.some(
@@ -5734,6 +5819,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         onImageFrameClick={setOpenImageFrameModal}
         onFrameHover={setHoveredFrameInfo}
         onLampToggle={toggleNearestLight}
+        onCandleToggle={toggleCandle}
         onSpeakerClick={handleSpeakerClick}
         onSceneReady={handleInitialSceneReady}
       />
