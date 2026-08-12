@@ -1781,6 +1781,8 @@ function createImageFrame(
     const modalId = setting.captionText.trim().toLowerCase();
     if (modalId === "stills" || modalId === "clients") {
       imageMesh.userData.imageFrameModalId = modalId satisfies ImageFrameModalId;
+    } else if (setting.id.startsWith("family-")) {
+      imageMesh.userData.familyFrameId = setting.id;
     }
   }
   imageMesh.userData.sceneObjectId = setting.id;
@@ -3137,6 +3139,7 @@ function ThreeWallCanvas({
   onFrameClick,
   onBioClick,
   onImageFrameClick,
+  onFamilyFrameClick,
   onFrameHover,
   onLampToggle,
   onCandleToggle,
@@ -3162,6 +3165,7 @@ function ThreeWallCanvas({
   onFrameClick?: (workSlug: string) => void;
   onBioClick?: () => void;
   onImageFrameClick?: (modalId: ImageFrameModalId) => void;
+  onFamilyFrameClick?: (frameId: string) => void;
   onFrameHover?: (info: FrameHoverInfo | null) => void;
   onLampToggle?: (position: VectorTuple) => void;
   onCandleToggle?: (candleId: string) => void;
@@ -3189,6 +3193,7 @@ function ThreeWallCanvas({
   const frameClickCallbackRef = useRef(onFrameClick);
   const bioClickCallbackRef = useRef(onBioClick);
   const imageFrameClickCallbackRef = useRef(onImageFrameClick);
+  const familyFrameClickCallbackRef = useRef(onFamilyFrameClick);
   const frameHoverCallbackRef = useRef(onFrameHover);
   const lampToggleCallbackRef = useRef(onLampToggle);
   const candleToggleCallbackRef = useRef(onCandleToggle);
@@ -3210,6 +3215,10 @@ function ThreeWallCanvas({
   useEffect(() => {
     imageFrameClickCallbackRef.current = onImageFrameClick;
   }, [onImageFrameClick]);
+
+  useEffect(() => {
+    familyFrameClickCallbackRef.current = onFamilyFrameClick;
+  }, [onFamilyFrameClick]);
 
   useEffect(() => {
     frameHoverCallbackRef.current = onFrameHover;
@@ -3758,7 +3767,8 @@ function ThreeWallCanvas({
       return Boolean(
         clip.userData?.workSlug ||
           clip.userData?.bioSlug ||
-          clip.userData?.imageFrameModalId,
+          clip.userData?.imageFrameModalId ||
+          clip.userData?.familyFrameId,
       );
     };
 
@@ -4094,7 +4104,8 @@ function ThreeWallCanvas({
       const frameHandler = frameClickCallbackRef.current;
       const bioHandler = bioClickCallbackRef.current;
       const imageFrameHandler = imageFrameClickCallbackRef.current;
-      if (!frameHandler && !bioHandler && !imageFrameHandler) {
+      const familyFrameHandler = familyFrameClickCallbackRef.current;
+      if (!frameHandler && !bioHandler && !imageFrameHandler && !familyFrameHandler) {
         return;
       }
       const rect = host.getBoundingClientRect();
@@ -4121,6 +4132,11 @@ function ThreeWallCanvas({
         | undefined;
       if (imageFrameModalId) {
         imageFrameHandler?.(imageFrameModalId);
+        return;
+      }
+      const familyFrameId = hit?.userData?.familyFrameId as string | undefined;
+      if (familyFrameId) {
+        familyFrameHandler?.(familyFrameId);
         return;
       }
       const slug = hit?.userData?.workSlug as string | undefined;
@@ -5068,6 +5084,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   const [openWorkSlug, setOpenWorkSlug] = useState<string | null>(null);
   const [bioOpen, setBioOpen] = useState(false);
   const [openImageFrameModal, setOpenImageFrameModal] = useState<ImageFrameModalId | null>(null);
+  const [openFamilyFrameId, setOpenFamilyFrameId] = useState<string | null>(null);
   const [speakerPlaying, setSpeakerPlaying] = useState(false);
   const [candleEnabled, setCandleEnabled] = useState<Record<string, boolean>>({});
   const [initialAssetPaths, setInitialAssetPaths] = useState<string[] | null>(null);
@@ -5181,6 +5198,13 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
 
     return next;
   }, [candleEnabled, layoutMode, settings]);
+  const openFamilyFrame = useMemo(() => {
+    const frame = activeSettings.find(
+      (setting): setting is ImageFrameSetting =>
+        setting.kind === "image-frame" && setting.id === openFamilyFrameId,
+    );
+    return frame?.id.startsWith("family-") ? frame : null;
+  }, [activeSettings, openFamilyFrameId]);
   const candleAccentLight = useMemo(
     () => activeSettings.find(isCandleAccentLight),
     [activeSettings],
@@ -5829,6 +5853,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         onFrameClick={setOpenWorkSlug}
         onBioClick={() => setBioOpen(true)}
         onImageFrameClick={setOpenImageFrameModal}
+        onFamilyFrameClick={setOpenFamilyFrameId}
         onFrameHover={setHoveredFrameInfo}
         onLampToggle={toggleNearestLight}
         onCandleToggle={toggleCandle}
@@ -6907,6 +6932,12 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
           onClose={() => setOpenImageFrameModal(null)}
         />
       ) : null}
+      {openFamilyFrame ? (
+        <FamilyFrameModal
+          frame={openFamilyFrame}
+          onClose={() => setOpenFamilyFrameId(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -7024,6 +7055,147 @@ function ModalShell({
         </button>
         {children}
       </div>
+    </div>
+  );
+}
+
+function FamilyFrameModal({
+  frame,
+  onClose,
+}: {
+  frame: ImageFrameSetting;
+  onClose: () => void;
+}) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  useModalDismissal(onClose);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) {
+      return;
+    }
+
+    let disposed = false;
+    let animationFrame = 0;
+    const geometries: THREE.BufferGeometry[] = [];
+    const materials: THREE.Material[] = [];
+    const textures: THREE.Texture[] = [];
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: true,
+      powerPreference: "high-performance",
+    });
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setClearColor(0x000000, 0);
+    renderer.domElement.className = "block size-full";
+    renderer.domElement.setAttribute("aria-label", "Enlarged framed family photograph");
+    host.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 100);
+    camera.position.set(0, 0, 8);
+    camera.lookAt(0, 0, 0);
+    let framedPhoto: THREE.Group | null = null;
+
+    const resize = () => {
+      const width = Math.max(1, host.clientWidth);
+      const height = Math.max(1, host.clientHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(width, height, false);
+
+      if (!framedPhoto) {
+        return;
+      }
+      const box = new THREE.Box3().setFromObject(framedPhoto);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const padding = 1.08;
+      const objectAspect = Math.max(size.x, 0.01) / Math.max(size.y, 0.01);
+      const viewportAspect = width / height;
+      const halfWidth =
+        viewportAspect > objectAspect
+          ? (size.y * viewportAspect * padding) / 2
+          : (size.x * padding) / 2;
+      const halfHeight = halfWidth / viewportAspect;
+      camera.left = -halfWidth;
+      camera.right = halfWidth;
+      camera.top = halfHeight;
+      camera.bottom = -halfHeight;
+      camera.position.set(center.x, center.y, Math.max(8, box.max.z + 4));
+      camera.lookAt(center.x, center.y, center.z);
+      camera.updateProjectionMatrix();
+    };
+
+    new GLTFLoader()
+      .setMeshoptDecoder(MeshoptDecoder)
+      .loadAsync(resolveModelAssetUrl(frame.model))
+      .then((gltf) => {
+        if (disposed) {
+          return;
+        }
+        framedPhoto = createImageFrame(
+          frame,
+          gltf.scene,
+          geometries,
+          materials,
+          textures,
+          captionFontOptions[0],
+          DEFAULT_FRAME_CAPTION_COLOR,
+          "frame",
+          () => {},
+        );
+        framedPhoto.position.set(0, 0, 0);
+        framedPhoto.rotation.set(0, 0, 0);
+        framedPhoto.scale.setScalar(1);
+        scene.add(framedPhoto);
+        resize();
+      })
+      .catch(() => {
+        // The scene already preloads these assets; leave the backdrop clean if
+        // an unexpected network failure occurs while opening the enlargement.
+      });
+
+    const render = () => {
+      renderer.render(scene, camera);
+      animationFrame = window.requestAnimationFrame(render);
+    };
+    render();
+    window.addEventListener("resize", resize);
+
+    return () => {
+      disposed = true;
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", resize);
+      framedPhoto?.removeFromParent();
+      geometries.forEach((geometry) => geometry.dispose());
+      materials.forEach((material) => material.dispose());
+      textures.forEach((texture) => texture.dispose());
+      renderer.dispose();
+      renderer.domElement.remove();
+    };
+  }, [frame]);
+
+  return (
+    <div
+      className="absolute inset-0 z-50 bg-black/85"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Enlarged family photograph"
+      onClick={onClose}
+    >
+      <div
+        ref={hostRef}
+        className="absolute inset-4 sm:inset-6 md:inset-8"
+        onClick={(event) => event.stopPropagation()}
+      />
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute right-3 top-3 z-10 grid size-10 cursor-pointer place-items-center bg-black/55 text-white hover:bg-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white sm:right-5 sm:top-5"
+      >
+        <X size={22} strokeWidth={1.5} />
+      </button>
     </div>
   );
 }
