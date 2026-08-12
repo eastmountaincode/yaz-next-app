@@ -3895,16 +3895,8 @@ function ThreeWallCanvas({
       });
     };
 
-    const horizontalNavigationCursor = (clientX: number) => {
-      if (!canUseFrameHoverEffects()) {
-        return "";
-      }
-      const rect = host.getBoundingClientRect();
-      if (rect.width === 0) {
-        return "";
-      }
-      return clientX < rect.left + rect.width / 2 ? "w-resize" : "e-resize";
-    };
+    const horizontalNavigationCursor = () =>
+      canUseFrameHoverEffects() ? "ew-resize" : "";
 
     const clearHoveredFrame = () => {
       if (hoveredFrameClip) {
@@ -3962,11 +3954,11 @@ function ThreeWallCanvas({
         if (nextClip) {
           host.style.cursor = isFrameClipInteractive(nextClip)
             ? "pointer"
-            : horizontalNavigationCursor(clientX);
+            : horizontalNavigationCursor();
         } else {
           host.style.cursor = clickZoneHovered
             ? "pointer"
-            : horizontalNavigationCursor(clientX);
+            : horizontalNavigationCursor();
         }
         return;
       }
@@ -3981,11 +3973,11 @@ function ThreeWallCanvas({
         playFrame(hoveredFrameClip);
         host.style.cursor = isFrameClipInteractive(hoveredFrameClip)
           ? "pointer"
-          : horizontalNavigationCursor(clientX);
+          : horizontalNavigationCursor();
       } else {
         host.style.cursor = clickZoneHovered
           ? "pointer"
-          : horizontalNavigationCursor(clientX);
+          : horizontalNavigationCursor();
       }
     };
 
