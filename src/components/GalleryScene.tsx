@@ -385,6 +385,7 @@ const MOBILE_CAMERA_DEFAULTS = {
 };
 const DESKTOP_CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(16);
 const MOBILE_CONSTRAINED_YAW_LIMIT = THREE.MathUtils.degToRad(16);
+const CAMERA_MIN_DISTANCE_FACTOR = 0.35;
 const MOBILE_LAYOUT_BREAKPOINT = 720;
 
 type CaptionFontId =
@@ -4164,7 +4165,7 @@ function ThreeWallCanvas({
       const zoomFactor = Math.exp(boundedDelta * 0.00018);
       targetCameraDistance = THREE.MathUtils.clamp(
         targetCameraDistance * zoomFactor,
-        baseCameraDistance * 0.6,
+        baseCameraDistance * CAMERA_MIN_DISTANCE_FACTOR,
         baseCameraDistance * 5,
       );
     };
