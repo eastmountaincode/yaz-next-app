@@ -7120,6 +7120,7 @@ function FamilyFrameModal({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const frameBoundsRef = useRef<HTMLDivElement | null>(null);
+  const [frameReady, setFrameReady] = useState(false);
   useModalDismissal(onClose);
 
   useEffect(() => {
@@ -7127,6 +7128,8 @@ function FamilyFrameModal({
     if (!host) {
       return;
     }
+
+    setFrameReady(false);
 
     let disposed = false;
     let animationFrame = 0;
@@ -7212,6 +7215,7 @@ function FamilyFrameModal({
         frameBounds.style.top = `${(height - renderedHeight) / 2}px`;
         frameBounds.style.width = `${renderedWidth}px`;
         frameBounds.style.height = `${renderedHeight}px`;
+        setFrameReady(true);
       }
     };
 
@@ -7284,14 +7288,16 @@ function FamilyFrameModal({
           className="absolute z-10"
           onClick={(event) => event.stopPropagation()}
         >
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="absolute left-full top-0 grid size-9 -translate-y-1/2 cursor-pointer place-items-center bg-white/85 text-black hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black sm:size-10"
-          >
-            <X className="size-5 sm:size-[22px]" strokeWidth={1.5} />
-          </button>
+          {frameReady ? (
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              className="absolute left-full top-0 grid size-9 -translate-y-1/2 cursor-pointer place-items-center bg-white/85 text-black hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black sm:size-10"
+            >
+              <X className="size-5 sm:size-[22px]" strokeWidth={1.5} />
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
