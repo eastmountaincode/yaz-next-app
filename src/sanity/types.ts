@@ -35,6 +35,9 @@ export type PortfolioContent = {
     heading: string;
     body: PortableTextBlock[];
     image: SanityImageContent | null;
+    instagramUrl: string;
+    linkedinUrl: string;
+    email: string;
   };
   clients: PortfolioClient[];
   stillArtists: StillArtist[];
@@ -46,6 +49,9 @@ export const EMPTY_PORTFOLIO_CONTENT: PortfolioContent = {
     heading: "",
     body: [],
     image: null,
+    instagramUrl: "",
+    linkedinUrl: "",
+    email: "",
   },
   clients: [],
   stillArtists: [],

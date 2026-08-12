@@ -58,6 +58,27 @@ export const bioType = defineType({
         }),
       ],
     }),
+    defineField({
+      name: "instagramUrl",
+      title: "Instagram",
+      type: "url",
+      description: "Link to Yaslynn's Instagram profile.",
+      validation: (rule) => rule.uri({ scheme: ["http", "https"] }),
+    }),
+    defineField({
+      name: "linkedinUrl",
+      title: "LinkedIn",
+      type: "url",
+      description: "Link to Yaslynn's LinkedIn profile.",
+      validation: (rule) => rule.uri({ scheme: ["http", "https"] }),
+    }),
+    defineField({
+      name: "email",
+      title: "Email",
+      type: "string",
+      description: "Email address used by the contact icon.",
+      validation: (rule) => rule.email(),
+    }),
   ],
   preview: {
     prepare: () => ({ title: "Bio" }),

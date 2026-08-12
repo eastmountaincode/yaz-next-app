@@ -14,6 +14,9 @@ const portfolioQuery = defineQuery(`
     "directorReelUrl": *[_type == "directorReel" && _id == "director-reel"][0].videoUrl,
     "bioHeading": *[_type == "bio" && _id == "bio"][0].heading,
     "bioBody": *[_type == "bio" && _id == "bio"][0].body,
+    "bioInstagramUrl": *[_type == "bio" && _id == "bio"][0].instagramUrl,
+    "bioLinkedinUrl": *[_type == "bio" && _id == "bio"][0].linkedinUrl,
+    "bioEmail": *[_type == "bio" && _id == "bio"][0].email,
     "bioImage": *[_type == "bio" && _id == "bio"][0].image {
       "key": coalesce(_key, asset._ref),
       "url": asset->url,
@@ -63,6 +66,9 @@ type RawPortfolioContent = {
   directorReelUrl?: string;
   bioHeading?: string;
   bioBody?: Array<string | PortableTextBlock>;
+  bioInstagramUrl?: string;
+  bioLinkedinUrl?: string;
+  bioEmail?: string;
   bioImage?: Partial<SanityImageContent> | null;
   clients?: Array<{
     key?: string;
@@ -142,6 +148,9 @@ function normalizePortfolio(content: RawPortfolioContent | null): PortfolioConte
       heading: content.bioHeading || "",
       body: normalizeBioBody(content.bioBody),
       image: normalizeImage(content.bioImage),
+      instagramUrl: content.bioInstagramUrl || "",
+      linkedinUrl: content.bioLinkedinUrl || "",
+      email: content.bioEmail || "",
     },
     clients: (content.clients ?? [])
       .filter((client) => client.name)
