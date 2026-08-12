@@ -7348,7 +7348,7 @@ function DirectorReelModal({
       onClose={onClose}
       ariaLabel="Director's Reel"
       closeButtonTone="light"
-      className="bg-white p-10 text-black sm:p-11"
+      className="bg-white p-11 text-black"
       style={{
         width:
           "min(72rem, calc(100vw - 2rem), calc((100dvh - 8.5rem) * 16 / 9 + 5.5rem))",
@@ -7444,7 +7444,7 @@ function BioModal({
         }`}
       >
         {bio.image ? (
-          <div className="relative m-10 mb-0 aspect-[4/5] w-auto bg-white sm:mx-auto sm:mb-0 sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
+          <div className="relative m-11 mb-0 aspect-[4/5] w-auto bg-white sm:mx-auto sm:mb-0 sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
             <ContentImage
               image={bio.image}
               className="absolute inset-0 size-full object-cover object-[50%_35%]"
