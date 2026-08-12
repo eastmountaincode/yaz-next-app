@@ -2130,7 +2130,9 @@ function createCandleCompositeObject(
       map: flameTexture,
       transparent: true,
       opacity: setting.flameOpacity,
-      depthTest: true,
+      // The flame sits almost inside the candle geometry. Treat it as an
+      // effect layer so the candle mesh cannot occlude the animated sprite.
+      depthTest: false,
       depthWrite: false,
       toneMapped: false,
       side: THREE.DoubleSide,
