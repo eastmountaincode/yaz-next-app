@@ -104,7 +104,11 @@ type SceneLayoutOverride = {
   captionScale?: number;
 };
 type SceneLayoutOverrides = Partial<Record<SceneLayoutMode, SceneLayoutOverride>>;
-type ClickZoneAction = "toggle-nearest-light" | "toggle-candle" | "speaker-click";
+type ClickZoneAction =
+  | "toggle-nearest-light"
+  | "toggle-candle"
+  | "speaker-click"
+  | "open-credits";
 type ImageFrameModalId = "stills" | "clients";
 
 function PreloadedImage({
@@ -2563,6 +2567,33 @@ function createClockObject(
   prepareStaticModel(secondHand);
   handsRoot.add(secondHand);
 
+  const clockHitZone = new THREE.Mesh(
+    makeGeometry(
+      new THREE.BoxGeometry(
+        Math.max(0.3, modelSize.x * modelScale),
+        clockComposite.clockHeight,
+        Math.max(0.25, modelSize.z * modelScale),
+      ),
+      geometries,
+    ),
+    makeMaterial(
+      new THREE.MeshBasicMaterial({
+        colorWrite: false,
+        depthWrite: false,
+        opacity: 0,
+        transparent: true,
+      }),
+      materials,
+    ),
+  );
+  clockHitZone.position.set(
+    clockComposite.modelX,
+    clockComposite.modelY,
+    clockComposite.modelZ,
+  );
+  clockHitZone.userData.isClickZone = true;
+  clockHitZone.userData.clickAction = "open-credits" satisfies ClickZoneAction;
+  group.add(clockHitZone);
   syncClockHands(group);
   return group;
 }
@@ -3144,6 +3175,7 @@ function ThreeWallCanvas({
   onLampToggle,
   onCandleToggle,
   onSpeakerClick,
+  onCreditsClick,
   onSceneReady,
 }: {
   settings: SceneObjectSetting[];
@@ -3170,6 +3202,7 @@ function ThreeWallCanvas({
   onLampToggle?: (position: VectorTuple) => void;
   onCandleToggle?: (candleId: string) => void;
   onSpeakerClick?: () => void;
+  onCreditsClick?: () => void;
   onSceneReady?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -3198,6 +3231,7 @@ function ThreeWallCanvas({
   const lampToggleCallbackRef = useRef(onLampToggle);
   const candleToggleCallbackRef = useRef(onCandleToggle);
   const speakerClickCallbackRef = useRef(onSpeakerClick);
+  const creditsClickCallbackRef = useRef(onCreditsClick);
   const sceneReadyCallbackRef = useRef(onSceneReady);
 
   useEffect(() => {
@@ -3235,6 +3269,10 @@ function ThreeWallCanvas({
   useEffect(() => {
     speakerClickCallbackRef.current = onSpeakerClick;
   }, [onSpeakerClick]);
+
+  useEffect(() => {
+    creditsClickCallbackRef.current = onCreditsClick;
+  }, [onCreditsClick]);
 
   useEffect(() => {
     sceneReadyCallbackRef.current = onSceneReady;
@@ -4096,6 +4134,8 @@ function ThreeWallCanvas({
         candleToggleCallbackRef.current(candleId);
       } else if (action === "speaker-click") {
         speakerClickCallbackRef.current?.();
+      } else if (action === "open-credits") {
+        creditsClickCallbackRef.current?.();
       }
       return true;
     };
@@ -5086,6 +5126,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   const [bioOpen, setBioOpen] = useState(false);
   const [openImageFrameModal, setOpenImageFrameModal] = useState<ImageFrameModalId | null>(null);
   const [openFamilyFrameId, setOpenFamilyFrameId] = useState<string | null>(null);
+  const [creditsOpen, setCreditsOpen] = useState(false);
   const [speakerPlaying, setSpeakerPlaying] = useState(false);
   const [candleEnabled, setCandleEnabled] = useState<Record<string, boolean>>({});
   const [initialAssetPaths, setInitialAssetPaths] = useState<string[] | null>(null);
@@ -5867,6 +5908,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         onLampToggle={toggleNearestLight}
         onCandleToggle={toggleCandle}
         onSpeakerClick={handleSpeakerClick}
+        onCreditsClick={() => setCreditsOpen(true)}
         onSceneReady={handleInitialSceneReady}
       />
       ) : null}
@@ -6947,6 +6989,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
           onClose={() => setOpenFamilyFrameId(null)}
         />
       ) : null}
+      {creditsOpen ? <CreditsModal onClose={() => setCreditsOpen(false)} /> : null}
     </section>
   );
 }
@@ -7252,6 +7295,42 @@ function FamilyFrameModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function CreditsModal({ onClose }: { onClose: () => void }) {
+  return (
+    <ModalShell
+      onClose={onClose}
+      ariaLabel="Credits"
+      closeButtonTone="light"
+      className="w-[min(34rem,calc(100vw-2rem))] bg-white px-7 py-16 text-black sm:px-10"
+    >
+      <div className="space-y-5 text-base leading-relaxed sm:text-lg">
+        <p>
+          Web development by{" "}
+          <a
+            href="https://www.andrew-boylan.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-black/35 underline-offset-4 hover:opacity-65"
+          >
+            Andrew Boylan
+          </a>
+        </p>
+        <p>
+          Lighting consultation by{" "}
+          <a
+            href="https://www.linkedin.com/in/beatrice-cerezo/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-black/35 underline-offset-4 hover:opacity-65"
+          >
+            Beatrice Cerezo
+          </a>
+        </p>
+      </div>
+    </ModalShell>
   );
 }
 
