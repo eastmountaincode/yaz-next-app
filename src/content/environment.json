@@ -121,7 +121,7 @@
         0.61,
         0.05
       ],
-      "flameScale": 0.065,
+      "flameScale": 0.18,
       "flameOpacity": 0.92,
       "flameLightColor": "#ffb86b",
       "flameLightIntensity": 0.1,
@@ -802,7 +802,7 @@
         1.039,
         0.02
       ],
-      "flameScale": 0.144,
+      "flameScale": 0.36,
       "flameOpacity": 0.92,
       "flameLightColor": "#ffb86b",
       "flameLightIntensity": 0.1,

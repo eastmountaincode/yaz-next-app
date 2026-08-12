@@ -2036,11 +2036,11 @@ function syncCandleCompositeObject(group: THREE.Group, setting: CandleCompositeS
   }
 
   const flame = group.getObjectByName("candle-composite-flame");
-  if (flame instanceof THREE.Mesh) {
+  if (flame instanceof THREE.Sprite) {
     flame.position.set(...setting.flameOffset);
-    flame.scale.setScalar(setting.flameScale);
+    flame.scale.set(0.3 * setting.flameScale, setting.flameScale, 1);
     flame.visible = setting.enabled !== false;
-    if (flame.material instanceof THREE.MeshBasicMaterial) {
+    if (flame.material instanceof THREE.SpriteMaterial) {
       flame.material.opacity = setting.flameOpacity;
       flame.material.needsUpdate = true;
     }
@@ -2057,15 +2057,13 @@ function syncCandleCompositeObject(group: THREE.Group, setting: CandleCompositeS
 
 function syncCandleCompositeAnimation(
   group: THREE.Group,
-  camera: THREE.Camera,
   timeSeconds: number,
 ) {
   const flame = group.getObjectByName("candle-composite-flame");
-  if (!(flame instanceof THREE.Mesh)) {
+  if (!(flame instanceof THREE.Sprite)) {
     return;
   }
 
-  flame.lookAt(camera.position);
   const texture = flame.userData.animatedTexture as THREE.Texture | undefined;
   if (texture) {
     updateAnimatedImageTexture(texture, timeSeconds);
@@ -2127,7 +2125,7 @@ function createCandleCompositeObject(
     onSceneError,
   );
   const flameMaterial = makeMaterial(
-    new THREE.MeshBasicMaterial({
+    new THREE.SpriteMaterial({
       map: flameTexture,
       transparent: true,
       opacity: setting.flameOpacity,
@@ -2136,22 +2134,14 @@ function createCandleCompositeObject(
       depthTest: false,
       depthWrite: false,
       toneMapped: false,
-      side: THREE.DoubleSide,
       blending: THREE.NormalBlending,
     }),
     materials,
   );
-  const flame = new THREE.Mesh(
-    makeGeometry(new THREE.PlaneGeometry(0.3, 1), geometries),
-    flameMaterial,
-  );
+  const flame = new THREE.Sprite(flameMaterial);
   flame.name = "candle-composite-flame";
   flame.renderOrder = 10;
-  flame.userData.isCandleFlameBillboard = true;
   flame.userData.animatedTexture = flameTexture;
-  flame.userData.isClickZone = true;
-  flame.userData.clickAction = "toggle-candle" satisfies ClickZoneAction;
-  flame.userData.candleId = setting.id;
   group.add(flame);
 
   const flameLight = new THREE.PointLight(
@@ -4193,7 +4183,7 @@ function ThreeWallCanvas({
           syncClockPendulum(group, timeSeconds);
         }
         if (group.name === "editable-candle-composite") {
-          syncCandleCompositeAnimation(group, camera, timeSeconds);
+          syncCandleCompositeAnimation(group, timeSeconds);
         }
         if (group.name === "editable-speaker-composite") {
           syncSpeakerCompositePulse(group, timeSeconds, speakerPlayingRef.current);
