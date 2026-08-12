@@ -5068,6 +5068,7 @@ function TooltipLabel({ label, tooltip }: { label: string; tooltip?: string }) {
 
 export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   const storageReadyRef = useRef(false);
+  const previousLayoutModeRef = useRef<SceneLayoutMode | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
   const speakerAudioRef = useRef<SpeakerAudioChain | null>(null);
   const speakerButtonAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -5233,6 +5234,14 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
     window.addEventListener("resize", syncLayoutMode);
     return () => window.removeEventListener("resize", syncLayoutMode);
   }, []);
+
+  useEffect(() => {
+    const previousLayoutMode = previousLayoutModeRef.current;
+    if (previousLayoutMode && previousLayoutMode !== layoutMode) {
+      setOpenFamilyFrameId(null);
+    }
+    previousLayoutModeRef.current = layoutMode;
+  }, [layoutMode]);
 
   useEffect(() => {
     const root = document.documentElement;
