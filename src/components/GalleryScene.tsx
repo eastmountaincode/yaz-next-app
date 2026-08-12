@@ -7444,7 +7444,7 @@ function BioModal({
         }`}
       >
         {bio.image ? (
-          <div className="relative mb-0 ml-6 mr-14 mt-6 aspect-[4/5] w-auto bg-white min-[480px]:m-[7%] min-[480px]:mb-0 sm:mx-auto sm:mb-0 sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
+          <div className="relative m-10 mb-0 aspect-[4/5] w-auto bg-white sm:mx-auto sm:mb-0 sm:mt-8 sm:w-[72%] sm:max-w-md md:m-10 md:aspect-auto md:min-h-0 md:w-auto md:max-w-none">
             <ContentImage
               image={bio.image}
               className="absolute inset-0 size-full object-cover object-[50%_35%]"
