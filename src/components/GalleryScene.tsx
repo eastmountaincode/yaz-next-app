@@ -7034,9 +7034,9 @@ const MODAL_STYLE = {
     "absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-6",
   surface: "relative max-h-full bg-black text-[#f6f0e5]",
   closeButton:
-    "absolute right-2 top-2 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-white hover:bg-neutral-800 focus-visible:bg-neutral-800 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white active:bg-neutral-700 sm:size-9",
+    "absolute right-[6px] top-2 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-white hover:bg-neutral-800 focus-visible:bg-neutral-800 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-white active:bg-neutral-700 sm:right-2 sm:size-9",
   lightCloseButton:
-    "absolute right-2 top-2 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-black hover:bg-neutral-200 focus-visible:bg-neutral-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black active:bg-neutral-300 sm:size-9",
+    "absolute right-[6px] top-2 z-20 grid size-8 cursor-pointer place-items-center bg-transparent text-black hover:bg-neutral-200 focus-visible:bg-neutral-200 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black active:bg-neutral-300 sm:right-2 sm:size-9",
 } as const;
 
 const MODAL_HEADING_STYLE = {
