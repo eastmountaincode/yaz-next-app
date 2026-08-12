@@ -353,6 +353,7 @@ const CANDLE_HOLDER_MODEL_PATH = "/3d-models/candle-and-holder/holder.glb";
 const CANDLE_MODEL_PATH = "/3d-models/candle-and-holder/candle_no_flame_shorter.glb";
 const CANDLE_FLAME_TEXTURE_PATH = "/3d-models/candle-and-holder/candleflame_atlas.png";
 const CANDLE_ACCENT_PAIR_DISTANCE = 1.5;
+const WALL_CANDLE_ID = "candle-holder-composite";
 const CLAY_SAUCER_CANDLE_MODEL_PATH =
   "/3d-models/candles/low-poly_candle_on_clay_saucer_optimized.glb";
 const GLASS_CANDLE_MODEL_PATH = "/3d-models/candles/candle_in_a_glass_optimized.glb";
@@ -5135,6 +5136,13 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   );
   const [settings, setSettings] = useState<SceneObjectSetting[]>(defaultSceneSettings);
   const [lighting, setLighting] = useState<SceneLighting>(defaultSceneLighting);
+  const activeLighting = useMemo(
+    () =>
+      candleEnabled[WALL_CANDLE_ID] === false
+        ? { ...lighting, keyIntensity: 0 }
+        : lighting,
+    [candleEnabled, lighting],
+  );
   const activeSettings = useMemo(() => {
     const resolved = settings.map((setting) => resolveSceneObjectLayout(setting, layoutMode));
     const next = [...resolved];
@@ -5791,7 +5799,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         <ThreeWallCanvas
         key={resetSignal}
         settings={activeSettings}
-        lighting={lighting}
+        lighting={activeLighting}
         showSceneLightMarkers={HELPER_CONTROLS_ENABLED && lightingOpen}
         showObjectLightMarkers={HELPER_CONTROLS_ENABLED && (lightingOpen || editorOpen)}
         showHitboxHelpers={HELPER_CONTROLS_ENABLED && editorOpen}
