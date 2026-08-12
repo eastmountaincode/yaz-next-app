@@ -7067,6 +7067,7 @@ function FamilyFrameModal({
   onClose: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const frameBoundsRef = useRef<HTMLDivElement | null>(null);
   useModalDismissal(onClose);
 
   useEffect(() => {
@@ -7116,6 +7117,11 @@ function FamilyFrameModal({
       const padding = 1.08;
       const objectAspect = Math.max(size.x, 0.01) / Math.max(size.y, 0.01);
       const viewportAspect = width / height;
+      const renderedWidth =
+        viewportAspect > objectAspect
+          ? (height / padding) * objectAspect
+          : width / padding;
+      const renderedHeight = renderedWidth / objectAspect;
       const halfWidth =
         viewportAspect > objectAspect
           ? (size.y * viewportAspect * padding) / 2
@@ -7128,6 +7134,14 @@ function FamilyFrameModal({
       camera.position.set(center.x, center.y, Math.max(8, box.max.z + 4));
       camera.lookAt(center.x, center.y, center.z);
       camera.updateProjectionMatrix();
+
+      const frameBounds = frameBoundsRef.current;
+      if (frameBounds) {
+        frameBounds.style.left = `${(width - renderedWidth) / 2}px`;
+        frameBounds.style.top = `${(height - renderedHeight) / 2}px`;
+        frameBounds.style.width = `${renderedWidth}px`;
+        frameBounds.style.height = `${renderedHeight}px`;
+      }
     };
 
     new GLTFLoader()
@@ -7188,17 +7202,27 @@ function FamilyFrameModal({
       onClick={onClose}
     >
       <div
-        ref={hostRef}
-        className="pointer-events-none absolute inset-4 drop-shadow-[0_18px_24px_rgba(0,0,0,0.35)] sm:inset-6 md:inset-8"
-      />
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute right-3 top-3 z-10 grid size-10 cursor-pointer place-items-center bg-white/85 text-black hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black sm:right-5 sm:top-5"
+        className="absolute inset-4 sm:inset-6 md:inset-8"
       >
-        <X size={22} strokeWidth={1.5} />
-      </button>
+        <div
+          ref={hostRef}
+          className="pointer-events-none absolute inset-0 drop-shadow-[0_18px_24px_rgba(0,0,0,0.35)]"
+        />
+        <div
+          ref={frameBoundsRef}
+          className="absolute z-10"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="absolute right-0 top-0 grid size-10 translate-x-1/2 -translate-y-1/2 cursor-pointer place-items-center bg-white/85 text-black hover:bg-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-black"
+          >
+            <X size={22} strokeWidth={1.5} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
