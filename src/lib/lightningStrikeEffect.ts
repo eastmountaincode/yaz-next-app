@@ -1,8 +1,8 @@
 import * as THREE from "three";
 
 const MAX_SPARKS = 84;
-const LIGHTNING_DURATION = 0.52;
-const SPARK_DURATION = 0.95;
+const LIGHTNING_DURATION = 0.78;
+const SPARK_DURATION = 1.75;
 
 type LightningFrame = {
   exposureMultiplier: number;
@@ -94,22 +94,22 @@ function boltPulse(elapsed: number) {
   if (elapsed < 0 || elapsed > LIGHTNING_DURATION) {
     return 0;
   }
-  if (elapsed < 0.04) {
+  if (elapsed < 0.055) {
     return 1;
   }
-  if (elapsed < 0.075) {
+  if (elapsed < 0.105) {
     return 0.08;
   }
-  if (elapsed < 0.135) {
+  if (elapsed < 0.19) {
     return 0.82;
   }
-  if (elapsed < 0.18) {
+  if (elapsed < 0.255) {
     return 0.12;
   }
-  if (elapsed < 0.285) {
+  if (elapsed < 0.39) {
     return 1;
   }
-  return THREE.MathUtils.smoothstep(LIGHTNING_DURATION - elapsed, 0, 0.235) * 0.82;
+  return THREE.MathUtils.smoothstep(LIGHTNING_DURATION - elapsed, 0, 0.39) * 0.88;
 }
 
 export function createLightningStrikeEffect(): LightningStrikeEffect {
@@ -237,11 +237,11 @@ export function createLightningStrikeEffect(): LightningStrikeEffect {
       sparkPositions[positionOffset + 2] = impactPoint.z + randomBetween(0.04, 0.12);
 
       const angle = Math.random() * Math.PI * 2;
-      const horizontalSpeed = randomBetween(0.6, 2.4);
+      const horizontalSpeed = randomBetween(0.3, 1.65);
       sparkVelocities[positionOffset] = Math.cos(angle) * horizontalSpeed;
-      sparkVelocities[positionOffset + 1] = randomBetween(0.4, 3.2);
-      sparkVelocities[positionOffset + 2] = randomBetween(0.4, 1.8);
-      sparkLifetimes[index] = randomBetween(0.36, SPARK_DURATION);
+      sparkVelocities[positionOffset + 1] = randomBetween(0.2, 2.35);
+      sparkVelocities[positionOffset + 2] = randomBetween(0.1, 1.25);
+      sparkLifetimes[index] = randomBetween(0.72, SPARK_DURATION);
     }
     sparkPositionAttribute.needsUpdate = true;
     sparks.visible = true;
@@ -277,7 +277,7 @@ export function createLightningStrikeEffect(): LightningStrikeEffect {
       }
 
       livingSparks += 1;
-      sparkVelocities[positionOffset + 1] -= 11.5 * deltaSeconds;
+      sparkVelocities[positionOffset + 1] -= 4.35 * deltaSeconds;
       sparkPositions[positionOffset] += sparkVelocities[positionOffset] * deltaSeconds;
       sparkPositions[positionOffset + 1] += sparkVelocities[positionOffset + 1] * deltaSeconds;
       sparkPositions[positionOffset + 2] += sparkVelocities[positionOffset + 2] * deltaSeconds;
@@ -291,7 +291,7 @@ export function createLightningStrikeEffect(): LightningStrikeEffect {
     sparks.visible = livingSparks > 0;
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const shakeEnvelope = reducedMotion ? 0 : pulse * Math.max(0, 1 - elapsed / 0.4);
+    const shakeEnvelope = reducedMotion ? 0 : pulse * Math.max(0, 1 - elapsed / 0.58);
     return {
       exposureMultiplier: 1 + pulse * 0.82,
       shakeX: Math.sin(elapsed * 173) * 0.018 * shakeEnvelope,
