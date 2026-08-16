@@ -36,6 +36,7 @@ import optionalModels from "@/content/optionalModels.json";
 import { works } from "@/content/works";
 import { candleFlameAtlas } from "@/lib/candleComposite";
 import { resolveModelAssetUrl } from "@/lib/modelAssetUrl";
+import { createLightningStrikeEffect } from "@/lib/lightningStrikeEffect";
 import type {
   PortfolioClient,
   PortfolioContent,
@@ -110,7 +111,8 @@ type ClickZoneAction =
   | "toggle-nearest-light"
   | "toggle-candle"
   | "speaker-click"
-  | "open-credits";
+  | "open-credits"
+  | "lightning-strike";
 type ImageFrameModalId = "stills" | "clients";
 
 function PreloadedImage({
@@ -1910,6 +1912,8 @@ function createSpeakerCompositeObject(
 function createModelObject(
   setting: ModelSetting,
   sourceModel: THREE.Object3D,
+  geometries: THREE.BufferGeometry[],
+  materials: THREE.Material[],
 ) {
   const group = new THREE.Group();
   applyObjectPlacement(group, setting);
@@ -1929,6 +1933,35 @@ function createModelObject(
     }
   });
   group.add(model);
+
+  if (setting.catalogId === "wooden-cross" || setting.catalogId === "thin-christ") {
+    const hitZone = new THREE.Mesh(
+      makeGeometry(
+        new THREE.BoxGeometry(
+          Math.max(0.28, modelSize.x * normalizingScale * 1.18),
+          1.08,
+          Math.max(0.2, modelSize.z * normalizingScale + 0.16),
+        ),
+        geometries,
+      ),
+      makeMaterial(
+        new THREE.MeshBasicMaterial({
+          color: "#b8d8ff",
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          wireframe: true,
+        }),
+        materials,
+      ),
+    );
+    hitZone.name = "cross-lightning-hit-zone";
+    hitZone.position.set(0, 0.54, 0.08);
+    hitZone.renderOrder = 20;
+    hitZone.userData.isClickZone = true;
+    hitZone.userData.clickAction = "lightning-strike" satisfies ClickZoneAction;
+    group.add(hitZone);
+  }
 
   return group;
 }
@@ -3660,6 +3693,9 @@ function ThreeWallCanvas({
     const objectGroup = new THREE.Group();
     root.add(objectGroup);
 
+    const lightningEffect = createLightningStrikeEffect();
+    root.add(lightningEffect.group);
+
     let pointerIsDown = false;
     let pointerStartX = 0;
     let pointerStartY = 0;
@@ -4138,6 +4174,11 @@ function ThreeWallCanvas({
         speakerClickCallbackRef.current?.();
       } else if (action === "open-credits") {
         creditsClickCallbackRef.current?.();
+      } else if (action === "lightning-strike") {
+        scene.updateMatrixWorld(true);
+        const impactPoint = new THREE.Vector3();
+        hit.object.getWorldPosition(impactPoint);
+        lightningEffect.trigger(root.worldToLocal(impactPoint));
       }
       return true;
     };
@@ -4241,11 +4282,14 @@ function ThreeWallCanvas({
       root.rotation.y += (targetRotationY - root.rotation.y) * 0.08;
       currentPanX += (targetPanX - currentPanX) * 0.1;
       currentPanY += (targetPanY - currentPanY) * 0.1;
-      camera.position.x = currentPanX;
-      camera.position.y = cameraBaseY + currentPanY;
+      const timeSeconds = performance.now() / 1000;
+      const lightningFrame = lightningEffect.update(timeSeconds);
+      camera.position.x = currentPanX + lightningFrame.shakeX;
+      camera.position.y = cameraBaseY + currentPanY + lightningFrame.shakeY;
       camera.position.z += (targetCameraDistance - camera.position.z) * 0.08;
       camera.lookAt(currentPanX, 0.05 + currentPanY, -0.05);
-      const timeSeconds = performance.now() / 1000;
+      renderer.toneMappingExposure =
+        normalizeSceneLighting(lightingRef.current).exposure * lightningFrame.exposureMultiplier;
       sceneObjectsRef.current.forEach((group) => {
         if (group.name === "editable-live-clock") {
           syncClockHands(group);
@@ -4389,7 +4433,7 @@ function ThreeWallCanvas({
           }
 
           if (setting.kind === "model") {
-            return createModelObject(setting, sourceModel);
+            return createModelObject(setting, sourceModel, geometries, materials);
           }
 
           if (setting.kind === "bio-frame" || setting.kind === "image-frame") {
@@ -4464,6 +4508,7 @@ function ThreeWallCanvas({
         video.load();
       });
       sceneObjectsRef.current = [];
+      lightningEffect.dispose();
       wallHost.children.forEach((child) => disposeObjectGeometries(child));
       wallHost.clear();
       renderer.dispose();
