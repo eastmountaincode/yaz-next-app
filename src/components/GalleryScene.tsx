@@ -1912,8 +1912,6 @@ function createSpeakerCompositeObject(
 function createModelObject(
   setting: ModelSetting,
   sourceModel: THREE.Object3D,
-  geometries: THREE.BufferGeometry[],
-  materials: THREE.Material[],
 ) {
   const group = new THREE.Group();
   applyObjectPlacement(group, setting);
@@ -1930,38 +1928,13 @@ function createModelObject(
     if (object instanceof THREE.Mesh) {
       object.castShadow = true;
       object.receiveShadow = true;
+      if (setting.catalogId === "wooden-cross" || setting.catalogId === "thin-christ") {
+        object.userData.isLightningTarget = true;
+        object.userData.clickAction = "lightning-strike" satisfies ClickZoneAction;
+      }
     }
   });
   group.add(model);
-
-  if (setting.catalogId === "wooden-cross" || setting.catalogId === "thin-christ") {
-    const hitZone = new THREE.Mesh(
-      makeGeometry(
-        new THREE.BoxGeometry(
-          Math.max(0.28, modelSize.x * normalizingScale * 1.18),
-          1.08,
-          Math.max(0.2, modelSize.z * normalizingScale + 0.16),
-        ),
-        geometries,
-      ),
-      makeMaterial(
-        new THREE.MeshBasicMaterial({
-          color: "#b8d8ff",
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          wireframe: true,
-        }),
-        materials,
-      ),
-    );
-    hitZone.name = "cross-lightning-hit-zone";
-    hitZone.position.set(0, 0.54, 0.08);
-    hitZone.renderOrder = 20;
-    hitZone.userData.isClickZone = true;
-    hitZone.userData.clickAction = "lightning-strike" satisfies ClickZoneAction;
-    group.add(hitZone);
-  }
 
   return group;
 }
@@ -3857,7 +3830,9 @@ function ThreeWallCanvas({
         group.traverse((child) => {
           if (
             child instanceof THREE.Mesh &&
-            (child.userData?.isClickZone || child.userData?.isLampToggleZone)
+            (child.userData?.isClickZone ||
+              child.userData?.isLampToggleZone ||
+              child.userData?.isLightningTarget)
           ) {
             target.push(child);
           }
@@ -4176,9 +4151,7 @@ function ThreeWallCanvas({
         creditsClickCallbackRef.current?.();
       } else if (action === "lightning-strike") {
         scene.updateMatrixWorld(true);
-        const impactPoint = new THREE.Vector3();
-        hit.object.getWorldPosition(impactPoint);
-        lightningEffect.trigger(root.worldToLocal(impactPoint));
+        lightningEffect.trigger(root.worldToLocal(hit.point.clone()));
       }
       return true;
     };
@@ -4433,7 +4406,7 @@ function ThreeWallCanvas({
           }
 
           if (setting.kind === "model") {
-            return createModelObject(setting, sourceModel, geometries, materials);
+            return createModelObject(setting, sourceModel);
           }
 
           if (setting.kind === "bio-frame" || setting.kind === "image-frame") {
