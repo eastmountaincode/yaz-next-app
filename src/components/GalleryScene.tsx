@@ -372,6 +372,7 @@ const SPEAKER_AUDIO_START_SECONDS = 30;
 const LAMP_SWITCH_ON_AUDIO_PATH = "/audio/lamp-switch-on.mp3";
 const LAMP_SWITCH_OFF_AUDIO_PATH = "/audio/lamp-switch-off.mp3";
 const LIGHTNING_STRIKE_AUDIO_PATH = "/audio/lightning-strike-cool.mp3";
+const CANDLE_BLOW_OUT_AUDIO_PATH = "/audio/candle-blowing-out.mp3";
 const LAMP_TOGGLE_ZONE_NAME = "lamp-toggle-zone";
 const SPEAKER_CLICK_ZONE_NAME = "speaker-click-zone";
 const LAMP_TOGGLE_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.68, 0];
@@ -3030,6 +3031,7 @@ function scenePreloadAssets(
     WINKY_FONT_PATH,
     resolveModelAssetUrl(BASEBOARD_MODEL_PATH),
     LIGHTNING_STRIKE_AUDIO_PATH,
+    CANDLE_BLOW_OUT_AUDIO_PATH,
   ]);
 
   sceneModelPaths(settings).forEach((model) => assets.add(resolveModelAssetUrl(model)));
@@ -5145,6 +5147,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   const saveTimeoutRef = useRef<number | null>(null);
   const speakerAudioRef = useRef<SpeakerAudioChain | null>(null);
   const speakerButtonAudioRef = useRef<HTMLAudioElement | null>(null);
+  const candleEnabledRef = useRef<Record<string, boolean>>({});
   const [showChrome, setShowChrome] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [lightingOpen, setLightingOpen] = useState(false);
@@ -5656,13 +5659,25 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
     });
   }, []);
 
+  const playCandleBlowOutSound = useCallback(() => {
+    const element = new Audio(CANDLE_BLOW_OUT_AUDIO_PATH);
+    element.preload = "auto";
+    element.play().catch((error: unknown) => {
+      setSceneError(error instanceof Error ? error.message : String(error));
+    });
+  }, []);
+
   const toggleCandle = useCallback((candleId: string) => {
     setSceneError(null);
-    setCandleEnabled((current) => ({
-      ...current,
-      [candleId]: current[candleId] === false,
-    }));
-  }, []);
+    const current = candleEnabledRef.current;
+    const nextEnabled = current[candleId] === false;
+    const next = { ...current, [candleId]: nextEnabled };
+    candleEnabledRef.current = next;
+    setCandleEnabled(next);
+    if (!nextEnabled) {
+      playCandleBlowOutSound();
+    }
+  }, [playCandleBlowOutSound]);
 
   const toggleNearestLight = useCallback((position: VectorTuple) => {
     setSceneError(null);
