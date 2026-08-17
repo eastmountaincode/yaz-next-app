@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PortableText, type PortableTextComponents } from "@portabletext/react";
 import Link from "next/link";
-import { FaImdb, FaInstagram, FaLinkedinIn } from "react-icons/fa6";
+import { FaImdb } from "react-icons/fa";
+import { FaInstagram, FaLinkedinIn } from "react-icons/fa6";
 import {
   ArrowLeft,
   Box,
