@@ -5664,7 +5664,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
   const playCandleSound = useCallback((audioPath: string) => {
     const element = new Audio(audioPath);
     element.preload = "auto";
-    element.volume = audioPath === CANDLE_BLOW_OUT_AUDIO_PATH ? 0.75 : 1;
+    element.volume = audioPath === CANDLE_BLOW_OUT_AUDIO_PATH ? 0.9 : 1;
     element.play().catch((error: unknown) => {
       setSceneError(error instanceof Error ? error.message : String(error));
     });
