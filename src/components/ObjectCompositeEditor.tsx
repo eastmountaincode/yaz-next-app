@@ -631,13 +631,18 @@ function CompositeCanvas({
   const onChangeRef = useRef(onChange);
   const configRef = useRef(config);
   const showGridRef = useRef(showGrid);
-  const sceneControlsRef = useRef<{ syncConfig: () => void; syncGrid: () => void } | null>(null);
+  const sceneControlsRef = useRef<{
+    syncConfig: () => void;
+    syncFrame: () => void;
+    syncGrid: () => void;
+  } | null>(null);
 
   useEffect(() => {
     onChangeRef.current = onChange;
     configRef.current = config;
     showGridRef.current = showGrid;
     sceneControlsRef.current?.syncConfig();
+    sceneControlsRef.current?.syncFrame();
     sceneControlsRef.current?.syncGrid();
   }, [config, onChange, showGrid]);
 
@@ -714,6 +719,8 @@ function CompositeCanvas({
     let loadedFrameModel: THREE.Object3D | null = null;
     let loadedFrameSize = new THREE.Vector3(1, 1, 1);
     let loadedFrameCenter = new THREE.Vector3();
+    let requestedFrameModel = "";
+    let frameRequestId = 0;
 
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
     const imageLoader = new THREE.TextureLoader();
@@ -912,15 +919,22 @@ function CompositeCanvas({
 
     const updateFrame = async () => {
       const current = configRef.current;
-      disposeGroup(frameRoot);
-      const gltf = await loader.loadAsync(resolveModelAssetUrl(current.model));
-      if (disposed) {
+      if (current.model === requestedFrameModel) {
+        return;
+      }
+
+      const nextFrameModel = current.model;
+      requestedFrameModel = nextFrameModel;
+      const requestId = ++frameRequestId;
+      const gltf = await loader.loadAsync(resolveModelAssetUrl(nextFrameModel));
+      if (disposed || requestId !== frameRequestId) {
         return;
       }
 
       const model = gltf.scene;
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
+      disposeGroup(frameRoot);
       loadedFrameSize = box.getSize(new THREE.Vector3());
       loadedFrameCenter = center;
       loadedFrameModel = model;
@@ -934,11 +948,29 @@ function CompositeCanvas({
       frameRoot.add(model);
     };
 
+    const syncFrame = () => {
+      const requestedModel = configRef.current.model;
+      updateFrame().catch((error: unknown) => {
+        if (
+          requestedFrameModel !== requestedModel ||
+          configRef.current.model !== requestedModel
+        ) {
+          return;
+        }
+        requestedFrameModel = "";
+        onError(error instanceof Error ? error : new Error(String(error)));
+      });
+    };
+
     const renderConfig = () => {
       updateVideoSource();
       updateVideo();
     };
-    sceneControlsRef.current = { syncConfig: renderConfig, syncGrid: updateGridVisibility };
+    sceneControlsRef.current = {
+      syncConfig: renderConfig,
+      syncFrame,
+      syncGrid: updateGridVisibility,
+    };
 
     const resize = () => {
       const width = Math.max(1, host.clientWidth);
@@ -1126,9 +1158,7 @@ function CompositeCanvas({
     host.addEventListener("gestureend", preventBrowserGesture);
     window.addEventListener("resize", resize);
 
-    updateFrame().catch((error: unknown) => {
-      onError(error instanceof Error ? error : new Error(String(error)));
-    });
+    syncFrame();
     renderConfig();
     updateGridVisibility();
     resize();
