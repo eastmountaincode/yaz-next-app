@@ -11,6 +11,7 @@ import {
   familyFramePicture,
   framePictures,
 } from "@/content/framePictures";
+import frameModels from "@/content/frameModels.json";
 import { works } from "@/content/works";
 import { resolveModelAssetUrl } from "@/lib/modelAssetUrl";
 
@@ -56,31 +57,11 @@ const BIO_IMAGE_ASPECT = bioFramePicture.aspect;
 const FAMILY_FRAME_IMAGE_PATH = familyFramePicture.src;
 const FAMILY_IMAGE_ASPECT = familyFramePicture.aspect;
 
-const frameModels = [
-  "/3d-models/frames/adobe_stock_265717933_wood_square_frame_optimized.glb",
-  "/3d-models/frames/adobe_stock_259198522_art_frame_blank_04_optimized.glb",
-  "/3d-models/frames/picture_frame_1520_dimensions.glb",
-  "/3d-models/frames/standing_picture_frame_01.glb",
-  "/3d-models/frames/picture_frame_2.glb",
-  "/3d-models/frames/fancy_picture_frame_01-freepoly.org.glb",
-  "/3d-models/frames/picture_frame.glb",
-  "/3d-models/frames/picture_frame_2026_07_21_optimized.glb",
-  "/3d-models/frames/backrooms_ff2_painting_bacteria_room_2026_07_21_optimized.glb",
-  "/3d-models/frames/thick_simple_picture_frame_2026_07_21_optimized.glb",
-  "/3d-models/frames/vintage_picture_frame..glb",
-  "/3d-models/frames/wooden_picture_frame_2026_05_31_optimized.glb",
-  "/3d-models/frames/new_frame_default_2026_05_31_pbr.glb",
-  "/3d-models/frames/vintage_frame_04.glb",
-  "/3d-models/frames/vintage_frame_06.glb",
-  "/3d-models/frames/photo_frame_with_mat_2026_05_31.glb",
-  "/3d-models/frames/photo_frame_with_mat_wider_2026_05_31.glb",
-  "/3d-models/frames/red_cardinal_snowing_in_winter.glb",
-  "/3d-models/frames/thin_brass_2026_05_31.glb",
-  "/3d-models/frames/old_soviet_paints_first.glb",
-  "/3d-models/frames/old_soviet_paints_second.glb",
-];
-
 function normalizeFrameModelPath(model: string) {
+  if (model === "/3d-models/frames/vintage_picture_frame..glb") {
+    return "/3d-models/frames/vintage_picture_frame.glb";
+  }
+
   if (
     model === "/3d-models/frames/frame_1_default.glb" ||
     model === "/3d-models/frames/new_frame_default_2026_05_31.glb"

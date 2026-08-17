@@ -20,16 +20,54 @@ const cliPath = path.join(projectRoot, "node_modules", ".bin", "gltf-transform")
 const environmentPath = path.join(projectRoot, "src", "content", "environment.json");
 const clockPath = path.join(projectRoot, "src", "content", "clock.json");
 const optionalModelsPath = path.join(projectRoot, "src", "content", "optionalModels.json");
+const frameModelsPath = path.join(projectRoot, "src", "content", "frameModels.json");
 const baseboardPath = "/3d-models/beaded_baseboard_4_plaster_texture.glb";
-const publishedFrameModelPaths = [
-  "/3d-models/frames/adobe_stock_265717933_wood_square_frame_optimized.glb",
-  "/3d-models/frames/adobe_stock_259198522_art_frame_blank_04_optimized.glb",
-];
 
 const environment = JSON.parse(await readFile(environmentPath, "utf8"));
 const clock = JSON.parse(await readFile(clockPath, "utf8"));
 const optionalModels = JSON.parse(await readFile(optionalModelsPath, "utf8"));
+const publishedFrameModelPaths = JSON.parse(await readFile(frameModelsPath, "utf8"));
 const assetPaths = new Set([baseboardPath, ...publishedFrameModelPaths]);
+let previousReleaseRoot = null;
+
+try {
+  const previousManifest = JSON.parse(
+    await readFile(path.join(outputRoot, "latest.json"), "utf8"),
+  );
+  if (typeof previousManifest.releaseId === "string") {
+    previousReleaseRoot = path.join(outputRoot, "releases", previousManifest.releaseId);
+  }
+} catch (error) {
+  if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") {
+    throw error;
+  }
+}
+
+async function resolveSourcePath(relativePath) {
+  const localSourcePath = path.join(publicRoot, relativePath);
+  try {
+    await stat(localSourcePath);
+    return localSourcePath;
+  } catch (error) {
+    if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  if (previousReleaseRoot) {
+    const previousReleasePath = path.join(previousReleaseRoot, relativePath);
+    try {
+      await stat(previousReleasePath);
+      return previousReleasePath;
+    } catch (error) {
+      if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error(`Missing local and previous-release source for ${relativePath}`);
+}
 
 async function isProductionReadyGlb(sourcePath) {
   const bytes = await readFile(sourcePath);
@@ -111,7 +149,7 @@ try {
     }
 
     const relativePath = publicPath.slice(1);
-    const sourcePath = path.join(publicRoot, relativePath);
+    const sourcePath = await resolveSourcePath(relativePath);
     const outputPath = path.join(temporaryRelease, relativePath);
     await mkdir(path.dirname(outputPath), { recursive: true });
 

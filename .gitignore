@@ -38,6 +38,9 @@ public/3d-models/furniture/*.glb
 # candle model sources are deployed through R2; keep local working copies out of Git LFS
 public/3d-models/candles/*.glb
 
+# frame model sources are deployed through R2; keep the local editor catalog out of Git LFS
+public/3d-models/frames/*.glb
+
 # debug
 npm-debug.log*
 yarn-debug.log*
