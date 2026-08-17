@@ -46,6 +46,7 @@ const portfolioQuery = defineQuery(`
     "stillArtists": *[_type == "stills" && _id == "stills"][0].artists[] {
       "key": _key,
       name,
+      role,
       coverImage {
         "key": coalesce(_key, asset._ref),
         "url": asset->url,
@@ -88,6 +89,7 @@ type RawPortfolioContent = {
   stillArtists?: Array<{
     key?: string;
     name?: string;
+    role?: string;
     coverImage?: Partial<SanityImageContent> | null;
     images?: Array<Partial<SanityImageContent>>;
   }>;
@@ -178,6 +180,7 @@ function normalizePortfolio(content: RawPortfolioContent | null): PortfolioConte
       .map((artist, artistIndex) => ({
         key: artist.key || `stills-artist-${artistIndex}`,
         name: artist.name || "",
+        role: artist.role || "",
         coverImage: normalizeImage(artist.coverImage),
         images: (artist.images ?? [])
           .map(normalizeImage)

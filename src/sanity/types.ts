@@ -26,6 +26,7 @@ export type PortfolioClient = {
 export type StillArtist = {
   key: string;
   name: string;
+  role: string;
   coverImage: SanityImageContent | null;
   images: SanityImageContent[];
 };

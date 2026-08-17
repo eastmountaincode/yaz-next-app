@@ -23,6 +23,12 @@ export const stillsType = defineType({
               validation: (rule) => rule.required(),
             }),
             defineField({
+              name: "role",
+              title: "Role",
+              description: "What Yaslynn did for this artist.",
+              type: "string",
+            }),
+            defineField({
               name: "coverImage",
               title: "Cover image",
               description: "Square image shown for this artist in the Stills grid.",
@@ -62,10 +68,12 @@ export const stillsType = defineType({
           preview: {
             select: {
               title: "name",
+              subtitle: "role",
               coverImage: "coverImage",
             },
-            prepare: ({ title, coverImage }) => ({
+            prepare: ({ title, subtitle, coverImage }) => ({
               title,
+              subtitle,
               media: coverImage,
             }),
           },

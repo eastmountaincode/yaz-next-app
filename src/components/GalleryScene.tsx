@@ -7619,6 +7619,11 @@ function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: ()
                 {selectedArtist.name}
               </h3>
             </div>
+            {selectedArtist.role ? (
+              <p className="mt-1 text-center text-sm leading-tight text-black/60">
+                {selectedArtist.role}
+              </p>
+            ) : null}
 
             <div className="mt-3 grid items-start gap-4 sm:mt-4 sm:grid-cols-2 lg:grid-cols-3">
               {selectedArtist.images.map((image) => (
