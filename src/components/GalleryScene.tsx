@@ -371,6 +371,7 @@ const SPEAKER_BUTTON_AUDIO_PATH = "/audio/dragon-studio-button-press-2.mp3";
 const SPEAKER_AUDIO_START_SECONDS = 30;
 const LAMP_SWITCH_ON_AUDIO_PATH = "/audio/lamp-switch-on.mp3";
 const LAMP_SWITCH_OFF_AUDIO_PATH = "/audio/lamp-switch-off.mp3";
+const LIGHTNING_STRIKE_AUDIO_PATH = "/audio/lightning-strike-cool.mp3";
 const LAMP_TOGGLE_ZONE_NAME = "lamp-toggle-zone";
 const SPEAKER_CLICK_ZONE_NAME = "speaker-click-zone";
 const LAMP_TOGGLE_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.68, 0];
@@ -3028,6 +3029,7 @@ function scenePreloadAssets(
     resolveModelAssetUrl(clockComposite.faceTexture),
     WINKY_FONT_PATH,
     resolveModelAssetUrl(BASEBOARD_MODEL_PATH),
+    LIGHTNING_STRIKE_AUDIO_PATH,
   ]);
 
   sceneModelPaths(settings).forEach((model) => assets.add(resolveModelAssetUrl(model)));
@@ -3668,6 +3670,9 @@ function ThreeWallCanvas({
 
     const lightningEffect = createLightningStrikeEffect();
     root.add(lightningEffect.group);
+    const lightningStrikeAudio = new Audio(LIGHTNING_STRIKE_AUDIO_PATH);
+    lightningStrikeAudio.preload = "auto";
+    lightningStrikeAudio.load();
 
     let pointerIsDown = false;
     let pointerStartX = 0;
@@ -4151,6 +4156,11 @@ function ThreeWallCanvas({
         creditsClickCallbackRef.current?.();
       } else if (action === "lightning-strike") {
         scene.updateMatrixWorld(true);
+        lightningStrikeAudio.pause();
+        lightningStrikeAudio.currentTime = 0;
+        lightningStrikeAudio.play().catch((error: unknown) => {
+          onSceneError(error instanceof Error ? error : new Error(String(error)));
+        });
         lightningEffect.trigger(root.worldToLocal(hit.point.clone()));
       }
       return true;
@@ -4481,6 +4491,9 @@ function ThreeWallCanvas({
         video.load();
       });
       sceneObjectsRef.current = [];
+      lightningStrikeAudio.pause();
+      lightningStrikeAudio.removeAttribute("src");
+      lightningStrikeAudio.load();
       lightningEffect.dispose();
       wallHost.children.forEach((child) => disposeObjectGeometries(child));
       wallHost.clear();
