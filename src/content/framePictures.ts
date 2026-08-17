@@ -63,6 +63,15 @@ export const familyFirstCommunionPicture: FramePicture = {
   defaultCaption: "",
 };
 
+export const familyCouchPortraitPicture: FramePicture = {
+  id: "family-couch-portrait",
+  label: "Family — Couch portrait",
+  src: "/image/yaslynn_family_couch_portrait.jpg",
+  aspect: 2400 / 1558,
+  kind: "image-frame",
+  defaultCaption: "",
+};
+
 export const snoopDoggClientsPicture: FramePicture = {
   id: "clients-snoop-dogg",
   label: "Clients — Snoop Dogg",
@@ -79,5 +88,6 @@ export const framePictures: FramePicture[] = [
   familyEasterBunnyPicture,
   familyLightTunnelPicture,
   familyFirstCommunionPicture,
+  familyCouchPortraitPicture,
   familyFramePicture,
 ];
