@@ -373,6 +373,7 @@ const LAMP_SWITCH_ON_AUDIO_PATH = "/audio/lamp-switch-on.mp3";
 const LAMP_SWITCH_OFF_AUDIO_PATH = "/audio/lamp-switch-off.mp3";
 const LIGHTNING_STRIKE_AUDIO_PATH = "/audio/lightning-strike-cool.mp3";
 const CANDLE_BLOW_OUT_AUDIO_PATH = "/audio/candle-blowing-out.mp3";
+const CANDLE_LIGHT_ON_AUDIO_PATH = "/audio/candle-lighting-on.mp3";
 const LAMP_TOGGLE_ZONE_NAME = "lamp-toggle-zone";
 const SPEAKER_CLICK_ZONE_NAME = "speaker-click-zone";
 const LAMP_TOGGLE_ZONE_LOCAL_POSITION: VectorTuple = [0, 0.68, 0];
@@ -3032,6 +3033,7 @@ function scenePreloadAssets(
     resolveModelAssetUrl(BASEBOARD_MODEL_PATH),
     LIGHTNING_STRIKE_AUDIO_PATH,
     CANDLE_BLOW_OUT_AUDIO_PATH,
+    CANDLE_LIGHT_ON_AUDIO_PATH,
   ]);
 
   sceneModelPaths(settings).forEach((model) => assets.add(resolveModelAssetUrl(model)));
@@ -5659,8 +5661,8 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
     });
   }, []);
 
-  const playCandleBlowOutSound = useCallback(() => {
-    const element = new Audio(CANDLE_BLOW_OUT_AUDIO_PATH);
+  const playCandleSound = useCallback((audioPath: string) => {
+    const element = new Audio(audioPath);
     element.preload = "auto";
     element.play().catch((error: unknown) => {
       setSceneError(error instanceof Error ? error.message : String(error));
@@ -5674,10 +5676,8 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
     const next = { ...current, [candleId]: nextEnabled };
     candleEnabledRef.current = next;
     setCandleEnabled(next);
-    if (!nextEnabled) {
-      playCandleBlowOutSound();
-    }
-  }, [playCandleBlowOutSound]);
+    playCandleSound(nextEnabled ? CANDLE_LIGHT_ON_AUDIO_PATH : CANDLE_BLOW_OUT_AUDIO_PATH);
+  }, [playCandleSound]);
 
   const toggleNearestLight = useCallback((position: VectorTuple) => {
     setSceneError(null);
