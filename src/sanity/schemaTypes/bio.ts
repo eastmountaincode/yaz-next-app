@@ -73,6 +73,13 @@ export const bioType = defineType({
       validation: (rule) => rule.uri({ scheme: ["http", "https"] }),
     }),
     defineField({
+      name: "imdbUrl",
+      title: "IMDb",
+      type: "url",
+      description: "Link to Yaslynn's IMDb profile.",
+      validation: (rule) => rule.uri({ scheme: ["http", "https"] }),
+    }),
+    defineField({
       name: "email",
       title: "Email",
       type: "string",

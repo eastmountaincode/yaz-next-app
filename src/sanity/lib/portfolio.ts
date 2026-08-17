@@ -16,6 +16,7 @@ const portfolioQuery = defineQuery(`
     "bioBody": *[_type == "bio" && _id == "bio"][0].body,
     "bioInstagramUrl": *[_type == "bio" && _id == "bio"][0].instagramUrl,
     "bioLinkedinUrl": *[_type == "bio" && _id == "bio"][0].linkedinUrl,
+    "bioImdbUrl": *[_type == "bio" && _id == "bio"][0].imdbUrl,
     "bioEmail": *[_type == "bio" && _id == "bio"][0].email,
     "bioImage": *[_type == "bio" && _id == "bio"][0].image {
       "key": coalesce(_key, asset._ref),
@@ -69,6 +70,7 @@ type RawPortfolioContent = {
   bioBody?: Array<string | PortableTextBlock>;
   bioInstagramUrl?: string;
   bioLinkedinUrl?: string;
+  bioImdbUrl?: string;
   bioEmail?: string;
   bioImage?: Partial<SanityImageContent> | null;
   clients?: Array<{
@@ -152,6 +154,7 @@ function normalizePortfolio(content: RawPortfolioContent | null): PortfolioConte
       image: normalizeImage(content.bioImage),
       instagramUrl: content.bioInstagramUrl || "",
       linkedinUrl: content.bioLinkedinUrl || "",
+      imdbUrl: content.bioImdbUrl || "",
       email: content.bioEmail || "",
     },
     clients: (content.clients ?? [])

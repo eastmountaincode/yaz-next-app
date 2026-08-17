@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PortableText, type PortableTextComponents } from "@portabletext/react";
 import Link from "next/link";
-import { FaInstagram, FaLinkedinIn } from "react-icons/fa6";
+import { FaImdb, FaInstagram, FaLinkedinIn } from "react-icons/fa6";
 import {
   ArrowLeft,
   Box,
@@ -7516,7 +7516,7 @@ function BioModal({
           <div className="space-y-5 text-[15px] leading-7 text-black/75 md:text-base md:leading-8">
             <PortableText value={bio.body} components={BIO_PORTABLE_TEXT_COMPONENTS} />
           </div>
-          {(bio.instagramUrl || bio.linkedinUrl || bio.email) ? (
+          {(bio.instagramUrl || bio.linkedinUrl || bio.imdbUrl || bio.email) ? (
             <nav
               className="mt-8 flex items-center justify-center gap-6 text-black/55"
               aria-label="Yaslynn Rivera contact links"
@@ -7550,6 +7550,17 @@ function BioModal({
                   className="hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
                   <FaLinkedinIn className="size-6" aria-hidden="true" />
+                </a>
+              ) : null}
+              {bio.imdbUrl ? (
+                <a
+                  href={bio.imdbUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="IMDb"
+                  className="hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
+                >
+                  <FaImdb className="size-6" aria-hidden="true" />
                 </a>
               ) : null}
             </nav>

@@ -38,6 +38,7 @@ export type PortfolioContent = {
     image: SanityImageContent | null;
     instagramUrl: string;
     linkedinUrl: string;
+    imdbUrl: string;
     email: string;
   };
   clients: PortfolioClient[];
@@ -52,6 +53,7 @@ export const EMPTY_PORTFOLIO_CONTENT: PortfolioContent = {
     image: null,
     instagramUrl: "",
     linkedinUrl: "",
+    imdbUrl: "",
     email: "",
   },
   clients: [],
