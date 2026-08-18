@@ -52,14 +52,14 @@
             0.841,
             -0.03
           ],
-          "wallScale": 0.855,
-          "captionOffsetX": 0,
-          "captionOffsetY": 0.849,
           "rotation": [
             0,
-            0.008407346410207,
+            0.008,
             0.002
-          ]
+          ],
+          "wallScale": 0.855,
+          "captionOffsetX": 0,
+          "captionOffsetY": 0.849
         },
         "mobile": {
           "wallScale": 1.237,
@@ -941,6 +941,9 @@
             -0.003
           ],
           "wallScale": 0.671
+        },
+        "mobile": {
+          "visible": false
         }
       },
       "clipX": 0,
