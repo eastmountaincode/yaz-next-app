@@ -898,6 +898,64 @@
       "flameLightColor": "#ffb86b",
       "flameLightIntensity": 0.1,
       "flameLightDistance": 4
+    },
+    {
+      "id": "picture-msxvtdwu",
+      "kind": "image-frame",
+      "label": "",
+      "visible": true,
+      "model": "/3d-models/frames/picture_frame.glb",
+      "workSlug": "blk-odyssy-saturday",
+      "maskShape": "rectangle",
+      "position": [
+        -0.05,
+        1.1,
+        -0.03
+      ],
+      "width": 1.42,
+      "height": 2.02,
+      "frameRotationX": 0,
+      "frameRotationY": 3.141,
+      "frameRotationZ": 0,
+      "rotation": [
+        0,
+        0.035,
+        0.015
+      ],
+      "wallScale": 0.82,
+      "layouts": {
+        "desktop": {
+          "position": [
+            1.169,
+            0.039,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0.002,
+            -0.003
+          ],
+          "wallScale": 0.671
+        }
+      },
+      "clipX": 0,
+      "clipY": 0,
+      "clipZ": 0.045,
+      "clipWidth": 1.192,
+      "clipHeight": 0.7738066666666666,
+      "videoScale": 1,
+      "videoOffsetX": 0,
+      "videoOffsetY": 0,
+      "captionOffsetX": 0,
+      "captionOffsetY": -0.16,
+      "captionOffsetZ": 0.018,
+      "captionScale": 1,
+      "imageSrc": "/image/yaslynn_family_couch_portrait.jpg",
+      "captionText": "",
+      "imageTintColor": "#ead8bf",
+      "imageTintStrength": 0.05,
+      "imageHazeColor": "#ead8bf",
+      "imageHazeOpacity": 0.08
     }
   ]
 }

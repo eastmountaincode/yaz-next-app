@@ -182,5 +182,28 @@
     "cropX": 0.19,
     "cropY": 0,
     "captionText": "Clients"
+  },
+  {
+    "id": "picture-msxvtdwu",
+    "kind": "image-frame",
+    "model": "/3d-models/frames/picture_frame.glb",
+    "workSlug": "snoop-ten-til-midnight",
+    "imageSrc": "/image/yaslynn_family_couch_portrait.jpg",
+    "maskShape": "rectangle",
+    "frameWidth": 1.42,
+    "frameHeight": 2.02,
+    "frameRotationX": 0,
+    "frameRotationY": 3.141,
+    "frameRotationZ": 0,
+    "videoX": 0,
+    "videoY": 0,
+    "videoZ": 0.045,
+    "videoWidth": 1.192,
+    "videoHeight": 0.7738066666666666,
+    "videoAspect": 1.5404364569961488,
+    "videoZoom": 1,
+    "cropX": 0,
+    "cropY": 0,
+    "captionText": ""
   }
 ]

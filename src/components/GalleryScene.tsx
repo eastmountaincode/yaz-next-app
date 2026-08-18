@@ -337,6 +337,17 @@ const FLOOR_ROUGHNESS_PATH = "/textures/floor/floor_roughness.webp";
 const BASEBOARD_MODEL_PATH = "/3d-models/beaded_baseboard_4_plaster_texture.glb";
 const BIO_FRAME_IMAGE_PATH = "/image/yaz_headshot.jpeg";
 const FAMILY_FRAME_IMAGE_PATH = "/image/family_portrait.jpg";
+const ENLARGEABLE_FAMILY_FRAME_IMAGE_PATHS = new Set([
+  FAMILY_FRAME_IMAGE_PATH,
+  "/image/yaslynn_family_couch_portrait.jpg",
+]);
+
+function isEnlargeableFamilyFrame(setting: ImageFrameSetting) {
+  return (
+    setting.id.startsWith("family-") ||
+    ENLARGEABLE_FAMILY_FRAME_IMAGE_PATHS.has(setting.imageSrc)
+  );
+}
 // One texture tile covers this many world units. Smaller value = planks repeat
 // more often. The Poly Haven "old_wooden_floor_03" image shows roughly a 1 m
 // patch with a few planks running along U.
@@ -1774,7 +1785,7 @@ function createImageFrame(
     const modalId = setting.captionText.trim().toLowerCase();
     if (modalId === "stills" || modalId === "clients") {
       imageMesh.userData.imageFrameModalId = modalId satisfies ImageFrameModalId;
-    } else if (setting.id.startsWith("family-")) {
+    } else if (isEnlargeableFamilyFrame(setting)) {
       imageMesh.userData.familyFrameId = setting.id;
     }
   }
@@ -5265,7 +5276,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
       (setting): setting is ImageFrameSetting =>
         setting.kind === "image-frame" && setting.id === openFamilyFrameId,
     );
-    return frame?.id.startsWith("family-") ? frame : null;
+    return frame && isEnlargeableFamilyFrame(frame) ? frame : null;
   }, [activeSettings, openFamilyFrameId]);
   const candleAccentLight = useMemo(
     () => activeSettings.find(isCandleAccentLight),
