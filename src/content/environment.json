@@ -54,7 +54,12 @@
           ],
           "wallScale": 0.855,
           "captionOffsetX": 0,
-          "captionOffsetY": 0.849
+          "captionOffsetY": 0.849,
+          "rotation": [
+            0,
+            0.008407346410207,
+            0.002
+          ]
         },
         "mobile": {
           "wallScale": 1.237,
@@ -331,7 +336,7 @@
         "desktop": {
           "visible": true,
           "position": [
-            1.507,
+            1.453,
             1.208,
             -0.05
           ],
@@ -926,7 +931,7 @@
       "layouts": {
         "desktop": {
           "position": [
-            1.298,
+            1.251,
             0.086,
             -0.03
           ],
