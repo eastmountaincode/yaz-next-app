@@ -192,8 +192,8 @@
         "desktop": {
           "visible": true,
           "position": [
-            1.98,
-            2.653,
+            1.915,
+            2.91,
             -0.105
           ]
         },
@@ -331,8 +331,8 @@
         "desktop": {
           "visible": true,
           "position": [
-            1.485,
-            0.911,
+            1.507,
+            1.208,
             -0.05
           ],
           "wallScale": 0.979
@@ -548,8 +548,8 @@
         "desktop": {
           "visible": true,
           "position": [
-            0.842,
-            2.559,
+            0.817,
+            2.625,
             -0.133
           ],
           "rotation": [
