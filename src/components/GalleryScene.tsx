@@ -115,7 +115,7 @@ type ClickZoneAction =
   | "speaker-click"
   | "open-credits"
   | "lightning-strike";
-type ImageFrameModalId = "stills" | "clients";
+type ImageFrameModalId = "stills" | "clients" | "contact";
 
 function PreloadedImage({
   src,
@@ -1798,7 +1798,7 @@ function createImageFrame(
     imageMesh.userData.bioSlug = setting.bioSlug;
   } else {
     const modalId = captionText.trim().toLowerCase();
-    if (modalId === "stills" || modalId === "clients") {
+    if (modalId === "stills" || modalId === "clients" || modalId === "contact") {
       imageMesh.userData.imageFrameModalId = modalId satisfies ImageFrameModalId;
     } else if (isEnlargeableFamilyFrame(setting)) {
       imageMesh.userData.familyFrameId = setting.id;
@@ -5293,6 +5293,14 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
     );
     return frame && isEnlargeableFamilyFrame(frame) ? frame : null;
   }, [activeSettings, openFamilyFrameId]);
+  const contactFrame = useMemo(
+    () =>
+      activeSettings.find(
+        (setting): setting is ImageFrameSetting =>
+          setting.kind === "image-frame" && setting.id === CONTACT_FRAME_ID,
+      ),
+    [activeSettings],
+  );
   const candleAccentLight = useMemo(
     () => activeSettings.find(isCandleAccentLight),
     [activeSettings],
@@ -7040,6 +7048,13 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
           onClose={() => setOpenImageFrameModal(null)}
         />
       ) : null}
+      {openImageFrameModal === "contact" ? (
+        <ContactModal
+          bio={portfolio.bio}
+          imageSrc={contactFrame?.imageSrc ?? FAMILY_FRAME_IMAGE_PATH}
+          onClose={() => setOpenImageFrameModal(null)}
+        />
+      ) : null}
       {openFamilyFrame ? (
         <FamilyFrameModal
           frame={openFamilyFrame}
@@ -7483,6 +7498,99 @@ function ProjectModal({
   );
 }
 
+function ContactLinks({
+  bio,
+  className = "",
+}: {
+  bio: PortfolioContent["bio"];
+  className?: string;
+}) {
+  if (!bio.instagramUrl && !bio.linkedinUrl && !bio.imdbUrl && !bio.email) {
+    return null;
+  }
+
+  const linkClassName =
+    "hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black";
+
+  return (
+    <nav
+      className={`flex items-center justify-center gap-6 text-black/55 ${className}`}
+      aria-label="Yaslynn Rivera contact links"
+    >
+      {bio.email ? (
+        <a
+          href={`mailto:${bio.email}`}
+          aria-label={`Email ${bio.email}`}
+          className={linkClassName}
+        >
+          <Mail className="size-6" strokeWidth={1.5} />
+        </a>
+      ) : null}
+      {bio.instagramUrl ? (
+        <a
+          href={bio.instagramUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Instagram"
+          className={linkClassName}
+        >
+          <FaInstagram className="size-6" aria-hidden="true" />
+        </a>
+      ) : null}
+      {bio.linkedinUrl ? (
+        <a
+          href={bio.linkedinUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="LinkedIn"
+          className={linkClassName}
+        >
+          <FaLinkedinIn className="size-6" aria-hidden="true" />
+        </a>
+      ) : null}
+      {bio.imdbUrl ? (
+        <a
+          href={bio.imdbUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="IMDb"
+          className={linkClassName}
+        >
+          <FaImdb className="size-6" aria-hidden="true" />
+        </a>
+      ) : null}
+    </nav>
+  );
+}
+
+function ContactModal({
+  bio,
+  imageSrc,
+  onClose,
+}: {
+  bio: PortfolioContent["bio"];
+  imageSrc: string;
+  onClose: () => void;
+}) {
+  return (
+    <ModalShell
+      onClose={onClose}
+      ariaLabel="Contact Yaslynn Rivera"
+      closeButtonTone="light"
+      className="w-[min(36rem,calc(100vw-2rem))] bg-white p-10 pt-12 text-black sm:p-12"
+    >
+      <div className="relative aspect-[1206/826] w-full overflow-hidden bg-neutral-100">
+        <PreloadedImage
+          src={imageSrc}
+          alt="Yaslynn Rivera with family"
+          className="object-cover"
+        />
+      </div>
+      <ContactLinks bio={bio} className="mt-8" />
+    </ModalShell>
+  );
+}
+
 function BioModal({
   bio,
   onClose,
@@ -7524,55 +7632,7 @@ function BioModal({
           <div className="space-y-5 text-[15px] leading-7 text-black/75 md:text-base md:leading-8">
             <PortableText value={bio.body} components={BIO_PORTABLE_TEXT_COMPONENTS} />
           </div>
-          {(bio.instagramUrl || bio.linkedinUrl || bio.imdbUrl || bio.email) ? (
-            <nav
-              className="mt-8 flex items-center justify-center gap-6 text-black/55"
-              aria-label="Yaslynn Rivera contact links"
-            >
-              {bio.email ? (
-                <a
-                  href={`mailto:${bio.email}`}
-                  aria-label={`Email ${bio.email}`}
-                  className="hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
-                >
-                  <Mail className="size-6" strokeWidth={1.5} />
-                </a>
-              ) : null}
-              {bio.instagramUrl ? (
-                <a
-                  href={bio.instagramUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Instagram"
-                  className="hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
-                >
-                  <FaInstagram className="size-6" aria-hidden="true" />
-                </a>
-              ) : null}
-              {bio.linkedinUrl ? (
-                <a
-                  href={bio.linkedinUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="LinkedIn"
-                  className="hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
-                >
-                  <FaLinkedinIn className="size-6" aria-hidden="true" />
-                </a>
-              ) : null}
-              {bio.imdbUrl ? (
-                <a
-                  href={bio.imdbUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="IMDb"
-                  className="hover:text-black focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-black"
-                >
-                  <FaImdb className="size-6" aria-hidden="true" />
-                </a>
-              ) : null}
-            </nav>
-          ) : null}
+          <ContactLinks bio={bio} className="mt-8" />
         </div>
       </div>
     </ModalShell>
