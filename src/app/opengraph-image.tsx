@@ -1,7 +1,9 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { getPortfolioContent } from "@/sanity/lib/portfolio";
 
-export const alt = "Yaslynn Rivera — Director, Producer, and Writer";
+export const alt = "Yaslynn Rivera";
 export const size = {
   width: 1200,
   height: 630,
@@ -10,7 +12,10 @@ export const contentType = "image/png";
 export const revalidate = 60;
 
 export default async function OpenGraphImage() {
-  const portfolio = await getPortfolioContent();
+  const [portfolio, winkyFont] = await Promise.all([
+    getPortfolioContent(),
+    readFile(join(process.cwd(), "public/fonts/WinkyShowScript.ttf")),
+  ]);
 
   return new ImageResponse(
     (
@@ -27,7 +32,7 @@ export default async function OpenGraphImage() {
           style={{
             display: "flex",
             width: "58%",
-            flexDirection: "column",
+            alignItems: "center",
             justifyContent: "center",
             padding: "72px",
           }}
@@ -35,25 +40,13 @@ export default async function OpenGraphImage() {
           <div
             style={{
               display: "flex",
-              fontFamily: "Georgia, serif",
-              fontSize: 82,
-              lineHeight: 1.02,
-              letterSpacing: "-0.045em",
+              fontFamily: "Yaz Winky Show",
+              fontSize: 116,
+              lineHeight: 1,
+              textAlign: "center",
             }}
           >
             Yaslynn Rivera
-          </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: "30px",
-              fontFamily: "Arial, sans-serif",
-              fontSize: 28,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Director · Producer · Writer
           </div>
         </div>
         <div
@@ -83,6 +76,16 @@ export default async function OpenGraphImage() {
         </div>
       </div>
     ),
-    size,
+    {
+      ...size,
+      fonts: [
+        {
+          name: "Yaz Winky Show",
+          data: winkyFont,
+          style: "normal",
+          weight: 400,
+        },
+      ],
+    },
   );
 }
