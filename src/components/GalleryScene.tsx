@@ -7579,21 +7579,23 @@ function ContactModal({
       closeButtonTone="light"
       className="w-[min(34rem,calc(100vw-2rem))] bg-white p-8 pt-10 text-black sm:p-10"
     >
-      <h2
-        id="contact-modal-title"
-        className="mb-7 text-center text-5xl leading-none sm:text-6xl"
-        style={MODAL_HEADING_STYLE}
-      >
-        Contact
-      </h2>
-      <div className="relative mx-auto aspect-[1206/826] w-full max-w-[23rem] overflow-hidden bg-neutral-100">
-        <PreloadedImage
-          src={imageSrc}
-          alt="Yaslynn Rivera with family"
-          className="scale-[1.08] object-cover object-[45%_40%]"
-        />
+      <div className="grid gap-7">
+        <h2
+          id="contact-modal-title"
+          className="text-center text-5xl leading-none sm:text-6xl"
+          style={MODAL_HEADING_STYLE}
+        >
+          Contact
+        </h2>
+        <div className="relative mx-auto aspect-[1206/826] w-full max-w-[23rem] overflow-hidden bg-neutral-100">
+          <PreloadedImage
+            src={imageSrc}
+            alt="Yaslynn Rivera with family"
+            className="scale-[1.08] object-cover object-[45%_40%]"
+          />
+        </div>
+        <ContactLinks bio={bio} />
       </div>
-      <ContactLinks bio={bio} className="mt-7" />
     </ModalShell>
   );
 }
