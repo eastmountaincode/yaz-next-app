@@ -42,6 +42,7 @@ export default async function OpenGraphImage() {
               display: "flex",
               fontFamily: "Yaz Winky Show",
               fontSize: 116,
+              letterSpacing: "-0.025em",
               lineHeight: 1,
               textAlign: "center",
             }}
