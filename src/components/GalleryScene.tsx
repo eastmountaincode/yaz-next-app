@@ -337,6 +337,7 @@ const FLOOR_ROUGHNESS_PATH = "/textures/floor/floor_roughness.webp";
 const BASEBOARD_MODEL_PATH = "/3d-models/beaded_baseboard_4_plaster_texture.glb";
 const BIO_FRAME_IMAGE_PATH = "/image/yaz_headshot.jpeg";
 const FAMILY_FRAME_IMAGE_PATH = "/image/family_portrait.jpg";
+const CONTACT_FRAME_ID = "family-portrait-frame";
 const ENLARGEABLE_FAMILY_FRAME_IMAGE_PATHS = new Set([
   FAMILY_FRAME_IMAGE_PATH,
   "/image/yaslynn_family_couch_portrait.jpg",
@@ -876,13 +877,21 @@ function createImageFrameSetting(index: number, seed?: Partial<ImageFrameSetting
     captionOffsetY: seed?.captionOffsetY ?? -0.16,
     captionScale: seed?.captionScale ?? 1,
   });
+  const id = seed?.id ?? CONTACT_FRAME_ID;
+  const imageSrc = safeAssetPath(
+    seed?.imageSrc ?? savedFamilyComposite?.imageSrc,
+    FAMILY_FRAME_IMAGE_PATH,
+  );
   return {
     ...base,
-    id: seed?.id ?? "family-portrait-frame",
+    id,
     kind: "image-frame",
     label: seed?.label ?? "Family portrait",
-    imageSrc: safeAssetPath(seed?.imageSrc ?? savedFamilyComposite?.imageSrc, FAMILY_FRAME_IMAGE_PATH),
-    captionText: seed?.captionText ?? savedFamilyComposite?.captionText ?? "",
+    imageSrc,
+    captionText:
+      id === CONTACT_FRAME_ID || imageSrc === FAMILY_FRAME_IMAGE_PATH
+        ? "Contact"
+        : seed?.captionText ?? savedFamilyComposite?.captionText ?? "",
     imageTintColor: normalizeHexColor(
       seed?.imageTintColor ?? savedFamilyComposite?.imageTintColor,
       "#ead8bf",
@@ -1765,11 +1774,16 @@ function createImageFrame(
     }),
     materials,
   );
+  const captionText =
+    setting.kind === "image-frame" && setting.id === CONTACT_FRAME_ID
+      ? "Contact"
+      : setting.captionText;
   const isNavigationImage =
     setting.kind === "bio-frame" ||
-    setting.captionText.trim().toLowerCase() === "stills" ||
-    setting.captionText.trim().toLowerCase() === "clients" ||
-    setting.captionText.trim().toLowerCase() === "contact";
+    setting.id === CONTACT_FRAME_ID ||
+    captionText.trim().toLowerCase() === "stills" ||
+    captionText.trim().toLowerCase() === "clients" ||
+    captionText.trim().toLowerCase() === "contact";
   let imageMeshGrayscaleStrength: FrameMediaGrayscaleStrength | undefined;
   if (isNavigationImage) {
     imageMeshGrayscaleStrength = addFrameMediaGrayscale(imageMaterial, 0);
@@ -1783,7 +1797,7 @@ function createImageFrame(
   if (setting.kind === "bio-frame") {
     imageMesh.userData.bioSlug = setting.bioSlug;
   } else {
-    const modalId = setting.captionText.trim().toLowerCase();
+    const modalId = captionText.trim().toLowerCase();
     if (modalId === "stills" || modalId === "clients") {
       imageMesh.userData.imageFrameModalId = modalId satisfies ImageFrameModalId;
     } else if (isEnlargeableFamilyFrame(setting)) {
@@ -1816,10 +1830,10 @@ function createImageFrame(
     group.add(hazeMesh);
   }
 
-  if (captionPlacement === "frame" && setting.captionText.trim().length > 0) {
+  if (captionPlacement === "frame" && captionText.trim().length > 0) {
     const captionMesh = createFrameCaptionMesh(
       setting,
-      setting.captionText,
+      captionText,
       captionFont,
       captionColor,
       geometries,
