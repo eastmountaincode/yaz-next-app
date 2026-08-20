@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PortableTextBlock } from "@portabletext/react";
 import { defineQuery } from "next-sanity";
+import { cache } from "react";
 import { sanityClient } from "@/sanity/lib/client";
 import {
   EMPTY_PORTFOLIO_CONTENT,
@@ -189,7 +190,7 @@ function normalizePortfolio(content: RawPortfolioContent | null): PortfolioConte
   };
 }
 
-export async function getPortfolioContent(): Promise<PortfolioContent> {
+export const getPortfolioContent = cache(async (): Promise<PortfolioContent> => {
   if (!sanityClient) {
     return EMPTY_PORTFOLIO_CONTENT;
   }
@@ -210,4 +211,4 @@ export async function getPortfolioContent(): Promise<PortfolioContent> {
     console.error("Could not load portfolio content from Sanity.", error);
     return EMPTY_PORTFOLIO_CONTENT;
   }
-}
+});

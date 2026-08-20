@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import {
+  FALLBACK_DESCRIPTION,
+  SITE_NAME,
+  SITE_URL,
+} from "@/sanity/lib/portfolioText";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,8 +18,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Yaslynn Rivera",
-  description: "A 3D environment scene editor for Yaz.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: FALLBACK_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: FALLBACK_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: FALLBACK_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
