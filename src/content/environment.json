@@ -573,7 +573,7 @@
           ],
           "wallScale": 0.905,
           "captionOffsetX": 0,
-          "captionOffsetY": 0.602,
+          "captionOffsetY": 0.618,
           "captionScale": 1.685
         }
       },
@@ -652,7 +652,7 @@
       "captionOffsetZ": 0.018,
       "captionScale": 1,
       "imageSrc": "/image/family_portrait.jpg",
-      "captionText": "",
+      "captionText": "Contact",
       "imageTintColor": "#ead8bf",
       "imageTintStrength": 0.05,
       "imageHazeColor": "#ead8bf",
