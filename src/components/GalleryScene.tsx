@@ -7583,7 +7583,7 @@ function ContactModal({
         <div className="grid h-24 place-items-center sm:h-[6.875rem]">
           <h2
             id="contact-modal-title"
-            className="text-center text-5xl leading-none sm:text-6xl"
+            className="translate-y-2 text-center text-5xl leading-none sm:text-6xl"
             style={MODAL_HEADING_STYLE}
           >
             Contact
