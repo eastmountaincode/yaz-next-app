@@ -7577,16 +7577,18 @@ function ContactModal({
       onClose={onClose}
       ariaLabelledBy="contact-modal-title"
       closeButtonTone="light"
-      className="w-[min(34rem,calc(100vw-2rem))] bg-white p-8 pt-10 text-black sm:p-10"
+      className="w-[min(34rem,calc(100vw-2rem))] bg-white px-8 text-black sm:px-10"
     >
-      <div className="grid gap-7">
-        <h2
-          id="contact-modal-title"
-          className="text-center text-5xl leading-none sm:text-6xl"
-          style={MODAL_HEADING_STYLE}
-        >
-          Contact
-        </h2>
+      <div>
+        <div className="grid h-24 place-items-center sm:h-[6.875rem]">
+          <h2
+            id="contact-modal-title"
+            className="text-center text-5xl leading-none sm:text-6xl"
+            style={MODAL_HEADING_STYLE}
+          >
+            Contact
+          </h2>
+        </div>
         <div className="relative mx-auto aspect-[1206/826] w-full max-w-[23rem] overflow-hidden bg-neutral-100">
           <PreloadedImage
             src={imageSrc}
@@ -7594,7 +7596,9 @@ function ContactModal({
             className="scale-[1.08] object-cover object-[45%_40%]"
           />
         </div>
-        <ContactLinks bio={bio} />
+        <div className="grid h-24 place-items-center sm:h-[6.875rem]">
+          <ContactLinks bio={bio} />
+        </div>
       </div>
     </ModalShell>
   );
