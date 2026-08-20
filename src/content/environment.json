@@ -633,7 +633,8 @@
             0.004,
             0.004
           ],
-          "wallScale": 0.586
+          "wallScale": 0.586,
+          "captionOffsetZ": 0.126
         },
         "mobile": {
           "visible": false

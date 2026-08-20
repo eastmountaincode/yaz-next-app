@@ -1768,7 +1768,8 @@ function createImageFrame(
   const isNavigationImage =
     setting.kind === "bio-frame" ||
     setting.captionText.trim().toLowerCase() === "stills" ||
-    setting.captionText.trim().toLowerCase() === "clients";
+    setting.captionText.trim().toLowerCase() === "clients" ||
+    setting.captionText.trim().toLowerCase() === "contact";
   let imageMeshGrayscaleStrength: FrameMediaGrayscaleStrength | undefined;
   if (isNavigationImage) {
     imageMeshGrayscaleStrength = addFrameMediaGrayscale(imageMaterial, 0);
