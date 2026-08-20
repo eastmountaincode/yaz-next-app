@@ -7575,18 +7575,25 @@ function ContactModal({
   return (
     <ModalShell
       onClose={onClose}
-      ariaLabel="Contact Yaslynn Rivera"
+      ariaLabelledBy="contact-modal-title"
       closeButtonTone="light"
-      className="w-[min(36rem,calc(100vw-2rem))] bg-white p-10 pt-12 text-black sm:p-12"
+      className="w-[min(34rem,calc(100vw-2rem))] bg-white p-8 pt-10 text-black sm:p-10"
     >
-      <div className="relative aspect-[1206/826] w-full overflow-hidden bg-neutral-100">
+      <h2
+        id="contact-modal-title"
+        className="mb-7 text-center text-5xl leading-none sm:text-6xl"
+        style={MODAL_HEADING_STYLE}
+      >
+        Contact
+      </h2>
+      <div className="relative mx-auto aspect-[1206/826] w-full max-w-[23rem] overflow-hidden bg-neutral-100">
         <PreloadedImage
           src={imageSrc}
           alt="Yaslynn Rivera with family"
-          className="object-cover"
+          className="scale-[1.08] object-cover object-[45%_40%]"
         />
       </div>
-      <ContactLinks bio={bio} className="mt-8" />
+      <ContactLinks bio={bio} className="mt-7" />
     </ModalShell>
   );
 }
