@@ -47,18 +47,18 @@ export default async function BioPage() {
 
   return (
     <PortfolioPageShell title={bio.heading || "Bio"}>
-      <article className="grid gap-10 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] md:gap-14">
+      <article className="grid gap-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:gap-10">
         {bio.image ? (
           <Image
             src={bio.image.url}
             alt={bio.image.alt || "Portrait of Yaslynn Rivera"}
             width={bio.image.width || 1200}
             height={bio.image.height || 1500}
-            className="h-auto w-full object-cover"
+            className="mx-auto h-auto w-full max-w-md object-cover md:max-w-none"
             priority
           />
         ) : null}
-        <div className="space-y-5 text-base leading-8 text-black/75">
+        <div className="space-y-5 text-[15px] leading-7 text-black/75 md:text-base md:leading-8">
           <PortableText value={bio.body} components={portableTextComponents} />
         </div>
       </article>

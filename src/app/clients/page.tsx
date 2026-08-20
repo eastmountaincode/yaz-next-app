@@ -18,26 +18,28 @@ export default async function ClientsPage() {
   const { clients } = await getPortfolioContent();
 
   return (
-    <PortfolioPageShell title="Clients">
-      <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+    <PortfolioPageShell title="Clients" maxWidthClassName="max-w-6xl">
+      <div className="grid grid-cols-2 items-start gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-10">
         {clients.map((client) => (
           <section key={client.key}>
-            {client.coverImage ? (
-              <Image
-                src={client.coverImage.url}
-                alt={client.coverImage.alt || `${client.name} cover image`}
-                width={client.coverImage.width || 900}
-                height={client.coverImage.height || 900}
-                className="aspect-square w-full object-cover"
-              />
-            ) : null}
-            <h2 className="mt-4 text-2xl font-medium">{client.name}</h2>
+            <div className="aspect-square w-full overflow-hidden bg-neutral-200">
+              {client.coverImage ? (
+                <Image
+                  src={client.coverImage.url}
+                  alt={client.coverImage.alt || `${client.name} cover image`}
+                  width={client.coverImage.width || 900}
+                  height={client.coverImage.height || 900}
+                  className="size-full object-cover"
+                />
+              ) : null}
+            </div>
+            <h2 className="mt-2 text-sm leading-tight sm:text-base">{client.name}</h2>
             <ul className="mt-3 space-y-3">
               {client.projects.map((project) => (
-                <li key={project.key}>
+                <li key={project.key} className="text-sm leading-snug">
                   <a
                     href={project.videoUrl}
-                    className="underline decoration-black/25 underline-offset-4 hover:decoration-black"
+                    className="underline decoration-black/25 underline-offset-4 hover:opacity-80"
                   >
                     {project.title}
                   </a>
