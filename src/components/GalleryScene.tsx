@@ -1781,6 +1781,7 @@ function createImageFrame(
   const isNavigationImage =
     setting.kind === "bio-frame" ||
     setting.id === CONTACT_FRAME_ID ||
+    (setting.kind === "image-frame" && isEnlargeableFamilyFrame(setting)) ||
     captionText.trim().toLowerCase() === "stills" ||
     captionText.trim().toLowerCase() === "clients" ||
     captionText.trim().toLowerCase() === "contact";
