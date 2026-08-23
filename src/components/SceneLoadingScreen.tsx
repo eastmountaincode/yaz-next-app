@@ -207,9 +207,7 @@ export function SceneLoadingScreen({
       aria-label={`Loading ${displayedPercentage}%`}
     >
       <div className="flex w-full max-w-[13rem] flex-col items-center text-center">
-        <div className="text-sm">Loading</div>
-
-        <div className="relative mt-4 size-36" aria-hidden="true">
+        <div className="relative size-36" aria-hidden="true">
           <NextImage
             src={gobletIcon}
             alt=""
@@ -233,7 +231,7 @@ export function SceneLoadingScreen({
           </div>
         </div>
 
-        <div className="mt-4 text-sm tabular-nums">{displayedPercentage}%</div>
+        <div className="mt-3 text-sm tabular-nums">{displayedPercentage}%</div>
 
         {displayedError ? (
           <div className="mt-6">
