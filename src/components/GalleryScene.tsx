@@ -5984,6 +5984,7 @@ export function GalleryScene({ portfolio }: { portfolio: PortfolioContent }) {
         assetsReady={initialAssetsReady}
         sceneReady={initialSceneReady}
         sceneError={sceneError}
+        holdOpen={process.env.NODE_ENV === "development"}
         onAssetsReady={handleInitialAssetsReady}
         onError={handleInitialAssetError}
       />

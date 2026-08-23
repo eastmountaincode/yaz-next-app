@@ -1,6 +1,8 @@
 "use client";
 
+import NextImage from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import gobletIcon from "@/app/icon.png";
 
 const MAX_PARALLEL_REQUESTS = 2;
 const MAX_ASSET_ATTEMPTS = 5;
@@ -114,6 +116,7 @@ export function SceneLoadingScreen({
   assetsReady,
   sceneReady,
   sceneError,
+  holdOpen = false,
   onAssetsReady,
   onError,
 }: {
@@ -121,6 +124,7 @@ export function SceneLoadingScreen({
   assetsReady: boolean;
   sceneReady: boolean;
   sceneError?: string | null;
+  holdOpen?: boolean;
   onAssetsReady: () => void;
   onError: (error: Error | null) => void;
 }) {
@@ -188,7 +192,7 @@ export function SceneLoadingScreen({
     return Math.min(100, Math.round((loadedCount / assets.length) * 100));
   }, [assets, assetsReady, loadedCount]);
 
-  if (sceneReady) {
+  if (sceneReady && !holdOpen) {
     return null;
   }
 
@@ -202,17 +206,34 @@ export function SceneLoadingScreen({
       aria-live="polite"
       aria-label={`Loading ${displayedPercentage}%`}
     >
-      <div className="w-full max-w-[13rem] text-center sm:max-w-xs">
+      <div className="flex w-full max-w-[13rem] flex-col items-center text-center">
         <div className="text-sm">Loading</div>
 
-        <div className="mt-3 h-0.5 overflow-hidden bg-white/20">
-          <div
-            className="h-full bg-white transition-[width] duration-300 ease-out"
-            style={{ width: `${displayedPercentage}%` }}
+        <div className="relative mt-4 size-36" aria-hidden="true">
+          <NextImage
+            src={gobletIcon}
+            alt=""
+            fill
+            priority
+            sizes="144px"
+            className="object-contain opacity-15 grayscale [image-rendering:pixelated]"
           />
+          <div
+            className="absolute inset-0 transition-[clip-path] duration-300 ease-out"
+            style={{ clipPath: `inset(${100 - displayedPercentage}% 0 0 0)` }}
+          >
+            <NextImage
+              src={gobletIcon}
+              alt=""
+              fill
+              priority
+              sizes="144px"
+              className="object-contain [image-rendering:pixelated]"
+            />
+          </div>
         </div>
 
-        <div className="mt-3 text-sm tabular-nums">{displayedPercentage}%</div>
+        <div className="mt-4 text-sm tabular-nums">{displayedPercentage}%</div>
 
         {displayedError ? (
           <div className="mt-6">
