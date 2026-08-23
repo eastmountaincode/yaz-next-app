@@ -140,7 +140,7 @@ export function SceneLoadingScreen({
 
     const timeout = window.setTimeout(() => {
       setCompletionPauseFinished(true);
-    }, 500);
+    }, 300);
 
     return () => window.clearTimeout(timeout);
   }, [holdOpen, sceneReady]);
