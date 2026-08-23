@@ -131,6 +131,19 @@ export function SceneLoadingScreen({
   const [loadedCount, setLoadedCount] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [completionPauseFinished, setCompletionPauseFinished] = useState(false);
+
+  useEffect(() => {
+    if (!sceneReady || holdOpen) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setCompletionPauseFinished(true);
+    }, 500);
+
+    return () => window.clearTimeout(timeout);
+  }, [holdOpen, sceneReady]);
 
   useEffect(() => {
     if (!assets || assetsReady) {
@@ -192,7 +205,7 @@ export function SceneLoadingScreen({
     return Math.min(100, Math.round((loadedCount / assets.length) * 100));
   }, [assets, assetsReady, loadedCount]);
 
-  if (sceneReady && !holdOpen) {
+  if (sceneReady && !holdOpen && completionPauseFinished) {
     return null;
   }
 
@@ -214,7 +227,7 @@ export function SceneLoadingScreen({
             fill
             priority
             sizes="144px"
-            className="object-contain opacity-15 grayscale [image-rendering:pixelated]"
+            className="object-contain opacity-[0.07] grayscale [image-rendering:pixelated]"
           />
           <div
             className="absolute inset-0 transition-[clip-path] duration-300 ease-out"
