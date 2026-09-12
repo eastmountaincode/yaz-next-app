@@ -1,18 +1,14 @@
 @import "tailwindcss";
 
-.modal-ready-surface {
+.modal-ready-content {
   opacity: 0;
   pointer-events: none;
 }
 
-.modal-ready-surface[data-ready="true"] {
+.modal-ready-content[data-ready="true"] {
   opacity: 1;
   pointer-events: auto;
   animation: modal-content-reveal 350ms ease-out both;
-}
-
-.modal-loading-label {
-  animation: modal-content-reveal 250ms ease-out 250ms both;
 }
 
 @keyframes modal-content-reveal {
@@ -21,8 +17,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .modal-ready-surface[data-ready="true"],
-  .modal-loading-label {
+  .modal-ready-content[data-ready="true"] {
     animation: none;
   }
 }

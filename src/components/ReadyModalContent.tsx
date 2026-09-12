@@ -1,13 +1,9 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 type Props = {
   children: ReactNode;
-  className: string;
-  style?: CSSProperties;
-  onClose: () => void;
 };
 
 function waitForVimeoPlayer(frame: HTMLIFrameElement, signal: AbortSignal) {
@@ -34,12 +30,12 @@ function waitForVimeoPlayer(frame: HTMLIFrameElement, signal: AbortSignal) {
 
 // Remount this boundary when navigating to a different modal view. Keeping the
 // media mounted at opacity zero lets the browser load and decode it normally.
-export function ReadyModalSurface(props: Props) {
+export function ReadyModalContent(props: Props) {
   const [attempt, setAttempt] = useState(0);
-  return <SurfaceAttempt key={attempt} {...props} onRetry={() => setAttempt((value) => value + 1)} />;
+  return <ContentAttempt key={attempt} {...props} onRetry={() => setAttempt((value) => value + 1)} />;
 }
 
-function SurfaceAttempt({ children, className, style, onClose, onRetry }: Props & { onRetry: () => void }) {
+function ContentAttempt({ children, onRetry }: Props & { onRetry: () => void }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
@@ -105,30 +101,21 @@ function SurfaceAttempt({ children, className, style, onClose, onRetry }: Props 
 
   return (
     <>
-      {status !== "ready" ? (
-        <div className="absolute inset-0 flex items-center justify-center text-white">
-          <button type="button" onClick={onClose} aria-label="Close" className="absolute right-5 top-5 grid size-9 cursor-pointer place-items-center hover:bg-white/10 focus-visible:outline focus-visible:outline-white">
-            <X size={20} strokeWidth={1.5} />
-          </button>
-          <div role="status" className="px-6 text-center font-sans text-sm" onClick={(event) => event.stopPropagation()}>
-            {status === "error" ? (
-              <>
-                <p>Some content couldn’t load.</p>
-                <button type="button" onClick={onRetry} className="mt-3 cursor-pointer underline underline-offset-4">Try again</button>
-              </>
-            ) : <span className="modal-loading-label">Loading…</span>}
+      {status === "error" ? (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div role="status" className="px-6 text-center font-sans text-sm">
+            <p>Some content couldn’t load.</p>
+            <button type="button" onClick={onRetry} className="mt-3 cursor-pointer underline underline-offset-4">Try again</button>
           </div>
         </div>
       ) : null}
       <div
         ref={surfaceRef}
-        className={`${className} modal-ready-surface`}
-        style={style}
+        className="modal-ready-content"
         data-ready={status === "ready"}
         aria-busy={status === "loading"}
         aria-hidden={status !== "ready"}
         inert={status !== "ready"}
-        onClick={(event) => event.stopPropagation()}
       >
         {children}
       </div>

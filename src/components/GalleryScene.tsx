@@ -30,7 +30,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { SceneLoadingScreen } from "@/components/SceneLoadingScreen";
-import { ReadyModalSurface } from "@/components/ReadyModalSurface";
+import { ReadyModalContent } from "@/components/ReadyModalContent";
 import savedClockComposite from "@/content/clock.json";
 import savedComposites from "@/content/composites.json";
 import { framePictures } from "@/content/framePictures";
@@ -7165,11 +7165,10 @@ function ModalShell({
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
     >
-      <ReadyModalSurface
-        key={contentKey}
+      <div
         className={`${MODAL_STYLE.surface} ${className}`}
         style={style}
-        onClose={onClose}
+        onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
@@ -7183,8 +7182,8 @@ function ModalShell({
         >
           <X className="size-[18px] sm:size-5" strokeWidth={1.5} />
         </button>
-        {children}
-      </ReadyModalSurface>
+        <ReadyModalContent key={contentKey}>{children}</ReadyModalContent>
+      </div>
     </div>
   );
 }
