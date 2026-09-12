@@ -25,6 +25,9 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description: FALLBACK_DESCRIPTION,
+  verification: {
+    google: "mEQ3ftjE6jdYIvfrgXOZrRb93NZDjIp8_etFLTxs_lo",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
