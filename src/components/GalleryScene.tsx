@@ -30,6 +30,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { SceneLoadingScreen } from "@/components/SceneLoadingScreen";
+import { ReadyModalSurface } from "@/components/ReadyModalSurface";
 import savedClockComposite from "@/content/clock.json";
 import savedComposites from "@/content/composites.json";
 import { framePictures } from "@/content/framePictures";
@@ -7141,6 +7142,7 @@ function ModalShell({
   closeButtonTone = "dark",
   className = "",
   style,
+  contentKey = "default",
   children,
 }: {
   onClose: () => void;
@@ -7149,6 +7151,7 @@ function ModalShell({
   closeButtonTone?: "dark" | "light";
   className?: string;
   style?: React.CSSProperties;
+  contentKey?: string;
   children: React.ReactNode;
 }) {
   useModalDismissal(onClose);
@@ -7162,10 +7165,11 @@ function ModalShell({
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
     >
-      <div
+      <ReadyModalSurface
+        key={contentKey}
         className={`${MODAL_STYLE.surface} ${className}`}
         style={style}
-        onClick={(event) => event.stopPropagation()}
+        onClose={onClose}
       >
         <button
           type="button"
@@ -7180,7 +7184,7 @@ function ModalShell({
           <X className="size-[18px] sm:size-5" strokeWidth={1.5} />
         </button>
         {children}
-      </div>
+      </ReadyModalSurface>
     </div>
   );
 }
@@ -7427,6 +7431,7 @@ function DirectorReelModal({
     <ModalShell
       onClose={onClose}
       ariaLabel="Director's Reel"
+      contentKey={sourceUrl}
       closeButtonTone="light"
       className="bg-white p-11 text-black"
       style={{
@@ -7466,6 +7471,7 @@ function ProjectModal({
     <ModalShell
       onClose={onClose}
       ariaLabel={project.title}
+      contentKey={project.key}
       closeButtonTone="light"
       className="w-full max-w-6xl bg-white text-black"
     >
@@ -7671,6 +7677,7 @@ function StillsModal({ artists, onClose }: { artists: StillArtist[]; onClose: ()
     <ModalShell
       onClose={onClose}
       ariaLabelledBy="stills-modal-title"
+      contentKey={selectedArtistKey ?? "all-stills-artists"}
       closeButtonTone="light"
       className="w-full max-w-7xl bg-white text-black"
     >
@@ -7778,7 +7785,7 @@ function ClientProjects({ client }: { client: PortfolioClient }) {
                   className="absolute inset-0 size-full"
                   src={embed.src}
                   title={`${client.name} — ${project.title}`}
-                  loading="lazy"
+                  loading="eager"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 />
@@ -7815,6 +7822,7 @@ function ClientsModal({
     <ModalShell
       onClose={onClose}
       ariaLabelledBy="clients-modal-title"
+      contentKey={selectedClientKey ?? "all-clients"}
       closeButtonTone="light"
       className="w-full max-w-6xl bg-white text-black"
     >

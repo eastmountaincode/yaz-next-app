@@ -1,5 +1,32 @@
 @import "tailwindcss";
 
+.modal-ready-surface {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modal-ready-surface[data-ready="true"] {
+  opacity: 1;
+  pointer-events: auto;
+  animation: modal-content-reveal 350ms ease-out both;
+}
+
+.modal-loading-label {
+  animation: modal-content-reveal 250ms ease-out 250ms both;
+}
+
+@keyframes modal-content-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-ready-surface[data-ready="true"],
+  .modal-loading-label {
+    animation: none;
+  }
+}
+
 @font-face {
   font-family: "Yaz Winky Show";
   src: url("/fonts/WinkyShowScript.woff2") format("woff2");
