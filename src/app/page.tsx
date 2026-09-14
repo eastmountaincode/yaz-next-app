@@ -37,22 +37,63 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home() {
   const portfolio = await getPortfolioContent();
   const description = getBioSummary(portfolio.bio.body);
+  const portraitUrl = new URL(PORTRAIT_IMAGE.url, SITE_URL).toString();
+  const websiteId = `${SITE_URL}/#website`;
+  const webpageId = `${SITE_URL}/#webpage`;
+  const personId = `${SITE_URL}/#person`;
+  const primaryImageId = `${portraitUrl}#primaryimage`;
   const sameAs = [
     portfolio.bio.instagramUrl,
     portfolio.bio.linkedinUrl,
     portfolio.bio.imdbUrl,
   ].filter(Boolean);
-  const personSchema = {
+  const structuredData = {
     "@context": "https://schema.org",
-    "@type": "Person",
-    mainEntityOfPage: SITE_URL,
-    name: SITE_NAME,
-    url: SITE_URL,
-    image: portfolio.bio.image?.url,
-    description,
-    jobTitle: "Director, producer, and writer",
-    sameAs,
-    email: portfolio.bio.email || undefined,
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": websiteId,
+        url: SITE_URL,
+        name: SITE_NAME,
+        inLanguage: "en-US",
+        hasPart: [
+          { "@id": `${SITE_URL}/bio#webpage` },
+          { "@id": `${SITE_URL}/clients#webpage` },
+          { "@id": `${SITE_URL}/stills#webpage` },
+        ],
+      },
+      {
+        "@type": "ImageObject",
+        "@id": primaryImageId,
+        url: portraitUrl,
+        contentUrl: portraitUrl,
+        width: PORTRAIT_IMAGE.width,
+        height: PORTRAIT_IMAGE.height,
+        caption: PORTRAIT_IMAGE.alt,
+      },
+      {
+        "@type": "WebPage",
+        "@id": webpageId,
+        url: SITE_URL,
+        name: SITE_NAME,
+        description,
+        isPartOf: { "@id": websiteId },
+        primaryImageOfPage: { "@id": primaryImageId },
+        mainEntity: { "@id": personId },
+      },
+      {
+        "@type": "Person",
+        "@id": personId,
+        mainEntityOfPage: { "@id": webpageId },
+        name: SITE_NAME,
+        url: SITE_URL,
+        image: { "@id": primaryImageId },
+        description,
+        jobTitle: "Director, producer, and writer",
+        sameAs,
+        email: portfolio.bio.email || undefined,
+      },
+    ],
   };
 
   return (
@@ -69,7 +110,7 @@ export default async function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(personSchema).replace(/</g, "\\u003c"),
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
         }}
       />
       <GalleryScene portfolio={portfolio} />

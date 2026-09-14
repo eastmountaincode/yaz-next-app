@@ -6,6 +6,12 @@ const HEADING_STYLE = {
   fontFamily: '"Yaz Winky Show"',
 } as const;
 
+const PORTFOLIO_PAGES = [
+  { href: "/bio", label: "Bio" },
+  { href: "/clients", label: "Clients" },
+  { href: "/stills", label: "Stills" },
+] as const;
+
 export function PortfolioPageShell({
   title,
   children,
@@ -33,6 +39,24 @@ export function PortfolioPageShell({
           </h1>
         </header>
         <div className="px-6 pb-10 sm:px-9 sm:pb-12">{children}</div>
+        <nav
+          aria-label="Portfolio pages"
+          className="mx-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-black/15 py-5 text-sm sm:mx-9"
+        >
+          <Link href="/" className="underline decoration-black/25 underline-offset-4 hover:opacity-65">
+            Gallery
+          </Link>
+          {PORTFOLIO_PAGES.map((page) => (
+            <Link
+              key={page.href}
+              href={page.href}
+              aria-current={title === page.label ? "page" : undefined}
+              className="underline decoration-black/25 underline-offset-4 hover:opacity-65 aria-[current=page]:font-semibold aria-[current=page]:no-underline"
+            >
+              {page.label}
+            </Link>
+          ))}
+        </nav>
       </section>
     </main>
   );
