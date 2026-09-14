@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { PortfolioPageShell } from "@/components/PortfolioPageShell";
 import { getPortfolioContent } from "@/sanity/lib/portfolio";
+import { PORTRAIT_IMAGE } from "@/sanity/lib/portfolioText";
 
 export const metadata: Metadata = {
   title: "Stills",
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
     url: "/stills",
     title: "Yaslynn Rivera — Stills",
     description: "Selected production stills from the work of Yaslynn Rivera.",
+    images: [PORTRAIT_IMAGE],
   },
 };
 

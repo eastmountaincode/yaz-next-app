@@ -4,6 +4,7 @@ import { GalleryScene } from "@/components/GalleryScene";
 import { getPortfolioContent } from "@/sanity/lib/portfolio";
 import {
   getBioSummary,
+  PORTRAIT_IMAGE,
   SITE_NAME,
   SITE_URL,
 } from "@/sanity/lib/portfolioText";
@@ -22,11 +23,13 @@ export async function generateMetadata(): Promise<Metadata> {
       url: "/",
       title: SITE_NAME,
       description,
+      images: [PORTRAIT_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title: SITE_NAME,
       description,
+      images: [PORTRAIT_IMAGE],
     },
   };
 }
@@ -42,6 +45,7 @@ export default async function Home() {
   const personSchema = {
     "@context": "https://schema.org",
     "@type": "Person",
+    mainEntityOfPage: SITE_URL,
     name: SITE_NAME,
     url: SITE_URL,
     image: portfolio.bio.image?.url,

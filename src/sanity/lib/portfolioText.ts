@@ -2,6 +2,12 @@ import type { PortableTextBlock } from "@portabletext/react";
 
 export const SITE_NAME = "Yaslynn Rivera";
 export const SITE_URL = "https://www.yaslynnrivera.com";
+export const PORTRAIT_IMAGE = {
+  url: "/image/yaz_headshot.jpeg",
+  width: 2023,
+  height: 3051,
+  alt: "Portrait of Yaslynn Rivera",
+};
 export const FALLBACK_DESCRIPTION =
   "Yaslynn Rivera is a director, producer, and writer drawn to the surreal and the sacred.";
 

@@ -2,7 +2,8 @@
 
 import NextImage from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import gobletIcon from "@/app/icon.png";
+
+const gobletIcon = "/image/goblet-icon.png";
 
 const MAX_PARALLEL_REQUESTS = 2;
 const MAX_ASSET_ATTEMPTS = 5;

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import {
   FALLBACK_DESCRIPTION,
+  PORTRAIT_IMAGE,
   SITE_NAME,
   SITE_URL,
 } from "@/sanity/lib/portfolioText";
@@ -34,11 +35,13 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: SITE_NAME,
     description: FALLBACK_DESCRIPTION,
+    images: [PORTRAIT_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_NAME,
     description: FALLBACK_DESCRIPTION,
+    images: [PORTRAIT_IMAGE],
   },
 };
 

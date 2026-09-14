@@ -3,7 +3,7 @@ import Image from "next/image";
 import { PortableText, type PortableTextComponents } from "@portabletext/react";
 import { PortfolioPageShell } from "@/components/PortfolioPageShell";
 import { getPortfolioContent } from "@/sanity/lib/portfolio";
-import { getBioSummary } from "@/sanity/lib/portfolioText";
+import { getBioSummary, PORTRAIT_IMAGE } from "@/sanity/lib/portfolioText";
 
 const portableTextComponents = {
   block: {
@@ -38,6 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
       url: "/bio",
       title: "Yaslynn Rivera — Bio",
       description,
+      images: [PORTRAIT_IMAGE],
     },
   };
 }
